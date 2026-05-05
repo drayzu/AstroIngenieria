@@ -34,6 +34,31 @@ export interface VisualizationSpec {
   fallback: string;
 }
 
+export type VisualLayerId = 'estructura' | 'energia' | 'riesgos' | 'escala' | 'materiales';
+
+export interface ConceptIllustration {
+  src: string;
+  alt: string;
+  prompt: string;
+  style: string;
+  credit: string;
+}
+
+export interface VisualHotspot {
+  id: string;
+  x: number;
+  y: number;
+  title: string;
+  description: string;
+  layer: VisualLayerId;
+}
+
+export interface VisualLayer {
+  id: VisualLayerId;
+  label: string;
+  description: string;
+}
+
 export interface AstroConcept {
   id: string;
   chapterId: string;
@@ -48,6 +73,10 @@ export interface AstroConcept {
   advantages: string[];
   difficulties: string[];
   related: string[];
+  illustration: ConceptIllustration;
+  hotspots: VisualHotspot[];
+  layers: VisualLayer[];
+  visualNotes: string;
   metrics: {
     energia: number;
     materiales: number;

@@ -1,28 +1,19 @@
 import { useMemo, useState } from 'react';
-import {
-  ArrowUpRight,
-  BookOpen,
-  Filter,
-  GitBranch,
-  Layers3,
-  Search,
-  Sparkles,
-} from 'lucide-react';
-import { chapters, allConcepts, defaultComparisonIds, featuredConceptIds } from './data/astroData';
-import { ChapterExplorer } from './components/ChapterExplorer';
+import { ArrowUpRight, BookOpen, Filter, GitBranch, Search } from 'lucide-react';
+import { allConcepts, chapters, plausibilityLabels, scaleLabels } from './data/astroData';
+import { ChapterFeature } from './components/ChapterFeature';
 import { ComparisonMatrix } from './components/ComparisonMatrix';
+import { ConceptGallery } from './components/ConceptGallery';
 import { ConceptModal } from './components/ConceptModal';
-import { CosmicHero } from './components/CosmicHero';
-import { ScaleNavigator } from './components/ScaleNavigator';
+import { MinimalHero } from './components/MinimalHero';
 import { SourceList } from './components/SourceList';
-import type { CSSProperties } from 'react';
 import type { AstroConcept, AstroScale, Plausibility } from './types';
-import { plausibilityLabels, scaleLabels } from './data/astroData';
 
 type FilterValue<T extends string> = 'all' | T;
 
 const scaleOptions = Object.keys(scaleLabels) as AstroScale[];
 const plausibilityOptions = Object.keys(plausibilityLabels) as Plausibility[];
+const defaultComparisonIds = ['oneill-cylinder', 'dyson-swarm', 'mars-terraforming', 'caplan'];
 
 const normalize = (value: string) =>
   value
@@ -38,14 +29,6 @@ function App() {
   const [query, setQuery] = useState('');
   const [selectedConcept, setSelectedConcept] = useState<AstroConcept | null>(null);
   const [comparisonIds, setComparisonIds] = useState<string[]>(defaultComparisonIds);
-
-  const featuredConcepts = useMemo(
-    () =>
-      featuredConceptIds
-        .map((id) => allConcepts.find((concept) => concept.id === id))
-        .filter((concept): concept is AstroConcept => Boolean(concept)),
-    [],
-  );
 
   const filteredConcepts = useMemo(() => {
     const cleanQuery = normalize(query.trim());
@@ -64,13 +47,15 @@ function App() {
           concept.keyIdea,
           concept.mentalImage,
           concept.mechanism,
-          concept.advantages.join(' '),
-          concept.difficulties.join(' '),
+          concept.visualNotes,
         ].join(' '),
       );
-      const matchesQuery = cleanQuery.length === 0 || searchable.includes(cleanQuery);
-
-      return matchesChapter && matchesScale && matchesPlausibility && matchesQuery;
+      return (
+        matchesChapter &&
+        matchesScale &&
+        matchesPlausibility &&
+        (cleanQuery.length === 0 || searchable.includes(cleanQuery))
+      );
     });
   }, [activeChapterId, activeScale, activePlausibility, query]);
 
@@ -88,7 +73,7 @@ function App() {
       if (current.includes(conceptId)) {
         return current.filter((id) => id !== conceptId);
       }
-      return [...current.slice(-5), conceptId];
+      return [...current.slice(-4), conceptId];
     });
   };
 
@@ -103,11 +88,12 @@ function App() {
     <div className="site-shell">
       <header className="topbar" aria-label="Navegación principal">
         <a className="brand-mark" href="#inicio" aria-label="Volver al inicio">
-          <Sparkles aria-hidden="true" />
-          <span>Astroingeniería</span>
+          <span />
+          Astroingeniería
         </a>
         <nav className="topbar-links" aria-label="Secciones principales">
-          <a href="#atlas">Atlas</a>
+          <a href="#capitulos">Capítulos</a>
+          <a href="#galeria">Galería</a>
           <a href="#comparador">Comparador</a>
           <a href="#fuentes">Fuentes</a>
           <a
@@ -121,48 +107,34 @@ function App() {
         </nav>
       </header>
 
-      <main>
-        <CosmicHero
-          concepts={featuredConcepts}
-          selectedScale={activeScale}
-          onScaleSelect={setActiveScale}
-          onOpenConcept={setSelectedConcept}
-        />
+      <main id="inicio">
+        <MinimalHero concept={allConcepts.find((concept) => concept.id === 'oneill-cylinder') ?? allConcepts[0]} />
 
-        <section className="atlas-overview" aria-label="Ruta general">
+        <section id="capitulos" className="chapter-band" aria-labelledby="capitulos-title">
           <div className="section-heading">
-            <span className="eyebrow">Ruta general</span>
-            <h2>De vivir en órbita a pensar civilizaciones galácticas</h2>
+            <span className="overline">Recorrido</span>
+            <h2 id="capitulos-title">Capítulos como salas de museo</h2>
             <p>
-              El atlas convierte el documento base en una experiencia exploratoria:
-              capítulos, fichas, escalas, plausibilidad, relaciones y visualizaciones.
+              Cada sala empieza con una imagen grande, conceptos clave y una lectura visual
+              pausada. El atlas conserva el contenido completo, pero reduce ruido visual.
             </p>
           </div>
-          <div className="route-strip" role="list" aria-label="Capítulos del atlas">
-            {chapters.slice(0, 8).map((chapter) => (
-              <button
-                className="route-node"
-                type="button"
+          <div className="chapter-stack">
+            {chapters.map((chapter) => (
+              <ChapterFeature
+                chapter={chapter}
                 key={chapter.id}
-                onClick={() => {
-                  setActiveChapterId(chapter.id);
-                  document.getElementById('atlas')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                style={{ '--node-color': chapter.color } as CSSProperties}
-              >
-                <span>{chapter.number}</span>
-                <strong>{chapter.title}</strong>
-              </button>
+                onOpenConcept={setSelectedConcept}
+              />
             ))}
           </div>
         </section>
 
-        <section className="filters-band" aria-labelledby="filtros-title">
-          <div className="section-heading compact">
-            <span className="eyebrow">Exploración</span>
-            <h2 id="filtros-title">Filtra el atlas por escala, madurez o concepto</h2>
+        <section id="atlas" className="filters-band" aria-labelledby="filtros-title">
+          <div className="section-heading">
+            <span className="overline">Búsqueda</span>
+            <h2 id="filtros-title">Filtrar sin romper la contemplación</h2>
           </div>
-
           <div className="filter-toolbar">
             <label className="search-box">
               <Search aria-hidden="true" />
@@ -170,23 +142,41 @@ function App() {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Buscar Dyson, terraformación, propulsión, Fermi..."
+                placeholder="Buscar Dyson, terraformación, Fermi, hábitat..."
               />
             </label>
-
-            <div className="filter-group" aria-label="Filtro de escala">
+            <div className="filter-group" aria-label="Filtro de capítulo">
               <Filter aria-hidden="true" />
+              <button
+                type="button"
+                className={activeChapterId === 'all' ? 'is-active' : ''}
+                onClick={() => setActiveChapterId('all')}
+              >
+                Todo
+              </button>
+              {chapters.map((chapter) => (
+                <button
+                  type="button"
+                  key={chapter.id}
+                  className={activeChapterId === chapter.id ? 'is-active' : ''}
+                  onClick={() => setActiveChapterId(chapter.id)}
+                >
+                  {chapter.number}. {chapter.title}
+                </button>
+              ))}
+            </div>
+            <div className="filter-group" aria-label="Filtro de escala">
               <button
                 type="button"
                 className={activeScale === 'all' ? 'is-active' : ''}
                 onClick={() => setActiveScale('all')}
               >
-                Todas
+                Todas las escalas
               </button>
               {scaleOptions.map((scale) => (
                 <button
-                  key={scale}
                   type="button"
+                  key={scale}
                   className={activeScale === scale ? 'is-active' : ''}
                   onClick={() => setActiveScale(scale)}
                 >
@@ -194,20 +184,18 @@ function App() {
                 </button>
               ))}
             </div>
-
             <div className="filter-group" aria-label="Filtro de plausibilidad">
-              <Layers3 aria-hidden="true" />
               <button
                 type="button"
                 className={activePlausibility === 'all' ? 'is-active' : ''}
                 onClick={() => setActivePlausibility('all')}
               >
-                Todo
+                Toda madurez
               </button>
               {plausibilityOptions.map((plausibility) => (
                 <button
-                  key={plausibility}
                   type="button"
+                  key={plausibility}
                   className={activePlausibility === plausibility ? 'is-active' : ''}
                   onClick={() => setActivePlausibility(plausibility)}
                 >
@@ -218,36 +206,27 @@ function App() {
           </div>
         </section>
 
-        <section id="atlas" className="atlas-band" aria-labelledby="atlas-title">
-          <div className="section-heading">
-            <span className="eyebrow">Atlas interactivo</span>
-            <h2 id="atlas-title">Capítulos, conceptos y relaciones</h2>
+        <section id="galeria" className="gallery-band" aria-labelledby="galeria-title">
+          <div className="section-heading split-heading">
+            <div>
+              <span className="overline">Galería interactiva</span>
+              <h2 id="galeria-title">106 ilustraciones, una por concepto</h2>
+            </div>
             <p>
-              {filteredConcepts.length} conceptos visibles de {allConcepts.length}. Cada ficha
-              resume qué es, cómo funciona, por qué importa y qué problemas abre.
+              {filteredConcepts.length} conceptos visibles. Abre cualquier imagen para activar
+              hotspots, capas, zoom y lectura detallada.
             </p>
           </div>
-
-          <ScaleNavigator selectedScale={activeScale} onSelectScale={setActiveScale} />
-
-          <ChapterExplorer
-            chapters={chapters}
-            activeChapterId={activeChapterId}
-            filteredConcepts={filteredConcepts}
-            comparisonIds={comparisonIds}
-            onChapterChange={setActiveChapterId}
-            onOpenConcept={setSelectedConcept}
-            onToggleCompare={toggleComparison}
-          />
+          <ConceptGallery concepts={filteredConcepts} onOpenConcept={setSelectedConcept} />
         </section>
 
         <section id="comparador" className="comparison-band" aria-labelledby="comparador-title">
           <div className="section-heading">
-            <span className="eyebrow">Modo comparar</span>
-            <h2 id="comparador-title">La misma escala no significa la misma dificultad</h2>
+            <span className="overline">Comparador</span>
+            <h2 id="comparador-title">Contrastar escalas, materiales y madurez</h2>
             <p>
-              Contrasta conceptos por energía, materiales, madurez y capacidad de maravillar.
-              La comparación es cualitativa, pensada para estudiar sin perder contexto.
+              Marca conceptos desde el visor para compararlos. El estado de comparación también se
+              refleja visualmente en las imágenes.
             </p>
           </div>
           <ComparisonMatrix
@@ -260,11 +239,11 @@ function App() {
 
         <section id="fuentes" className="sources-band" aria-labelledby="fuentes-title">
           <div className="section-heading">
-            <span className="eyebrow">Referencias</span>
-            <h2 id="fuentes-title">Base documental y puntos de partida</h2>
+            <span className="overline">Fuentes</span>
+            <h2 id="fuentes-title">Base documental y referencias</h2>
             <p>
-              La estructura sale de <strong>AstroIngenieria.txt</strong>. Estas fuentes agregan
-              anclajes técnicos para hábitats, energía, propulsión, ISRU, exoplanetas y SETI.
+              El contenido parte de <strong>AstroIngenieria.txt</strong>. La capa visual agrega
+              assets generativos WebP y prompts listos para reemplazo por IA curada.
             </p>
           </div>
           <SourceList sources={sourceRefs} />
@@ -277,10 +256,7 @@ function App() {
 
       <footer className="site-footer">
         <BookOpen aria-hidden="true" />
-        <span>
-          Atlas narrativo en español para contemplar, aprender y comparar ideas de
-          astroingeniería.
-        </span>
+        <span>Atlas visual minimalista de astroingeniería.</span>
       </footer>
 
       {selectedConcept && (

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "generate:illustrations": "node scripts/generateIllustrations.mjs",
     "lint": "eslint .",
     "build": "tsc && vite build",
     "preview": "vite preview",
@@ -31,6 +32,7 @@
     "lucide-react": "^1.14.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "sharp": "^0.34.5",
     "three": "^0.184.0"
   }
 }

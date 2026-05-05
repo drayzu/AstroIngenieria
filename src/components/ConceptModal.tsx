@@ -1,6 +1,7 @@
 import { BarChart3, BookMarked, GitBranch, Layers3, X } from 'lucide-react';
 import { plausibilityLabels, scaleLabels } from '../data/astroData';
 import type { AstroConcept } from '../types';
+import { IllustrationViewer } from './IllustrationViewer';
 import { SourceList } from './SourceList';
 
 interface ConceptModalProps {
@@ -51,6 +52,8 @@ export function ConceptModal({
         </div>
         <h2 id="concept-modal-title">{concept.title}</h2>
         <p className="modal-summary">{concept.summary}</p>
+
+        <IllustrationViewer concept={concept} compared={isCompared} />
 
         <div className="modal-grid">
           <div className="modal-section">
@@ -124,6 +127,12 @@ export function ConceptModal({
             <SourceList sources={concept.sources} compact />
           </div>
         )}
+
+        <div className="visual-prompt">
+          <h3>Prompt visual</h3>
+          <p>{concept.illustration.prompt}</p>
+          <span>{concept.illustration.credit}</span>
+        </div>
 
         <button
           type="button"

@@ -1,4 +1,13 @@
-import type { AstroChapter, AstroConcept, AstroScale, Plausibility, SourceRef } from '../types';
+import type {
+  AstroChapter,
+  AstroConcept,
+  AstroScale,
+  Plausibility,
+  SourceRef,
+  VisualHotspot,
+  VisualLayer,
+  VisualLayerId,
+} from '../types';
 
 const sources = {
   nasaSettlements: {
@@ -53,6 +62,8 @@ const sources = {
   },
 } satisfies Record<string, SourceRef>;
 
+const assetBase = import.meta.env.BASE_URL;
+
 const concept = (
   chapterId: string,
   id: string,
@@ -83,9 +94,148 @@ const concept = (
   advantages,
   difficulties,
   related,
+  ...createVisualProfile({
+    id,
+    title,
+    category,
+    scale,
+    plausibility,
+    summary,
+    keyIdea,
+    mentalImage,
+    mechanism,
+    advantages,
+    difficulties,
+    metrics,
+  }),
   metrics,
   sources: conceptSources,
 });
+
+const layerDescriptions: Record<VisualLayerId, string> = {
+  estructura: 'Forma, arquitectura y partes visibles del sistema.',
+  energia: 'Flujos de energía, radiación, propulsión o potencia disponible.',
+  riesgos: 'Límites, fallos posibles y condiciones hostiles.',
+  escala: 'Relación entre tamaño humano, planetario, estelar o galáctico.',
+  materiales: 'Recursos, masa, minería, blindaje o fabricación necesaria.',
+};
+
+const layerLabels: Record<VisualLayerId, string> = {
+  estructura: 'Estructura',
+  energia: 'Energía',
+  riesgos: 'Riesgos',
+  escala: 'Escala',
+  materiales: 'Materiales',
+};
+
+const visualLayers = (ids: VisualLayerId[]): VisualLayer[] =>
+  ids.map((id) => ({ id, label: layerLabels[id], description: layerDescriptions[id] }));
+
+const pickLayers = (scale: AstroScale, plausibility: Plausibility): VisualLayerId[] => {
+  const base: VisualLayerId[] = ['estructura', 'escala', 'energia'];
+  if (scale === 'habitat' || scale === 'orbital' || scale === 'planetaria') {
+    base.push('materiales');
+  }
+  if (plausibility === 'frontera' || plausibility === 'especulativo') {
+    base.push('riesgos');
+  }
+  return [...new Set(base)];
+};
+
+const createVisualProfile = ({
+  id,
+  title,
+  category,
+  scale,
+  plausibility,
+  summary,
+  keyIdea,
+  mentalImage,
+  mechanism,
+  advantages,
+  difficulties,
+  metrics,
+}: Pick<
+  AstroConcept,
+  | 'id'
+  | 'title'
+  | 'category'
+  | 'scale'
+  | 'plausibility'
+  | 'summary'
+  | 'keyIdea'
+  | 'mentalImage'
+  | 'mechanism'
+  | 'advantages'
+  | 'difficulties'
+  | 'metrics'
+>) => {
+  const layers = visualLayers(pickLayers(scale, plausibility));
+  const hotspotSeed = id.length + title.length + category.length;
+  const hotspots: VisualHotspot[] = [
+    {
+      id: `${id}-estructura`,
+      x: 58 + (hotspotSeed % 18),
+      y: 38 + (hotspotSeed % 12),
+      title: 'Estructura observable',
+      description: mentalImage,
+      layer: 'estructura' as VisualLayerId,
+    },
+    {
+      id: `${id}-energia`,
+      x: 72 - (hotspotSeed % 14),
+      y: 58 + (metrics.energia % 3) * 7,
+      title: 'Flujo de energía',
+      description: keyIdea,
+      layer: 'energia' as VisualLayerId,
+    },
+    {
+      id: `${id}-escala`,
+      x: 31 + (hotspotSeed % 12),
+      y: 68 - (metrics.maravilla % 3) * 8,
+      title: 'Lectura de escala',
+      description: summary,
+      layer: 'escala' as VisualLayerId,
+    },
+    {
+      id: `${id}-materiales`,
+      x: 45 + (metrics.materiales % 4) * 8,
+      y: 78 - (hotspotSeed % 10),
+      title: 'Materiales y construcción',
+      description: advantages[0] ?? mechanism,
+      layer: 'materiales' as VisualLayerId,
+    },
+    {
+      id: `${id}-riesgos`,
+      x: 82 - (metrics.madurez % 4) * 9,
+      y: 27 + (hotspotSeed % 15),
+      title: 'Riesgo principal',
+      description: difficulties[0] ?? 'La dificultad central depende de energía, precisión y mantenimiento.',
+      layer: 'riesgos' as VisualLayerId,
+    },
+  ].filter((hotspot) => layers.some((layer) => layer.id === hotspot.layer));
+
+  return {
+    illustration: {
+      src: `${assetBase}illustrations/${id}.webp`,
+      alt: `Ilustración realista y minimalista de ${title}`,
+      prompt: [
+        'Scientific educational realistic concept illustration.',
+        `Subject: ${title}.`,
+        `Category: ${category}; scale: ${scale}; plausibility: ${plausibility}.`,
+        `Mental image: ${mentalImage}.`,
+        `Mechanism: ${mechanism}.`,
+        'Editorial black and white museum style, natural cinematic light, no poster look, no neon excess, no text in image.',
+      ].join(' '),
+      style:
+        'Realismo científico sobrio, museo blanco/negro, iluminación natural, composición con mucho aire, sin texto incrustado.',
+      credit: 'Asset generativo local WebP, preparado para reemplazo por IA curada.',
+    },
+    hotspots,
+    layers,
+    visualNotes: `Observa ${title} como ${category.toLocaleLowerCase('es')}: ${keyIdea}`,
+  };
+};
 
 export const scaleLabels: Record<AstroScale, string> = {
   nave: 'Nave',

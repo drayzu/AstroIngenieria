@@ -16,6 +16,16 @@ npm run lint
 npm run build
 ```
 
+## Ilustraciones
+
+La galería usa 106 assets WebP más un hero en `public/illustrations/`. Se pueden regenerar con:
+
+```bash
+npm run generate:illustrations
+```
+
+Cada concepto incluye prompt, alt text, capas y hotspots en `src/data/astroData.ts`, de modo que los WebP iniciales pueden reemplazarse por imágenes IA curadas manteniendo la misma interfaz.
+
 ## Publicación
 
 El proyecto está configurado para GitHub Pages con base `/AstroIngenieria/`.
