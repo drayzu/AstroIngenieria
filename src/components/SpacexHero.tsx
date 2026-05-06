@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { ArrowDown, Play } from 'lucide-react';
 import type { AstroChapter } from '../types';
 
@@ -14,12 +13,7 @@ export function SpacexHero({ chapter, conceptCount }: SpacexHeroProps) {
     <section className="sx-hero" aria-labelledby="hero-title">
       <img className="sx-hero-media" src={visual?.heroImage} alt={visual?.visualFocus} />
       <div className="sx-scrim" />
-      <motion.div
-        className="sx-hero-copy"
-        initial={{ opacity: 0, y: 28 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, ease: 'easeOut' }}
-      >
+      <div className="sx-hero-copy">
         <span className="sx-kicker">{visual?.missionLabel}</span>
         <h1 id="hero-title">
           <span>Astro</span>
@@ -39,7 +33,7 @@ export function SpacexHero({ chapter, conceptCount }: SpacexHeroProps) {
             <ArrowDown aria-hidden="true" />
           </a>
         </div>
-      </motion.div>
+      </div>
     </section>
   );
 }
