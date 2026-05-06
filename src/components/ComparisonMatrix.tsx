@@ -6,7 +6,7 @@ interface ComparisonMatrixProps {
   concepts: AstroConcept[];
   comparisonIds: string[];
   onToggleConcept: (conceptId: string) => void;
-  onOpenConcept: (concept: AstroConcept) => void;
+  onSelectConcept: (concept: AstroConcept) => void;
 }
 
 const metricLabels = {
@@ -20,7 +20,7 @@ export function ComparisonMatrix({
   concepts,
   comparisonIds,
   onToggleConcept,
-  onOpenConcept,
+  onSelectConcept,
 }: ComparisonMatrixProps) {
   const comparedConcepts = comparisonIds
     .map((id) => concepts.find((concept) => concept.id === id))
@@ -67,7 +67,7 @@ export function ComparisonMatrix({
                   ),
                 )}
                 <td>
-                  <button type="button" onClick={() => onOpenConcept(concept)} aria-label={`Abrir ${concept.title}`}>
+                  <button type="button" onClick={() => onSelectConcept(concept)} aria-label={`Abrir ${concept.title}`}>
                     <Eye aria-hidden="true" />
                   </button>
                   <button type="button" onClick={() => onToggleConcept(concept.id)} aria-label={`Quitar ${concept.title}`}>

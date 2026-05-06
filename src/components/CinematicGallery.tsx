@@ -5,10 +5,10 @@ import type { AstroConcept } from '../types';
 
 interface CinematicGalleryProps {
   concepts: AstroConcept[];
-  onOpenConcept: (concept: AstroConcept) => void;
+  onSelectConcept: (concept: AstroConcept) => void;
 }
 
-export function CinematicGallery({ concepts, onOpenConcept }: CinematicGalleryProps) {
+export function CinematicGallery({ concepts, onSelectConcept }: CinematicGalleryProps) {
   return (
     <div className="cinematic-grid">
       {concepts.map((concept, index) => {
@@ -22,7 +22,7 @@ export function CinematicGallery({ concepts, onOpenConcept }: CinematicGalleryPr
             viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.45, delay: Math.min(index % 6, 4) * 0.035 }}
           >
-            <button type="button" onClick={() => onOpenConcept(concept)}>
+            <button type="button" onClick={() => onSelectConcept(concept)}>
               <img src={visual.heroImage} alt={visual.visualFocus} loading="lazy" />
               <span className="card-scrim" />
               <span className="card-open">

@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUpRight, Filter, GitBranch, Search } from 'lucide-react';
 import { allConcepts, chapters, plausibilityLabels, scaleLabels } from './data/astroData';
 import { CinematicGallery } from './components/CinematicGallery';
+import { ConceptStudyPage } from './components/ConceptStudyPage';
 import { ComparisonMatrix } from './components/ComparisonMatrix';
-import { DarkConceptModal } from './components/DarkConceptModal';
 import { MissionChapter } from './components/MissionChapter';
 import { MissionSideNav } from './components/MissionSideNav';
 import { SourceList } from './components/SourceList';
@@ -11,7 +11,10 @@ import { SpacexHero } from './components/SpacexHero';
 import type { AstroChapter, AstroConcept, AstroScale, Plausibility } from './types';
 
 type FilterValue<T extends string> = 'all' | T;
-type AppRoute = { page: 'home' } | { page: 'mission'; chapterId: string };
+type AppRoute =
+  | { page: 'home' }
+  | { page: 'mission'; chapterId: string }
+  | { page: 'concept'; conceptId: string };
 
 const scaleOptions = Object.keys(scaleLabels) as AstroScale[];
 const plausibilityOptions = Object.keys(plausibilityLabels) as Plausibility[];
@@ -33,6 +36,17 @@ const routeToChapterId = Object.fromEntries(
   Object.entries(chapterRoutes).map(([chapterId, route]) => [route.toLocaleLowerCase('es'), chapterId]),
 ) as Record<string, string>;
 
+const getConceptSlug = (concept: AstroConcept) =>
+  concept.id
+    .split('-')
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toLocaleUpperCase('es')}${part.slice(1)}`)
+    .join('-');
+
+const routeToConceptId = Object.fromEntries(
+  allConcepts.map((concept) => [getConceptSlug(concept).toLocaleLowerCase('es'), concept.id]),
+) as Record<string, string>;
+
 const normalize = (value: string) =>
   value
     .toLocaleLowerCase('es')
@@ -45,13 +59,24 @@ const getRouteFromLocation = (): AppRoute => {
   const base = normalizeBase();
   const pathname = decodeURIComponent(window.location.pathname);
   const localPath = pathname.startsWith(base) ? pathname.slice(base.length) : pathname;
-  const segment = localPath.replace(/^\/+|\/+$/g, '').toLocaleLowerCase('es');
-  const chapterId = routeToChapterId[segment];
+  const [chapterSegment, conceptSegment] = localPath
+    .replace(/^\/+|\/+$/g, '')
+    .split('/')
+    .map((segment) => segment.toLocaleLowerCase('es'));
+  const chapterId = routeToChapterId[chapterSegment];
+  const conceptId = conceptSegment ? routeToConceptId[conceptSegment] : null;
 
+  if (conceptId) {
+    return { page: 'concept', conceptId };
+  }
   return chapterId ? { page: 'mission', chapterId } : { page: 'home' };
 };
 
 const getChapterUrl = (chapter: AstroChapter) => `${import.meta.env.BASE_URL}${chapterRoutes[chapter.id]}`;
+const getConceptUrl = (concept: AstroConcept) => {
+  const chapter = chapters.find((item) => item.id === concept.chapterId) ?? chapters[0];
+  return `${getChapterUrl(chapter)}/${getConceptSlug(concept)}`;
+};
 
 function App() {
   const [route, setRoute] = useState<AppRoute>(() => getRouteFromLocation());
@@ -59,14 +84,18 @@ function App() {
   const [activePlausibility, setActivePlausibility] =
     useState<FilterValue<Plausibility>>('all');
   const [query, setQuery] = useState('');
-  const [selectedConcept, setSelectedConcept] = useState<AstroConcept | null>(null);
   const [comparisonIds, setComparisonIds] = useState<string[]>(defaultComparisonIds);
   const [sideNavOpen, setSideNavOpen] = useState(false);
   const [pendingScrollId, setPendingScrollId] = useState<string | null>(null);
 
+  const activeConcept = route.page === 'concept'
+    ? allConcepts.find((concept) => concept.id === route.conceptId) ?? null
+    : null;
   const activeChapter = route.page === 'mission'
     ? chapters.find((chapter) => chapter.id === route.chapterId) ?? chapters[0]
-    : null;
+    : activeConcept
+      ? chapters.find((chapter) => chapter.id === activeConcept.chapterId) ?? chapters[0]
+      : null;
 
   const missionConcepts = useMemo(() => {
     const cleanQuery = normalize(query.trim());
@@ -109,7 +138,6 @@ function App() {
   useEffect(() => {
     const onPopState = () => {
       setRoute(getRouteFromLocation());
-      setSelectedConcept(null);
       setSideNavOpen(false);
       setPendingScrollId('top');
     };
@@ -117,6 +145,17 @@ function App() {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
+
+  useEffect(() => {
+    if (route.page !== 'concept' || !activeConcept) {
+      return;
+    }
+
+    const canonicalUrl = getConceptUrl(activeConcept);
+    if (window.location.pathname !== canonicalUrl) {
+      window.history.replaceState(null, '', canonicalUrl);
+    }
+  }, [activeConcept, route]);
 
   useEffect(() => {
     if (!pendingScrollId) {
@@ -138,7 +177,6 @@ function App() {
   const pushRoute = (nextRoute: AppRoute, url: string, scrollId = 'top') => {
     window.history.pushState(null, '', url);
     setRoute(nextRoute);
-    setSelectedConcept(null);
     setSideNavOpen(false);
     setPendingScrollId(scrollId);
   };
@@ -151,6 +189,11 @@ function App() {
   const navigateChapter = (chapter: AstroChapter, scrollId = 'top') => {
     resetMissionFilters();
     pushRoute({ page: 'mission', chapterId: chapter.id }, getChapterUrl(chapter), scrollId);
+  };
+
+  const navigateConcept = (concept: AstroConcept) => {
+    resetMissionFilters();
+    pushRoute({ page: 'concept', conceptId: concept.id }, getConceptUrl(concept));
   };
 
   const scrollToSection = (sectionId: string) => {
@@ -169,13 +212,6 @@ function App() {
     });
   };
 
-  const openConceptById = (conceptId: string) => {
-    const concept = allConcepts.find((item) => item.id === conceptId);
-    if (concept) {
-      setSelectedConcept(concept);
-    }
-  };
-
   const handleSideMission = (chapter: AstroChapter) => {
     if (route.page === 'home') {
       setSideNavOpen(false);
@@ -190,6 +226,11 @@ function App() {
     if (route.page === 'mission') {
       setSideNavOpen(false);
       scrollToSection('mission-concepts');
+      return;
+    }
+
+    if (route.page === 'concept' && activeChapter) {
+      navigateChapter(activeChapter, 'mission-concepts');
       return;
     }
 
@@ -227,7 +268,7 @@ function App() {
           concepts={allConcepts}
           comparisonIds={comparisonIds}
           onToggleConcept={toggleComparison}
-          onOpenConcept={setSelectedConcept}
+          onSelectConcept={navigateConcept}
         />
       </section>
 
@@ -352,7 +393,7 @@ function App() {
             </div>
           </div>
 
-          <CinematicGallery concepts={missionConcepts} onOpenConcept={setSelectedConcept} />
+          <CinematicGallery concepts={missionConcepts} onSelectConcept={navigateConcept} />
         </section>
 
         <section className="sx-section sources-section mission-study-sources" aria-labelledby="mission-sources-title">
@@ -366,6 +407,24 @@ function App() {
           <SourceList sources={chapter.sources} />
         </section>
       </>
+    );
+  };
+
+  const renderConceptPage = (concept: AstroConcept) => {
+    const chapter = chapters.find((item) => item.id === concept.chapterId) ?? chapters[0];
+    const chapterConcepts = allConcepts.filter((item) => item.chapterId === chapter.id);
+
+    return (
+      <ConceptStudyPage
+        concept={concept}
+        chapter={chapter}
+        chapterConcepts={chapterConcepts}
+        allConcepts={allConcepts}
+        isCompared={comparisonIds.includes(concept.id)}
+        onBackToMission={(targetChapter) => navigateChapter(targetChapter, 'mission-concepts')}
+        onNavigateConcept={navigateConcept}
+        onToggleCompare={toggleComparison}
+      />
     );
   };
 
@@ -401,19 +460,12 @@ function App() {
       </header>
 
       <main id="top">
-        {activeChapter ? renderMissionPage(activeChapter) : renderHome()}
+        {activeConcept
+          ? renderConceptPage(activeConcept)
+          : activeChapter
+            ? renderMissionPage(activeChapter)
+            : renderHome()}
       </main>
-
-      {selectedConcept && (
-        <DarkConceptModal
-          concept={selectedConcept}
-          allConcepts={allConcepts}
-          isCompared={comparisonIds.includes(selectedConcept.id)}
-          onClose={() => setSelectedConcept(null)}
-          onOpenConcept={openConceptById}
-          onToggleCompare={toggleComparison}
-        />
-      )}
     </div>
   );
 }

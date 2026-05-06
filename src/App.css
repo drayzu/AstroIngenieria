@@ -492,6 +492,157 @@ h3,
   background: #000;
 }
 
+.concept-study-hero {
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+  display: grid;
+  align-items: end;
+  padding: 120px clamp(20px, 4vw, 72px) 92px;
+  isolation: isolate;
+}
+
+.concept-study-media {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(1.08) contrast(1.06) saturate(1.02);
+  transform: scale(1.02);
+}
+
+.concept-study-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(ellipse at 24% 78%, rgba(0, 0, 0, 0.86), transparent 40%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.86), rgba(0, 0, 0, 0.42) 32%, rgba(0, 0, 0, 0.08) 62%, transparent),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent 42%, rgba(0, 0, 0, 0.18));
+}
+
+.concept-study-copy {
+  width: min(980px, 100%);
+  text-shadow: 0 2px 22px rgba(0, 0, 0, 0.72);
+}
+
+.concept-study-copy h1 {
+  max-width: 1080px;
+  font-size: clamp(2.8rem, 7.2vw, 7rem);
+  line-height: 0.9;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.concept-study-copy p {
+  max-width: 760px;
+  margin-top: 16px;
+  color: #e6e6e6;
+  line-height: 1.55;
+}
+
+.concept-study-section {
+  background: #050505;
+}
+
+.concept-route-controls,
+.concept-study-layout {
+  width: min(1180px, 100%);
+  margin-inline: auto;
+}
+
+.concept-route-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.concept-study-layout {
+  display: grid;
+  gap: 22px;
+}
+
+.concept-study-visual {
+  border: 1px solid var(--line-soft);
+  background: #000;
+}
+
+.concept-study-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.concept-study-grid article {
+  padding: 18px;
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.concept-study-grid h2 {
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.concept-study-grid p,
+.concept-study-grid li {
+  color: #e6e6e6;
+  line-height: 1.55;
+}
+
+.concept-study-grid ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.concept-study-grid li + li {
+  margin-top: 8px;
+}
+
+.concept-metrics {
+  margin-top: 0;
+}
+
+.concept-related {
+  padding: 18px;
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.concept-related > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.concept-related button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line-soft);
+  color: rgba(255, 255, 255, 0.78);
+  background: transparent;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.concept-related button:hover,
+.concept-related button:focus-visible {
+  color: #000;
+  background: #fff;
+  outline: 0;
+}
+
+.concept-sources {
+  background: #000;
+}
+
 .sx-filters {
   width: min(1180px, 100%);
   margin: 0 auto 34px;
@@ -1134,8 +1285,8 @@ h3,
 
 @media (max-width: 760px) {
   .mission-side-nav {
-    top: auto;
-    bottom: 18px;
+    top: 76px;
+    bottom: auto;
     left: 0;
     width: min(310px, calc(100vw - 54px));
     transform: translateX(-100%);
@@ -1151,9 +1302,9 @@ h3,
   }
 
   .mission-side-toggle {
-    top: auto;
+    top: 0;
     right: -44px;
-    bottom: 0;
+    bottom: auto;
     width: 44px;
     height: 54px;
     transform: none;
@@ -1162,7 +1313,7 @@ h3,
 
   .mission-side-panel {
     min-height: 0;
-    max-height: min(650px, calc(100svh - 110px));
+    max-height: min(650px, calc(100svh - 96px));
     overflow: auto;
     padding: 14px 12px;
   }
@@ -1176,20 +1327,23 @@ h3,
     font-size: 0.88rem;
   }
 
+  .sx-nav button,
   .sx-nav a:not(:last-child) {
     display: none;
   }
 
   .sx-hero,
   .mission-panel,
-  .mission-study-hero {
+  .mission-study-hero,
+  .concept-study-hero {
     min-height: 86svh;
     padding: 96px 18px 58px;
   }
 
   .sx-scrim,
   .mission-scrim,
-  .mission-study-scrim {
+  .mission-study-scrim,
+  .concept-study-scrim {
     background:
       radial-gradient(ellipse at 50% 74%, rgba(0, 0, 0, 0.78), transparent 48%),
       linear-gradient(180deg, rgba(0, 0, 0, 0.08), transparent 34%, rgba(0, 0, 0, 0.68)),
@@ -1202,6 +1356,11 @@ h3,
   }
 
   .mission-study-copy h1 {
+    font-size: clamp(2rem, 10vw, 3.4rem);
+    overflow-wrap: break-word;
+  }
+
+  .concept-study-copy h1 {
     font-size: clamp(2rem, 10vw, 3.4rem);
     overflow-wrap: break-word;
   }
@@ -1235,6 +1394,7 @@ h3,
   .cinematic-grid,
   .source-list,
   .dark-modal-grid,
+  .concept-study-grid,
   .dark-metrics,
   .pan-controls {
     grid-template-columns: 1fr;
