@@ -5,6 +5,7 @@ import { CinematicGallery } from './components/CinematicGallery';
 import { ComparisonMatrix } from './components/ComparisonMatrix';
 import { DarkConceptModal } from './components/DarkConceptModal';
 import { MissionChapter } from './components/MissionChapter';
+import { MissionSideNav } from './components/MissionSideNav';
 import { SourceList } from './components/SourceList';
 import { SpacexHero } from './components/SpacexHero';
 import type { AstroConcept, AstroScale, Plausibility } from './types';
@@ -29,6 +30,7 @@ function App() {
   const [query, setQuery] = useState('');
   const [selectedConcept, setSelectedConcept] = useState<AstroConcept | null>(null);
   const [comparisonIds, setComparisonIds] = useState<string[]>(defaultComparisonIds);
+  const [sideNavOpen, setSideNavOpen] = useState(false);
 
   const filteredConcepts = useMemo(() => {
     const cleanQuery = normalize(query.trim());
@@ -64,6 +66,11 @@ function App() {
     return [...byUrl.values()];
   }, []);
 
+  const activeChapter = useMemo(
+    () => chapters.find((chapter) => chapter.id === activeChapterId),
+    [activeChapterId],
+  );
+
   const toggleComparison = (conceptId: string) => {
     setComparisonIds((current) => {
       if (current.includes(conceptId)) {
@@ -80,8 +87,48 @@ function App() {
     }
   };
 
+  const scrollToSection = (sectionId: string) => {
+    document.getElementById(sectionId)?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'start',
+    });
+  };
+
+  const handleExploreChapter = (chapterId: string) => {
+    setActiveChapterId(chapterId);
+    setActiveScale('all');
+    setActivePlausibility('all');
+    setQuery('');
+    window.requestAnimationFrame(() => scrollToSection('gallery'));
+  };
+
+  const handleGoMission = (chapterId: string) => {
+    scrollToSection(`mission-${chapterId}`);
+  };
+
+  const handleGoGallery = () => {
+    setActiveChapterId('all');
+    setActiveScale('all');
+    setActivePlausibility('all');
+    setQuery('');
+    setSideNavOpen(false);
+    window.requestAnimationFrame(() => scrollToSection('gallery'));
+  };
+
   return (
     <div className="sx-shell">
+      <MissionSideNav
+        chapters={chapters}
+        isOpen={sideNavOpen}
+        onToggle={() => setSideNavOpen((open) => !open)}
+        onClose={() => setSideNavOpen(false)}
+        onGoHome={() => {
+          setSideNavOpen(false);
+          scrollToSection('top');
+        }}
+        onGoGallery={handleGoGallery}
+        onGoMission={handleGoMission}
+      />
       <header className="sx-topbar" aria-label="Navegación principal">
         <a className="sx-brand" href="#top" aria-label="Volver al inicio">
           ASTROINGENIERÍA
@@ -108,7 +155,7 @@ function App() {
         <section id="missions" className="sx-section mission-section" aria-labelledby="missions-title">
           <div className="sx-section-head">
             <span className="sx-kicker">Flight plan</span>
-            <h2 id="missions-title">Ocho misiones para entender la astroingeniería</h2>
+            <h2 id="missions-title">Nueve misiones para entender la astroingeniería</h2>
           </div>
           <div className="mission-stack">
             {chapters.map((chapter, index) => (
@@ -116,7 +163,7 @@ function App() {
                 key={chapter.id}
                 chapter={chapter}
                 index={index}
-                onOpenConcept={setSelectedConcept}
+                onExploreChapter={handleExploreChapter}
               />
             ))}
           </div>
@@ -129,8 +176,9 @@ function App() {
               <h2 id="gallery-title">Conceptos del atlas</h2>
             </div>
             <p>
-              {filteredConcepts.length} de {allConcepts.length} conceptos visibles. Cada ficha usa
-              la imagen IA de su misión y conserva sus hotspots técnicos.
+              {activeChapter
+                ? `${filteredConcepts.length} conceptos de ${activeChapter.title}. Cada ficha usa la imagen IA de su misión y conserva sus hotspots técnicos.`
+                : `${filteredConcepts.length} de ${allConcepts.length} conceptos visibles. Cada ficha usa la imagen IA de su misión y conserva sus hotspots técnicos.`}
             </p>
           </div>
 

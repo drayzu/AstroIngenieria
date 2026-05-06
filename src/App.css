@@ -129,6 +129,95 @@ h3,
   height: 18px;
 }
 
+.mission-side-nav {
+  position: fixed;
+  z-index: 55;
+  top: 50%;
+  left: 0;
+  width: 270px;
+  transform: translate(-224px, -50%);
+  transition: transform 180ms ease;
+}
+
+.mission-side-nav:hover,
+.mission-side-nav:focus-within,
+.mission-side-nav.is-open {
+  transform: translate(0, -50%);
+}
+
+.mission-side-toggle {
+  position: absolute;
+  top: 50%;
+  right: -40px;
+  width: 40px;
+  height: 92px;
+  display: grid;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 1px solid var(--line-soft);
+  border-left: 0;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.58);
+  backdrop-filter: blur(14px);
+  cursor: pointer;
+}
+
+.mission-side-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mission-side-panel {
+  min-height: 420px;
+  padding: 18px 14px;
+  border: 1px solid var(--line-soft);
+  border-left: 0;
+  background: rgba(0, 0, 0, 0.64);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+}
+
+.mission-side-panel nav {
+  display: grid;
+  gap: 6px;
+}
+
+.mission-side-panel button {
+  min-height: 34px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  color: rgba(255, 255, 255, 0.72);
+  background: transparent;
+  text-align: left;
+  text-transform: uppercase;
+  font-size: 0.69rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.mission-side-panel button:first-child,
+.mission-side-panel button:last-child {
+  grid-template-columns: 1fr;
+  color: #fff;
+}
+
+.mission-side-panel button span {
+  color: var(--muted);
+}
+
+.mission-side-panel button:hover,
+.mission-side-panel button:focus-visible,
+.mission-side-panel button.is-active {
+  border-color: rgba(255, 255, 255, 0.38);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  outline: 0;
+}
+
 .sx-hero,
 .mission-panel {
   position: relative;
@@ -968,6 +1057,40 @@ h3,
 }
 
 @media (max-width: 760px) {
+  .mission-side-nav {
+    top: auto;
+    bottom: 18px;
+    left: 0;
+    width: min(310px, calc(100vw - 54px));
+    transform: translateX(calc(-100% + 10px));
+  }
+
+  .mission-side-nav:hover,
+  .mission-side-nav:focus-within {
+    transform: translateX(calc(-100% + 10px));
+  }
+
+  .mission-side-nav.is-open {
+    transform: translateX(0);
+  }
+
+  .mission-side-toggle {
+    top: auto;
+    right: -44px;
+    bottom: 0;
+    width: 44px;
+    height: 54px;
+    transform: none;
+    border-left: 1px solid var(--line-soft);
+  }
+
+  .mission-side-panel {
+    min-height: 0;
+    max-height: min(650px, calc(100svh - 110px));
+    overflow: auto;
+    padding: 14px 12px;
+  }
+
   .sx-topbar {
     min-height: 62px;
     padding-inline: 16px;

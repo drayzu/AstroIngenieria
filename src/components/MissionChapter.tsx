@@ -1,17 +1,16 @@
 import { useRef } from 'react';
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { ArrowUpRight } from 'lucide-react';
-import type { AstroChapter, AstroConcept } from '../types';
+import type { AstroChapter } from '../types';
 
 interface MissionChapterProps {
   chapter: AstroChapter;
   index: number;
-  onOpenConcept: (concept: AstroConcept) => void;
+  onExploreChapter: (chapterId: string) => void;
 }
 
-export function MissionChapter({ chapter, index, onOpenConcept }: MissionChapterProps) {
+export function MissionChapter({ chapter, index, onExploreChapter }: MissionChapterProps) {
   const visual = chapter.visual;
-  const leadConcept = chapter.concepts[0];
   const panelRef = useRef<HTMLElement>(null);
   const shouldReduceMotion = useReducedMotion();
   const { scrollYProgress } = useScroll({
@@ -21,7 +20,7 @@ export function MissionChapter({ chapter, index, onOpenConcept }: MissionChapter
   const dimOpacity = useTransform(scrollYProgress, [0, 0.48, 0.52, 1], [0.34, 0, 0, 0.34]);
 
   return (
-    <article ref={panelRef} className="mission-panel">
+    <article ref={panelRef} id={`mission-${chapter.id}`} className="mission-panel">
       <img
         className="mission-media"
         src={visual?.heroImage}
@@ -38,15 +37,13 @@ export function MissionChapter({ chapter, index, onOpenConcept }: MissionChapter
         <h2>{chapter.title}</h2>
         <p>{chapter.summary}</p>
         <div className="mission-actions">
-          {leadConcept && (
-            <button type="button" className="sx-button primary" onClick={() => onOpenConcept(leadConcept)}>
-              <span>{visual?.cta ?? 'Explorar'}</span>
-              <ArrowUpRight aria-hidden="true" />
-            </button>
-          )}
-          <a className="sx-button" href="#gallery">
+          <button type="button" className="sx-button primary" onClick={() => onExploreChapter(chapter.id)}>
+            <span>{visual?.cta ?? 'Explorar'}</span>
+            <ArrowUpRight aria-hidden="true" />
+          </button>
+          <button type="button" className="sx-button" onClick={() => onExploreChapter(chapter.id)}>
             <span>Ver conceptos</span>
-          </a>
+          </button>
         </div>
       </div>
     </article>
