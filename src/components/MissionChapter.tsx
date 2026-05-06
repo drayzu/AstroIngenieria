@@ -15,8 +15,8 @@ export function MissionChapter({ chapter, index, onOpenConcept }: MissionChapter
   return (
     <motion.article
       className="mission-panel"
-      initial={{ opacity: 0, y: 44 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={{ y: 36 }}
+      whileInView={{ y: 0 }}
       viewport={{ once: true, amount: 0.28 }}
       transition={{ duration: 0.65, ease: 'easeOut' }}
     >
