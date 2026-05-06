@@ -163,6 +163,19 @@ h3,
     linear-gradient(180deg, rgba(0, 0, 0, 0.16), transparent 42%, rgba(0, 0, 0, 0.1));
 }
 
+.mission-focus-dim {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: rgba(0, 0, 0, 0.34);
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+.mission-scrim {
+  z-index: -1;
+}
+
 .sx-hero-copy,
 .mission-copy {
   width: min(720px, 100%);
@@ -990,6 +1003,11 @@ h3,
   .mission-copy h2,
   .sx-section-head h2 {
     font-size: clamp(2.2rem, 12vw, 4.2rem);
+  }
+
+  .mission-copy h2 {
+    font-size: clamp(1.75rem, 8vw, 2.8rem);
+    overflow-wrap: break-word;
   }
 
   .sx-actions,
