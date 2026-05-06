@@ -10,7 +10,8 @@
     "build": "tsc && vite build && node scripts/createSpaFallback.mjs",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "generate:habitats": "node scripts/generateHabitatConceptImages.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
