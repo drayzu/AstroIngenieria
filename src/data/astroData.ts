@@ -2,6 +2,7 @@ import type {
   AstroChapter,
   AstroConcept,
   AstroScale,
+  ChapterVisual,
   Plausibility,
   SourceRef,
   VisualHotspot,
@@ -63,6 +64,84 @@ const sources = {
 } satisfies Record<string, SourceRef>;
 
 const assetBase = import.meta.env.BASE_URL;
+
+export const chapterVisuals = {
+  intro: {
+    heroImage: `${assetBase}illustrations/ai/intro.webp`,
+    missionLabel: 'Mission 00 / Astroengineering',
+    cta: 'Iniciar recorrido',
+    visualFocus: 'Infraestructura orbital en construcción como símbolo de ingeniería a escala civilizatoria.',
+    aiPrompt:
+      'Realistic cinematic aerospace image of orbital construction yard and rotating habitat above Earth at sunrise, dark SpaceX-inspired unbranded style, no text, no logos.',
+  },
+  habitats: {
+    heroImage: `${assetBase}illustrations/ai/habitats.webp`,
+    missionLabel: 'Mission 01 / Space Habitats',
+    cta: 'Explorar hábitats',
+    visualFocus: 'Hábitats rotatorios, ensamblaje orbital, ventanas, radiadores y escala humana frente a mundos artificiales.',
+    aiPrompt:
+      'Photorealistic massive O’Neill cylinder and Stanford torus under construction in low orbit, realistic aerospace lighting, dark unbranded premium style.',
+  },
+  infrastructure: {
+    heroImage: `${assetBase}illustrations/ai/infrastructure.webp`,
+    missionLabel: 'Mission 02 / Space Infrastructure',
+    cta: 'Ver infraestructura',
+    visualFocus: 'Puertos, depósitos, astilleros, carga orbital y logística espacial como red industrial.',
+    aiPrompt:
+      'Photorealistic orbital shipyard and logistics hub over Earth with fuel depots, docking ports, cargo tugs and tether elements, dark cinematic aerospace style.',
+  },
+  energy: {
+    heroImage: `${assetBase}illustrations/ai/energy.webp`,
+    missionLabel: 'Mission 03 / Stellar Energy',
+    cta: 'Capturar energía',
+    visualFocus: 'Enjambres Dyson, colectores solares, radiadores y transmisión energética a escala estelar.',
+    aiPrompt:
+      'Photorealistic Dyson swarm around a star, realistic solar collectors, radiators and relay satellites, high contrast dark scientific aerospace look.',
+  },
+  propulsion: {
+    heroImage: `${assetBase}illustrations/ai/propulsion.webp`,
+    missionLabel: 'Mission 04 / Advanced Propulsion',
+    cta: 'Ver propulsión',
+    visualFocus: 'Naves de espacio profundo, radiadores, plasma y sistemas de propulsión de frontera.',
+    aiPrompt:
+      'Photorealistic deep-space vehicle near Earth with nuclear electric propulsion, radiators, plasma exhaust and laser sail test craft, dark unbranded style.',
+  },
+  planetary: {
+    heroImage: `${assetBase}illustrations/ai/planetary.webp`,
+    missionLabel: 'Mission 05 / Planetary Engineering',
+    cta: 'Modificar mundos',
+    visualFocus: 'Marte, domos, procesadores atmosféricos, espejos orbitales y habitabilidad parcial.',
+    aiPrompt:
+      'Photorealistic Mars terraforming research outpost at dawn with domed habitats, atmospheric processors, orbital mirrors and rover tracks.',
+  },
+  stellar: {
+    heroImage: `${assetBase}illustrations/ai/stellar.webp`,
+    missionLabel: 'Mission 06 / Stellar Engineering',
+    cta: 'Mover estrellas',
+    visualFocus: 'Espejos estelares, plataformas colosales, plasma, star lifting y energía extrema.',
+    aiPrompt:
+      'Photorealistic colossal stellar engineering platform near a star with Shkadov mirror segment, plasma collectors and radiators, dark cinematic style.',
+  },
+  civilizations: {
+    heroImage: `${assetBase}illustrations/ai/civilizations.webp`,
+    missionLabel: 'Mission 07 / Cosmic Civilizations',
+    cta: 'Detectar señales',
+    visualFocus: 'Tecnofirmas, SETI, estructuras galácticas sutiles y la pregunta del silencio cósmico.',
+    aiPrompt:
+      'Realistic astrophotography scene with subtle artificial galactic infrastructure, infrared megastructure glows and deep-space antenna foreground.',
+  },
+  complements: {
+    heroImage: `${assetBase}illustrations/ai/complements.webp`,
+    missionLabel: 'Mission 08 / Supporting Systems',
+    cta: 'Ampliar estudio',
+    visualFocus: 'Astrobiología, exoplanetas, observatorios, laboratorios y cultura espacial como soporte del atlas.',
+    aiPrompt:
+      'Photorealistic lunar or asteroid research base, observatory and astrobiology lab with exoplanet data surfaces, dark premium aerospace style.',
+  },
+} satisfies Record<string, ChapterVisual>;
+
+export const getChapterVisual = (chapterId: string): ChapterVisual =>
+  chapterVisuals[chapterId as keyof typeof chapterVisuals] ?? chapterVisuals.intro;
 
 const concept = (
   chapterId: string,
@@ -2261,6 +2340,10 @@ export const chapters: AstroChapter[] = [
     },
   },
 ];
+
+chapters.forEach((chapter) => {
+  chapter.visual = getChapterVisual(chapter.id);
+});
 
 export const allConcepts = chapters.flatMap((chapter) => chapter.concepts);
 

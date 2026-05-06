@@ -91,6 +91,14 @@ export interface AstroSection {
   body: string;
 }
 
+export interface ChapterVisual {
+  heroImage: string;
+  aiPrompt: string;
+  missionLabel: string;
+  cta: string;
+  visualFocus: string;
+}
+
 export interface AstroChapter {
   id: string;
   number: string;
@@ -103,4 +111,5 @@ export interface AstroChapter {
   concepts: AstroConcept[];
   sources: SourceRef[];
   visualization: VisualizationSpec;
+  visual?: ChapterVisual;
 }

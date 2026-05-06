@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
-import { ArrowUpRight, BookOpen, Filter, GitBranch, Search } from 'lucide-react';
+import { ArrowUpRight, Filter, GitBranch, Search } from 'lucide-react';
 import { allConcepts, chapters, plausibilityLabels, scaleLabels } from './data/astroData';
-import { ChapterFeature } from './components/ChapterFeature';
+import { CinematicGallery } from './components/CinematicGallery';
 import { ComparisonMatrix } from './components/ComparisonMatrix';
-import { ConceptGallery } from './components/ConceptGallery';
-import { ConceptModal } from './components/ConceptModal';
-import { MinimalHero } from './components/MinimalHero';
+import { DarkConceptModal } from './components/DarkConceptModal';
+import { MissionChapter } from './components/MissionChapter';
 import { SourceList } from './components/SourceList';
+import { SpacexHero } from './components/SpacexHero';
 import type { AstroConcept, AstroScale, Plausibility } from './types';
 
 type FilterValue<T extends string> = 'all' | T;
@@ -34,11 +34,6 @@ function App() {
     const cleanQuery = normalize(query.trim());
 
     return allConcepts.filter((concept) => {
-      const matchesChapter =
-        activeChapterId === 'all' || concept.chapterId === activeChapterId;
-      const matchesScale = activeScale === 'all' || concept.scale === activeScale;
-      const matchesPlausibility =
-        activePlausibility === 'all' || concept.plausibility === activePlausibility;
       const searchable = normalize(
         [
           concept.title,
@@ -50,10 +45,11 @@ function App() {
           concept.visualNotes,
         ].join(' '),
       );
+
       return (
-        matchesChapter &&
-        matchesScale &&
-        matchesPlausibility &&
+        (activeChapterId === 'all' || concept.chapterId === activeChapterId) &&
+        (activeScale === 'all' || concept.scale === activeScale) &&
+        (activePlausibility === 'all' || concept.plausibility === activePlausibility) &&
         (cleanQuery.length === 0 || searchable.includes(cleanQuery))
       );
     });
@@ -85,17 +81,16 @@ function App() {
   };
 
   return (
-    <div className="site-shell">
-      <header className="topbar" aria-label="Navegación principal">
-        <a className="brand-mark" href="#inicio" aria-label="Volver al inicio">
-          <span />
-          Astroingeniería
+    <div className="sx-shell">
+      <header className="sx-topbar" aria-label="Navegación principal">
+        <a className="sx-brand" href="#top" aria-label="Volver al inicio">
+          ASTROINGENIERÍA
         </a>
-        <nav className="topbar-links" aria-label="Secciones principales">
-          <a href="#capitulos">Capítulos</a>
-          <a href="#galeria">Galería</a>
-          <a href="#comparador">Comparador</a>
-          <a href="#fuentes">Fuentes</a>
+        <nav className="sx-nav" aria-label="Secciones principales">
+          <a href="#missions">Misiones</a>
+          <a href="#gallery">Conceptos</a>
+          <a href="#compare">Comparador</a>
+          <a href="#sources">Fuentes</a>
           <a
             href="https://github.com/drayo00/AstroIngenieria"
             target="_blank"
@@ -107,45 +102,49 @@ function App() {
         </nav>
       </header>
 
-      <main id="inicio">
-        <MinimalHero concept={allConcepts.find((concept) => concept.id === 'oneill-cylinder') ?? allConcepts[0]} />
+      <main id="top">
+        <SpacexHero chapter={chapters[0]} conceptCount={allConcepts.length} />
 
-        <section id="capitulos" className="chapter-band" aria-labelledby="capitulos-title">
-          <div className="section-heading">
-            <span className="overline">Recorrido</span>
-            <h2 id="capitulos-title">Capítulos como salas de museo</h2>
-            <p>
-              Cada sala empieza con una imagen grande, conceptos clave y una lectura visual
-              pausada. El atlas conserva el contenido completo, pero reduce ruido visual.
-            </p>
+        <section id="missions" className="sx-section mission-section" aria-labelledby="missions-title">
+          <div className="sx-section-head">
+            <span className="sx-kicker">Flight plan</span>
+            <h2 id="missions-title">Ocho misiones para entender la astroingeniería</h2>
           </div>
-          <div className="chapter-stack">
-            {chapters.map((chapter) => (
-              <ChapterFeature
-                chapter={chapter}
+          <div className="mission-stack">
+            {chapters.map((chapter, index) => (
+              <MissionChapter
                 key={chapter.id}
+                chapter={chapter}
+                index={index}
                 onOpenConcept={setSelectedConcept}
               />
             ))}
           </div>
         </section>
 
-        <section id="atlas" className="filters-band" aria-labelledby="filtros-title">
-          <div className="section-heading">
-            <span className="overline">Búsqueda</span>
-            <h2 id="filtros-title">Filtrar sin romper la contemplación</h2>
+        <section id="gallery" className="sx-section gallery-section" aria-labelledby="gallery-title">
+          <div className="sx-section-head split">
+            <div>
+              <span className="sx-kicker">Payload</span>
+              <h2 id="gallery-title">Conceptos del atlas</h2>
+            </div>
+            <p>
+              {filteredConcepts.length} de {allConcepts.length} conceptos visibles. Cada ficha usa
+              la imagen IA de su misión y conserva sus hotspots técnicos.
+            </p>
           </div>
-          <div className="filter-toolbar">
-            <label className="search-box">
+
+          <div className="sx-filters">
+            <label className="sx-search">
               <Search aria-hidden="true" />
               <span className="sr-only">Buscar conceptos</span>
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Buscar Dyson, terraformación, Fermi, hábitat..."
+                placeholder="Buscar Dyson, Marte, Fermi, hábitat..."
               />
             </label>
-            <div className="filter-group" aria-label="Filtro de capítulo">
+            <div className="sx-filter-row" aria-label="Filtro de capítulo">
               <Filter aria-hidden="true" />
               <button
                 type="button"
@@ -161,17 +160,17 @@ function App() {
                   className={activeChapterId === chapter.id ? 'is-active' : ''}
                   onClick={() => setActiveChapterId(chapter.id)}
                 >
-                  {chapter.number}. {chapter.title}
+                  {chapter.title}
                 </button>
               ))}
             </div>
-            <div className="filter-group" aria-label="Filtro de escala">
+            <div className="sx-filter-row" aria-label="Filtro de escala">
               <button
                 type="button"
                 className={activeScale === 'all' ? 'is-active' : ''}
                 onClick={() => setActiveScale('all')}
               >
-                Todas las escalas
+                Escalas
               </button>
               {scaleOptions.map((scale) => (
                 <button
@@ -184,13 +183,13 @@ function App() {
                 </button>
               ))}
             </div>
-            <div className="filter-group" aria-label="Filtro de plausibilidad">
+            <div className="sx-filter-row" aria-label="Filtro de plausibilidad">
               <button
                 type="button"
                 className={activePlausibility === 'all' ? 'is-active' : ''}
                 onClick={() => setActivePlausibility('all')}
               >
-                Toda madurez
+                Madurez
               </button>
               {plausibilityOptions.map((plausibility) => (
                 <button
@@ -204,30 +203,15 @@ function App() {
               ))}
             </div>
           </div>
+
+          <CinematicGallery concepts={filteredConcepts} onOpenConcept={setSelectedConcept} />
         </section>
 
-        <section id="galeria" className="gallery-band" aria-labelledby="galeria-title">
-          <div className="section-heading split-heading">
-            <div>
-              <span className="overline">Galería interactiva</span>
-              <h2 id="galeria-title">106 ilustraciones, una por concepto</h2>
-            </div>
-            <p>
-              {filteredConcepts.length} conceptos visibles. Abre cualquier imagen para activar
-              hotspots, capas, zoom y lectura detallada.
-            </p>
-          </div>
-          <ConceptGallery concepts={filteredConcepts} onOpenConcept={setSelectedConcept} />
-        </section>
-
-        <section id="comparador" className="comparison-band" aria-labelledby="comparador-title">
-          <div className="section-heading">
-            <span className="overline">Comparador</span>
-            <h2 id="comparador-title">Contrastar escalas, materiales y madurez</h2>
-            <p>
-              Marca conceptos desde el visor para compararlos. El estado de comparación también se
-              refleja visualmente en las imágenes.
-            </p>
+        <section id="compare" className="sx-section compare-section" aria-labelledby="compare-title">
+          <div className="sx-section-head">
+            <span className="sx-kicker">Telemetry</span>
+            <h2 id="compare-title">Comparar arquitectura, energía y madurez</h2>
+            <p>Un resumen técnico para contrastar ideas sin perder el contexto visual.</p>
           </div>
           <ComparisonMatrix
             concepts={allConcepts}
@@ -237,30 +221,27 @@ function App() {
           />
         </section>
 
-        <section id="fuentes" className="sources-band" aria-labelledby="fuentes-title">
-          <div className="section-heading">
-            <span className="overline">Fuentes</span>
-            <h2 id="fuentes-title">Base documental y referencias</h2>
+        <section id="sources" className="sx-section sources-section" aria-labelledby="sources-title">
+          <div className="sx-section-head split">
+            <div>
+              <span className="sx-kicker">References</span>
+              <h2 id="sources-title">Fuentes y documentación</h2>
+            </div>
             <p>
-              El contenido parte de <strong>AstroIngenieria.txt</strong>. La capa visual agrega
-              assets generativos WebP y prompts listos para reemplazo por IA curada.
+              El contenido parte del TXT original y se apoya en referencias técnicas para mantener
+              el atlas visual conectado con fuentes reales.
             </p>
           </div>
           <SourceList sources={sourceRefs} />
-          <a className="repo-link" href="https://github.com/drayo00/AstroIngenieria" target="_blank" rel="noreferrer">
-            Ver repositorio
+          <a className="sx-button source-link" href="https://github.com/drayo00/AstroIngenieria" target="_blank" rel="noreferrer">
+            <span>Ver repositorio</span>
             <ArrowUpRight aria-hidden="true" />
           </a>
         </section>
       </main>
 
-      <footer className="site-footer">
-        <BookOpen aria-hidden="true" />
-        <span>Atlas visual minimalista de astroingeniería.</span>
-      </footer>
-
       {selectedConcept && (
-        <ConceptModal
+        <DarkConceptModal
           concept={selectedConcept}
           allConcepts={allConcepts}
           isCompared={comparisonIds.includes(selectedConcept.id)}

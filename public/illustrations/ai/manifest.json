@@ -1,0 +1,50 @@
+{
+  "generatedAt": "2026-05-06T02:04:32.183Z",
+  "files": [
+    {
+      "id": "intro",
+      "source": "C:\\Users\\diego\\.codex\\generated_images\\019df6a4-2b18-7810-bc77-079fd7af21ae\\ig_0440721b291743690169fa9d6a421c8196a7613a523c0328b0.png",
+      "output": "public/illustrations/ai/intro.webp"
+    },
+    {
+      "id": "habitats",
+      "source": "C:\\Users\\diego\\.codex\\generated_images\\019df6a4-2b18-7810-bc77-079fd7af21ae\\ig_0440721b291743690169fa9da7a2d88196a1105ebd31d81cb7.png",
+      "output": "public/illustrations/ai/habitats.webp"
+    },
+    {
+      "id": "infrastructure",
+      "source": "C:\\Users\\diego\\.codex\\generated_images\\019df6a4-2b18-7810-bc77-079fd7af21ae\\ig_0440721b291743690169fa9df013fc8196a0f34841ce8499c5.png",
+      "output": "public/illustrations/ai/infrastructure.webp"
+    },
+    {
+      "id": "energy",
+      "source": "C:\\Users\\diego\\.codex\\generated_images\\019df6a4-2b18-7810-bc77-079fd7af21ae\\ig_0440721b291743690169fa9e778c708196b000ce2f5ad05f5f.png",
+      "output": "public/illustrations/ai/energy.webp"
+    },
+    {
+      "id": "propulsion",
+      "source": "C:\\Users\\diego\\.codex\\generated_images\\019df6a4-2b18-7810-bc77-079fd7af21ae\\ig_0440721b291743690169fa9eb615d881968a25551bde01e909.png",
+      "output": "public/illustrations/ai/propulsion.webp"
+    },
+    {
+      "id": "planetary",
+      "source": "C:\\Users\\diego\\.codex\\generated_images\\019df6a4-2b18-7810-bc77-079fd7af21ae\\ig_0440721b291743690169fa9f3fc88c8196b7841e87b26456c0.png",
+      "output": "public/illustrations/ai/planetary.webp"
+    },
+    {
+      "id": "stellar",
+      "source": "C:\\Users\\diego\\.codex\\generated_images\\019df6a4-2b18-7810-bc77-079fd7af21ae\\ig_0440721b291743690169fa9f917c0c8196a0ca0991666ed30b.png",
+      "output": "public/illustrations/ai/stellar.webp"
+    },
+    {
+      "id": "civilizations",
+      "source": "C:\\Users\\diego\\.codex\\generated_images\\019df6a4-2b18-7810-bc77-079fd7af21ae\\ig_0440721b291743690169fa9fd46fa081968e42f6e5c3155cf2.png",
+      "output": "public/illustrations/ai/civilizations.webp"
+    },
+    {
+      "id": "complements",
+      "source": "C:\\Users\\diego\\.codex\\generated_images\\019df6a4-2b18-7810-bc77-079fd7af21ae\\ig_0440721b291743690169faa02861d08196bcbd96004b95f86f.png",
+      "output": "public/illustrations/ai/complements.webp"
+    }
+  ]
+}

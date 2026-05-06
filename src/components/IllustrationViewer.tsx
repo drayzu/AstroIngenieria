@@ -6,9 +6,15 @@ interface IllustrationViewerProps {
   concept: AstroConcept;
   compared?: boolean;
   compact?: boolean;
+  imageOverride?: string;
 }
 
-export function IllustrationViewer({ concept, compared = false, compact = false }: IllustrationViewerProps) {
+export function IllustrationViewer({
+  concept,
+  compared = false,
+  compact = false,
+  imageOverride,
+}: IllustrationViewerProps) {
   const [activeLayer, setActiveLayer] = useState<VisualLayerId | 'all'>('all');
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -33,7 +39,7 @@ export function IllustrationViewer({ concept, compared = false, compact = false 
     <div className={compact ? 'illustration-viewer compact' : 'illustration-viewer'}>
       <div className="illustration-frame">
         <img
-          src={concept.illustration.src}
+          src={imageOverride ?? concept.illustration.src}
           alt={concept.illustration.alt}
           loading="lazy"
           style={{
