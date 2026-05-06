@@ -221,6 +221,67 @@ const pickLayers = (scale: AstroScale, plausibility: Plausibility): VisualLayerI
   return [...new Set(base)];
 };
 
+const habitatConceptVisualPrompts: Record<string, string> = {
+  iss:
+    'Cinematic realistic orbital station study plate, modular pressurized modules, long solar arrays, docking ports and radiators over Earth, SpaceX-inspired dark aerospace lighting, no text, no logos.',
+  'bernal-sphere':
+    'Cinematic realistic Bernal sphere habitat study plate, polished metallic sphere with equatorial habitat band, mirror petals and service trusses in orbit, dark premium aerospace style, no text, no logos.',
+  'stanford-torus':
+    'Cinematic realistic Stanford torus study plate, rotating ring habitat with illuminated inner rim, hub, spokes and construction cranes over Earth, dark SpaceX-inspired aerospace style, no text, no logos.',
+  'oneill-cylinder':
+    'Cinematic realistic O’Neill cylinder study plate, colossal rotating cylinder with open rim, exterior panels, radiators and inspection spacecraft, dark premium aerospace lighting, no text, no logos.',
+  'bishop-ring':
+    'Cinematic realistic Bishop ring study plate, immense open ring habitat with thin atmosphere, rim lights, tension structure and construction tugs, dark scientific aerospace style, no text, no logos.',
+  'mckendree-cylinder':
+    'Cinematic realistic McKendree cylinder study plate, ultra-large carbon-composite rotating habitat cylinder with layered structure, docking towers and scale spacecraft, dark aerospace style, no text, no logos.',
+  'asteroid-habitat':
+    'Cinematic realistic asteroid habitat study plate, dark rocky asteroid with engineered lit cavity, docking tunnels, radiators and small construction vehicles, premium aerospace realism, no text, no logos.',
+  worldship:
+    'Cinematic realistic generation ship study plate, long interstellar worldship with rotating habitat sections, radiators, propulsion spine and tiny escort craft, dark aerospace style, no text, no logos.',
+  'life-support':
+    'Cinematic realistic closed ecosystem habitat study plate, greenhouse bioregenerative life support modules inside orbital structure, water loops, radiators and soft interior glow, dark aerospace style, no text, no logos.',
+};
+
+const getConceptIllustration = (
+  id: string,
+  title: string,
+  category: string,
+  scale: AstroScale,
+  plausibility: Plausibility,
+  mentalImage: string,
+  mechanism: string,
+): AstroConcept['illustration'] => {
+  const habitatPrompt = habitatConceptVisualPrompts[id];
+
+  if (habitatPrompt) {
+    return {
+      src: `${assetBase}illustrations/ai/concepts/habitats/${id}.svg`,
+      alt: `Imagen cinematográfica del concepto ${title} dentro de la misión Hábitats espaciales`,
+      prompt: habitatPrompt,
+      style:
+        'Realismo científico cinematográfico, negro dominante, iluminación aeroespacial sobria, continuidad visual con las imágenes IA de la portada.',
+      credit:
+        'Placa SVG generada para el atlas con composición cinematográfica y siluetas técnicas específicas del concepto.',
+    };
+  }
+
+  return {
+    src: `${assetBase}illustrations/${id}.webp`,
+    alt: `Ilustración realista y minimalista de ${title}`,
+    prompt: [
+      'Scientific educational realistic concept illustration.',
+      `Subject: ${title}.`,
+      `Category: ${category}; scale: ${scale}; plausibility: ${plausibility}.`,
+      `Mental image: ${mentalImage}.`,
+      `Mechanism: ${mechanism}.`,
+      'Editorial black and white museum style, natural cinematic light, no poster look, no neon excess, no text in image.',
+    ].join(' '),
+    style:
+      'Realismo científico sobrio, museo blanco/negro, iluminación natural, composición con mucho aire, sin texto incrustado.',
+    credit: 'Asset generativo local WebP, preparado para reemplazo por IA curada.',
+  };
+};
+
 const createVisualProfile = ({
   id,
   title,
@@ -295,21 +356,7 @@ const createVisualProfile = ({
   ].filter((hotspot) => layers.some((layer) => layer.id === hotspot.layer));
 
   return {
-    illustration: {
-      src: `${assetBase}illustrations/${id}.webp`,
-      alt: `Ilustración realista y minimalista de ${title}`,
-      prompt: [
-        'Scientific educational realistic concept illustration.',
-        `Subject: ${title}.`,
-        `Category: ${category}; scale: ${scale}; plausibility: ${plausibility}.`,
-        `Mental image: ${mentalImage}.`,
-        `Mechanism: ${mechanism}.`,
-        'Editorial black and white museum style, natural cinematic light, no poster look, no neon excess, no text in image.',
-      ].join(' '),
-      style:
-        'Realismo científico sobrio, museo blanco/negro, iluminación natural, composición con mucho aire, sin texto incrustado.',
-      credit: 'Asset generativo local WebP, preparado para reemplazo por IA curada.',
-    },
+    illustration: getConceptIllustration(id, title, category, scale, plausibility, mentalImage, mechanism),
     hotspots,
     layers,
     visualNotes: `Observa ${title} como ${category.toLocaleLowerCase('es')}: ${keyIdea}`,

@@ -33,6 +33,8 @@ export function ConceptStudyPage({
   onToggleCompare,
 }: ConceptStudyPageProps) {
   const visual = getChapterVisual(concept.chapterId);
+  const studyImage = concept.chapterId === 'habitats' ? concept.illustration.src : visual.heroImage;
+  const studyImageAlt = concept.chapterId === 'habitats' ? concept.illustration.alt : visual.visualFocus;
   const conceptIndex = Math.max(0, chapterConcepts.findIndex((item) => item.id === concept.id));
   const previousConcept = chapterConcepts[(conceptIndex - 1 + chapterConcepts.length) % chapterConcepts.length];
   const nextConcept = chapterConcepts[(conceptIndex + 1) % chapterConcepts.length];
@@ -43,7 +45,7 @@ export function ConceptStudyPage({
   return (
     <>
       <section className="concept-study-hero" aria-labelledby="concept-study-title">
-        <img className="concept-study-media" src={visual.heroImage} alt={visual.visualFocus} />
+        <img className="concept-study-media" src={studyImage} alt={studyImageAlt} />
         <div className="concept-study-scrim" />
         <div className="concept-study-copy">
           <span className="sx-kicker">{visual.missionLabel}</span>
@@ -80,7 +82,11 @@ export function ConceptStudyPage({
 
         <div className="concept-study-layout">
           <div className="concept-study-visual">
-            <IllustrationViewer concept={concept} compared={isCompared} imageOverride={visual.heroImage} />
+            <IllustrationViewer
+              concept={concept}
+              compared={isCompared}
+              imageOverride={concept.chapterId === 'habitats' ? undefined : visual.heroImage}
+            />
           </div>
 
           <div className="concept-study-grid">

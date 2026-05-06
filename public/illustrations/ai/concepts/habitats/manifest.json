@@ -1,0 +1,61 @@
+{
+  "generatedAt": "2026-05-06",
+  "source": "procedural SVG concept plates",
+  "note": "Text-based cinematic concept plates for Space Habitats. SVG is used so pull requests remain reviewable in environments that reject binary image diffs.",
+  "concepts": [
+    {
+      "id": "iss",
+      "title": "Estaciones espaciales actuales",
+      "output": "public/illustrations/ai/concepts/habitats/iss.svg",
+      "prompt": "Cinematic realistic orbital station study plate, modular pressurized modules, long solar arrays, docking ports and radiators over Earth, SpaceX-inspired dark aerospace lighting, no text, no logos."
+    },
+    {
+      "id": "bernal-sphere",
+      "title": "Bernal Sphere",
+      "output": "public/illustrations/ai/concepts/habitats/bernal-sphere.svg",
+      "prompt": "Cinematic realistic Bernal sphere habitat study plate, polished metallic sphere with equatorial habitat band, mirror petals and service trusses in orbit, dark premium aerospace style, no text, no logos."
+    },
+    {
+      "id": "stanford-torus",
+      "title": "Stanford Torus",
+      "output": "public/illustrations/ai/concepts/habitats/stanford-torus.svg",
+      "prompt": "Cinematic realistic Stanford torus study plate, rotating ring habitat with illuminated inner rim, hub, spokes and construction cranes over Earth, dark SpaceX-inspired aerospace style, no text, no logos."
+    },
+    {
+      "id": "oneill-cylinder",
+      "title": "Cilindro de O’Neill",
+      "output": "public/illustrations/ai/concepts/habitats/oneill-cylinder.svg",
+      "prompt": "Cinematic realistic O’Neill cylinder study plate, colossal rotating cylinder with open rim, exterior panels, radiators and inspection spacecraft, dark premium aerospace lighting, no text, no logos."
+    },
+    {
+      "id": "bishop-ring",
+      "title": "Bishop Ring",
+      "output": "public/illustrations/ai/concepts/habitats/bishop-ring.svg",
+      "prompt": "Cinematic realistic Bishop ring study plate, immense open ring habitat with thin atmosphere, rim lights, tension structure and construction tugs, dark scientific aerospace style, no text, no logos."
+    },
+    {
+      "id": "mckendree-cylinder",
+      "title": "McKendree Cylinder",
+      "output": "public/illustrations/ai/concepts/habitats/mckendree-cylinder.svg",
+      "prompt": "Cinematic realistic McKendree cylinder study plate, ultra-large carbon-composite rotating habitat cylinder with layered structure, docking towers and scale spacecraft, dark aerospace style, no text, no logos."
+    },
+    {
+      "id": "asteroid-habitat",
+      "title": "Hábitats dentro de asteroides",
+      "output": "public/illustrations/ai/concepts/habitats/asteroid-habitat.svg",
+      "prompt": "Cinematic realistic asteroid habitat study plate, dark rocky asteroid with engineered lit cavity, docking tunnels, radiators and small construction vehicles, premium aerospace realism, no text, no logos."
+    },
+    {
+      "id": "worldship",
+      "title": "Naves generacionales y worldships",
+      "output": "public/illustrations/ai/concepts/habitats/worldship.svg",
+      "prompt": "Cinematic realistic generation ship study plate, long interstellar worldship with rotating habitat sections, radiators, propulsion spine and tiny escort craft, dark aerospace style, no text, no logos."
+    },
+    {
+      "id": "life-support",
+      "title": "Ecosistemas cerrados y soporte vital",
+      "output": "public/illustrations/ai/concepts/habitats/life-support.svg",
+      "prompt": "Cinematic realistic closed ecosystem habitat study plate, greenhouse bioregenerative life support modules inside orbital structure, water loops, radiators and soft interior glow, dark aerospace style, no text, no logos."
+    }
+  ]
+}
