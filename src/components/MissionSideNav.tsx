@@ -9,7 +9,7 @@ interface MissionSideNavProps {
   onClose: () => void;
   onGoHome: () => void;
   onGoGallery: () => void;
-  onGoMission: (chapterId: string) => void;
+  onGoMission: (chapter: AstroChapter) => void;
 }
 
 export function MissionSideNav({
@@ -56,7 +56,7 @@ export function MissionSideNav({
               key={chapter.id}
               onClick={(event) => {
                 releasePointerFocus(event);
-                onGoMission(chapter.id);
+                onGoMission(chapter);
                 onClose();
               }}
             >

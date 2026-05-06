@@ -7,7 +7,7 @@
     "dev": "vite",
     "generate:illustrations": "node scripts/generateIllustrations.mjs",
     "lint": "eslint .",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && node scripts/createSpaFallback.mjs",
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"

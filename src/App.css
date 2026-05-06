@@ -97,10 +97,13 @@ h3,
 }
 
 .sx-brand {
+  border: 0;
   color: #fff;
+  background: transparent;
   text-decoration: none;
   font-size: 1.05rem;
   font-weight: 900;
+  cursor: pointer;
 }
 
 .sx-nav {
@@ -109,18 +112,24 @@ h3,
   gap: clamp(14px, 2.2vw, 32px);
 }
 
-.sx-nav a {
+.sx-nav a,
+.sx-nav button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 36px;
+  border: 0;
   color: #fff;
+  background: transparent;
   text-decoration: none;
   font-size: 0.78rem;
   font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
 }
 
-.sx-nav a:hover {
+.sx-nav a:hover,
+.sx-nav button:hover {
   color: var(--muted);
 }
 
@@ -135,7 +144,7 @@ h3,
   top: 50%;
   left: 0;
   width: 270px;
-  transform: translate(-224px, -50%);
+  transform: translate(-100%, -50%);
   transition: transform 180ms ease;
 }
 
@@ -414,6 +423,73 @@ h3,
 
 .gallery-section {
   background: #050505;
+}
+
+.mission-study-hero {
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+  display: grid;
+  align-items: end;
+  padding: 120px clamp(20px, 4vw, 72px) 92px;
+  isolation: isolate;
+}
+
+.mission-study-media {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(1.12) contrast(1.06) saturate(1.02);
+  transform: scale(1.02);
+}
+
+.mission-study-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(ellipse at 24% 78%, rgba(0, 0, 0, 0.84), transparent 38%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.84), rgba(0, 0, 0, 0.38) 28%, rgba(0, 0, 0, 0.05) 54%, transparent 74%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.16), transparent 42%, rgba(0, 0, 0, 0.1));
+}
+
+.mission-study-copy {
+  width: min(780px, 100%);
+  text-shadow: 0 2px 22px rgba(0, 0, 0, 0.72);
+}
+
+.mission-study-copy h1 {
+  max-width: 980px;
+  font-size: clamp(3rem, 8vw, 7.4rem);
+  line-height: 0.9;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.mission-study-copy p {
+  max-width: 690px;
+  margin-top: 16px;
+  color: #e6e6e6;
+  line-height: 1.55;
+}
+
+.mission-study-section {
+  min-height: 100svh;
+}
+
+.mission-route-controls {
+  width: min(1180px, 100%);
+  margin: 0 auto 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.mission-study-sources {
+  background: #000;
 }
 
 .sx-filters {
@@ -1062,12 +1138,12 @@ h3,
     bottom: 18px;
     left: 0;
     width: min(310px, calc(100vw - 54px));
-    transform: translateX(calc(-100% + 10px));
+    transform: translateX(-100%);
   }
 
   .mission-side-nav:hover,
   .mission-side-nav:focus-within {
-    transform: translateX(calc(-100% + 10px));
+    transform: translateX(-100%);
   }
 
   .mission-side-nav.is-open {
@@ -1105,13 +1181,15 @@ h3,
   }
 
   .sx-hero,
-  .mission-panel {
+  .mission-panel,
+  .mission-study-hero {
     min-height: 86svh;
     padding: 96px 18px 58px;
   }
 
   .sx-scrim,
-  .mission-scrim {
+  .mission-scrim,
+  .mission-study-scrim {
     background:
       radial-gradient(ellipse at 50% 74%, rgba(0, 0, 0, 0.78), transparent 48%),
       linear-gradient(180deg, rgba(0, 0, 0, 0.08), transparent 34%, rgba(0, 0, 0, 0.68)),
@@ -1121,6 +1199,11 @@ h3,
   .sx-hero h1 {
     font-size: clamp(2.35rem, 12vw, 3.25rem);
     line-height: 0.9;
+  }
+
+  .mission-study-copy h1 {
+    font-size: clamp(2rem, 10vw, 3.4rem);
+    overflow-wrap: break-word;
   }
 
   .mission-copy h2,
@@ -1135,6 +1218,7 @@ h3,
 
   .sx-actions,
   .mission-actions,
+  .mission-route-controls,
   .sx-filter-row,
   .illustration-controls {
     flex-direction: column;

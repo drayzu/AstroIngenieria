@@ -6,7 +6,7 @@ import type { AstroChapter } from '../types';
 interface MissionChapterProps {
   chapter: AstroChapter;
   index: number;
-  onExploreChapter: (chapterId: string) => void;
+  onExploreChapter: (chapter: AstroChapter) => void;
 }
 
 export function MissionChapter({ chapter, index, onExploreChapter }: MissionChapterProps) {
@@ -37,11 +37,11 @@ export function MissionChapter({ chapter, index, onExploreChapter }: MissionChap
         <h2>{chapter.title}</h2>
         <p>{chapter.summary}</p>
         <div className="mission-actions">
-          <button type="button" className="sx-button primary" onClick={() => onExploreChapter(chapter.id)}>
+          <button type="button" className="sx-button primary" onClick={() => onExploreChapter(chapter)}>
             <span>{visual?.cta ?? 'Explorar'}</span>
             <ArrowUpRight aria-hidden="true" />
           </button>
-          <button type="button" className="sx-button" onClick={() => onExploreChapter(chapter.id)}>
+          <button type="button" className="sx-button" onClick={() => onExploreChapter(chapter)}>
             <span>Ver conceptos</span>
           </button>
         </div>
