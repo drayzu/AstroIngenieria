@@ -1,61 +1,73 @@
 {
   "generatedAt": "2026-05-06",
-  "source": "procedural SVG concept plates",
-  "note": "Text-based cinematic concept plates for Space Habitats. SVG is used so pull requests remain reviewable in environments that reject binary image diffs.",
+  "source": "OpenAI image generation via Codex built-in image_gen",
+  "format": "webp",
+  "size": "1920x1080",
+  "quality": 84,
+  "credit": "Imagen IA generada para AstroIngenieria; sin logos, texto incrustado ni marcas.",
   "concepts": [
     {
       "id": "iss",
       "title": "Estaciones espaciales actuales",
-      "output": "public/illustrations/ai/concepts/habitats/iss.svg",
-      "prompt": "Cinematic realistic orbital station study plate, modular pressurized modules, long solar arrays, docking ports and radiators over Earth, SpaceX-inspired dark aerospace lighting, no text, no logos."
+      "file": "iss.webp",
+      "prompt": "Photorealistic current-generation orbital station in low Earth orbit, modular pressurized modules, long solar arrays, radiators, docking ports and robotic arm, Earth limb behind, cinematic dark aerospace lighting, high contrast, no text, no logos, no watermark.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
     },
     {
       "id": "bernal-sphere",
       "title": "Bernal Sphere",
-      "output": "public/illustrations/ai/concepts/habitats/bernal-sphere.svg",
-      "prompt": "Cinematic realistic Bernal sphere habitat study plate, polished metallic sphere with equatorial habitat band, mirror petals and service trusses in orbit, dark premium aerospace style, no text, no logos."
+      "file": "bernal-sphere.webp",
+      "prompt": "Photorealistic Bernal sphere habitat in orbit above Earth, polished spherical pressure shell with equatorial habitat band, mirror petals, service trusses and tiny inspection craft, sober premium aerospace lighting, no text, no logos, no watermark.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
     },
     {
       "id": "stanford-torus",
       "title": "Stanford Torus",
-      "output": "public/illustrations/ai/concepts/habitats/stanford-torus.svg",
-      "prompt": "Cinematic realistic Stanford torus study plate, rotating ring habitat with illuminated inner rim, hub, spokes and construction cranes over Earth, dark SpaceX-inspired aerospace style, no text, no logos."
+      "file": "stanford-torus.webp",
+      "prompt": "Photorealistic Stanford torus rotating habitat over Earth, torus ring with central hub and spokes, illuminated inner rim, construction cranes, docking spacecraft, dark cinematic aerospace style, no text, no logos, no watermark.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
     },
     {
       "id": "oneill-cylinder",
-      "title": "Cilindro de O’Neill",
-      "output": "public/illustrations/ai/concepts/habitats/oneill-cylinder.svg",
-      "prompt": "Cinematic realistic O’Neill cylinder study plate, colossal rotating cylinder with open rim, exterior panels, radiators and inspection spacecraft, dark premium aerospace lighting, no text, no logos."
+      "title": "Cilindro de O'Neill",
+      "file": "oneill-cylinder.webp",
+      "prompt": "Photorealistic O Neill cylinder megastructure in orbit, colossal rotating habitat cylinder with open rim, mirror arrays, exterior panels, radiators and tiny inspection spacecraft for scale, dark premium aerospace lighting, no text, no logos, no watermark.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
     },
     {
       "id": "bishop-ring",
       "title": "Bishop Ring",
-      "output": "public/illustrations/ai/concepts/habitats/bishop-ring.svg",
-      "prompt": "Cinematic realistic Bishop ring study plate, immense open ring habitat with thin atmosphere, rim lights, tension structure and construction tugs, dark scientific aerospace style, no text, no logos."
+      "file": "bishop-ring.webp",
+      "prompt": "Photorealistic Bishop ring open habitat, immense ring arc in space with thin atmospheric glow along the inner rim, visible tension structure, rim lights and construction tugs, scientific dark aerospace realism, no text, no logos, no watermark.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
     },
     {
       "id": "mckendree-cylinder",
       "title": "McKendree Cylinder",
-      "output": "public/illustrations/ai/concepts/habitats/mckendree-cylinder.svg",
-      "prompt": "Cinematic realistic McKendree cylinder study plate, ultra-large carbon-composite rotating habitat cylinder with layered structure, docking towers and scale spacecraft, dark aerospace style, no text, no logos."
+      "file": "mckendree-cylinder.webp",
+      "prompt": "Photorealistic McKendree cylinder far-future habitat, ultra-large carbon-composite rotating cylinder with layered shell, docking towers, radiators and tiny spacecraft for scale, sober cinematic aerospace style, no text, no logos, no watermark.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
     },
     {
       "id": "asteroid-habitat",
-      "title": "Hábitats dentro de asteroides",
-      "output": "public/illustrations/ai/concepts/habitats/asteroid-habitat.svg",
-      "prompt": "Cinematic realistic asteroid habitat study plate, dark rocky asteroid with engineered lit cavity, docking tunnels, radiators and small construction vehicles, premium aerospace realism, no text, no logos."
+      "title": "Habitat en asteroide",
+      "file": "asteroid-habitat.webp",
+      "prompt": "Photorealistic asteroid habitat, dark rocky asteroid converted into a space settlement with engineered lit cavity, docking tunnels, radiators, small construction vehicles and mining infrastructure, premium aerospace realism, no text, no logos, no watermark.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
     },
     {
       "id": "worldship",
-      "title": "Naves generacionales y worldships",
-      "output": "public/illustrations/ai/concepts/habitats/worldship.svg",
-      "prompt": "Cinematic realistic generation ship study plate, long interstellar worldship with rotating habitat sections, radiators, propulsion spine and tiny escort craft, dark aerospace style, no text, no logos."
+      "title": "Worldship",
+      "file": "worldship.webp",
+      "prompt": "Photorealistic interstellar worldship in deep space, long generation ship with rotating habitat sections, radiator wings, propulsion spine, shielded bow and tiny escort craft, black cinematic aerospace style, no text, no logos, no watermark.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
     },
     {
       "id": "life-support",
-      "title": "Ecosistemas cerrados y soporte vital",
-      "output": "public/illustrations/ai/concepts/habitats/life-support.svg",
-      "prompt": "Cinematic realistic closed ecosystem habitat study plate, greenhouse bioregenerative life support modules inside orbital structure, water loops, radiators and soft interior glow, dark aerospace style, no text, no logos."
+      "title": "Soporte vital cerrado",
+      "file": "life-support.webp",
+      "prompt": "Photorealistic bioregenerative life support system inside an orbital habitat, greenhouse cylinders, water recycling loops, pipes, radiators, soft grow lights, sterile aerospace modules and black space beyond windows, no text, no logos, no watermark.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
     }
   ]
 }

@@ -223,23 +223,23 @@ const pickLayers = (scale: AstroScale, plausibility: Plausibility): VisualLayerI
 
 const habitatConceptVisualPrompts: Record<string, string> = {
   iss:
-    'Cinematic realistic orbital station study plate, modular pressurized modules, long solar arrays, docking ports and radiators over Earth, SpaceX-inspired dark aerospace lighting, no text, no logos.',
+    'Photorealistic current-generation orbital station in low Earth orbit, modular pressurized modules, long solar arrays, radiators, docking ports and robotic arm, Earth limb behind, cinematic dark aerospace lighting, high contrast, no text, no logos, no watermark.',
   'bernal-sphere':
-    'Cinematic realistic Bernal sphere habitat study plate, polished metallic sphere with equatorial habitat band, mirror petals and service trusses in orbit, dark premium aerospace style, no text, no logos.',
+    'Photorealistic Bernal sphere habitat in orbit above Earth, polished spherical pressure shell with equatorial habitat band, mirror petals, service trusses and tiny inspection craft, sober premium aerospace lighting, no text, no logos, no watermark.',
   'stanford-torus':
-    'Cinematic realistic Stanford torus study plate, rotating ring habitat with illuminated inner rim, hub, spokes and construction cranes over Earth, dark SpaceX-inspired aerospace style, no text, no logos.',
+    'Photorealistic Stanford torus rotating habitat over Earth, torus ring with central hub and spokes, illuminated inner rim, construction cranes, docking spacecraft, dark cinematic aerospace style, no text, no logos, no watermark.',
   'oneill-cylinder':
-    'Cinematic realistic O’Neill cylinder study plate, colossal rotating cylinder with open rim, exterior panels, radiators and inspection spacecraft, dark premium aerospace lighting, no text, no logos.',
+    'Photorealistic O Neill cylinder megastructure in orbit, colossal rotating habitat cylinder with open rim, mirror arrays, exterior panels, radiators and tiny inspection spacecraft for scale, dark premium aerospace lighting, no text, no logos, no watermark.',
   'bishop-ring':
-    'Cinematic realistic Bishop ring study plate, immense open ring habitat with thin atmosphere, rim lights, tension structure and construction tugs, dark scientific aerospace style, no text, no logos.',
+    'Photorealistic Bishop ring open habitat, immense ring arc in space with thin atmospheric glow along the inner rim, visible tension structure, rim lights and construction tugs, scientific dark aerospace realism, no text, no logos, no watermark.',
   'mckendree-cylinder':
-    'Cinematic realistic McKendree cylinder study plate, ultra-large carbon-composite rotating habitat cylinder with layered structure, docking towers and scale spacecraft, dark aerospace style, no text, no logos.',
+    'Photorealistic McKendree cylinder far-future habitat, ultra-large carbon-composite rotating cylinder with layered shell, docking towers, radiators and tiny spacecraft for scale, sober cinematic aerospace style, no text, no logos, no watermark.',
   'asteroid-habitat':
-    'Cinematic realistic asteroid habitat study plate, dark rocky asteroid with engineered lit cavity, docking tunnels, radiators and small construction vehicles, premium aerospace realism, no text, no logos.',
+    'Photorealistic asteroid habitat, dark rocky asteroid converted into a space settlement with engineered lit cavity, docking tunnels, radiators, small construction vehicles and mining infrastructure, premium aerospace realism, no text, no logos, no watermark.',
   worldship:
-    'Cinematic realistic generation ship study plate, long interstellar worldship with rotating habitat sections, radiators, propulsion spine and tiny escort craft, dark aerospace style, no text, no logos.',
+    'Photorealistic interstellar worldship in deep space, long generation ship with rotating habitat sections, radiator wings, propulsion spine, shielded bow and tiny escort craft, black cinematic aerospace style, no text, no logos, no watermark.',
   'life-support':
-    'Cinematic realistic closed ecosystem habitat study plate, greenhouse bioregenerative life support modules inside orbital structure, water loops, radiators and soft interior glow, dark aerospace style, no text, no logos.',
+    'Photorealistic bioregenerative life support system inside an orbital habitat, greenhouse cylinders, water recycling loops, pipes, radiators, soft grow lights, sterile aerospace modules and black space beyond windows, no text, no logos, no watermark.',
 };
 
 const getConceptIllustration = (
@@ -255,13 +255,13 @@ const getConceptIllustration = (
 
   if (habitatPrompt) {
     return {
-      src: `${assetBase}illustrations/ai/concepts/habitats/${id}.svg`,
+      src: `${assetBase}illustrations/ai/concepts/habitats/${id}.webp`,
       alt: `Imagen cinematográfica del concepto ${title} dentro de la misión Hábitats espaciales`,
       prompt: habitatPrompt,
       style:
         'Realismo científico cinematográfico, negro dominante, iluminación aeroespacial sobria, continuidad visual con las imágenes IA de la portada.',
       credit:
-        'Placa SVG generada para el atlas con composición cinematográfica y siluetas técnicas específicas del concepto.',
+        'Imagen IA WebP generada para el atlas con composicion cinematografica y realismo cientifico especifico del concepto.',
     };
   }
 
