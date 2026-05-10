@@ -1,6 +1,12 @@
-import { useMemo, useState } from 'react';
-import { Maximize2, Minus, Plus } from 'lucide-react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { Box, ImageIcon, Maximize2, Minus, Plus } from 'lucide-react';
 import type { AstroConcept, VisualLayerId } from '../types';
+
+const ONeillCylinderModel = lazy(() =>
+  import('./ONeillCylinderModel').then((module) => ({ default: module.ONeillCylinderModel })),
+);
+
+type ViewerMode = 'image' | 'model3d';
 
 interface IllustrationViewerProps {
   concept: AstroConcept;
@@ -16,11 +22,21 @@ export function IllustrationViewer({
   imageOverride,
 }: IllustrationViewerProps) {
   const [activeLayer, setActiveLayer] = useState<VisualLayerId | 'all'>('all');
+  const [viewerMode, setViewerMode] = useState<ViewerMode>('image');
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [activeHotspotId, setActiveHotspotId] = useState<string | null>(
     concept.hotspots[0]?.id ?? null,
   );
+  const hasModel3d = Boolean(concept.model3d);
+
+  useEffect(() => {
+    setViewerMode('image');
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+    setActiveLayer('all');
+    setActiveHotspotId(concept.hotspots[0]?.id ?? null);
+  }, [concept.id, concept.hotspots]);
 
   const activeHotspot = useMemo(
     () => concept.hotspots.find((hotspot) => hotspot.id === activeHotspotId),
@@ -35,34 +51,72 @@ export function IllustrationViewer({
     setPan((current) => ({ ...current, [axis]: value }));
   };
 
+  const modelCaption = concept.model3d?.caption ?? concept.visualNotes;
+
   return (
     <div className={compact ? 'illustration-viewer compact' : 'illustration-viewer'}>
       <div className="illustration-frame">
-        <img
-          src={imageOverride ?? concept.illustration.src}
-          alt={concept.illustration.alt}
-          loading="lazy"
-          style={{
-            transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`,
-          }}
-        />
-        <div className={compared ? 'comparison-sheen is-compared' : 'comparison-sheen'} />
-        {visibleHotspots.map((hotspot) => (
-          <button
-            type="button"
-            key={hotspot.id}
-            className={activeHotspotId === hotspot.id ? 'hotspot is-active' : 'hotspot'}
-            style={{ left: `${hotspot.x}%`, top: `${hotspot.y}%` }}
-            onClick={() => setActiveHotspotId(hotspot.id)}
-            aria-label={`${hotspot.title}: ${hotspot.description}`}
+        {viewerMode === 'model3d' && concept.model3d?.kind === 'oneill-cylinder' ? (
+          <Suspense
+            fallback={
+              <div className="model3d-loading">
+                <Box aria-hidden="true" />
+                <span>Preparando modelo 3D</span>
+              </div>
+            }
           >
-            <span />
-          </button>
-        ))}
+            <ONeillCylinderModel />
+          </Suspense>
+        ) : (
+          <img
+            src={imageOverride ?? concept.illustration.src}
+            alt={concept.illustration.alt}
+            loading="lazy"
+            style={{
+              transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`,
+            }}
+          />
+        )}
+        <div className={compared ? 'comparison-sheen is-compared' : 'comparison-sheen'} />
+        {viewerMode === 'image' &&
+          visibleHotspots.map((hotspot) => (
+            <button
+              type="button"
+              key={hotspot.id}
+              className={activeHotspotId === hotspot.id ? 'hotspot is-active' : 'hotspot'}
+              style={{ left: `${hotspot.x}%`, top: `${hotspot.y}%` }}
+              onClick={() => setActiveHotspotId(hotspot.id)}
+              aria-label={`${hotspot.title}: ${hotspot.description}`}
+            >
+              <span />
+            </button>
+          ))}
       </div>
 
-      <div className="illustration-controls" aria-label={`Controles de imagen para ${concept.title}`}>
-        <div className="layer-tabs">
+      <div className="illustration-controls" aria-label={`Controles visuales para ${concept.title}`}>
+        {hasModel3d && (
+          <div className="view-mode-tabs" aria-label={`Modo visual para ${concept.title}`}>
+            <button
+              type="button"
+              className={viewerMode === 'image' ? 'is-active' : ''}
+              onClick={() => setViewerMode('image')}
+            >
+              <ImageIcon aria-hidden="true" />
+              Imagen
+            </button>
+            <button
+              type="button"
+              className={viewerMode === 'model3d' ? 'is-active' : ''}
+              onClick={() => setViewerMode('model3d')}
+            >
+              <Box aria-hidden="true" />
+              3D
+            </button>
+          </div>
+        )}
+
+        {viewerMode === 'image' && (
+          <div className="layer-tabs">
           <button
             type="button"
             className={activeLayer === 'all' ? 'is-active' : ''}
@@ -81,9 +135,10 @@ export function IllustrationViewer({
               {layer.label}
             </button>
           ))}
-        </div>
+          </div>
+        )}
 
-        {!compact && (
+        {!compact && viewerMode === 'image' && (
           <div className="zoom-controls">
             <button type="button" onClick={() => setZoom((value) => Math.max(1, value - 0.15))}>
               <Minus aria-hidden="true" />
@@ -105,7 +160,7 @@ export function IllustrationViewer({
         )}
       </div>
 
-      {!compact && zoom > 1 && (
+      {!compact && viewerMode === 'image' && zoom > 1 && (
         <div className="pan-controls">
           <label>
             Horizontal
@@ -132,8 +187,8 @@ export function IllustrationViewer({
 
       {!compact && (
         <div className="hotspot-caption">
-          <strong>{activeHotspot?.title ?? concept.title}</strong>
-          <p>{activeHotspot?.description ?? concept.visualNotes}</p>
+          <strong>{viewerMode === 'model3d' ? concept.model3d?.label : (activeHotspot?.title ?? concept.title)}</strong>
+          <p>{viewerMode === 'model3d' ? modelCaption : (activeHotspot?.description ?? concept.visualNotes)}</p>
         </div>
       )}
     </div>
