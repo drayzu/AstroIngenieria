@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUpRight, BarChart3, BookOpen, Database, ScrollText } from 'lucide-react';
-import { getChapterVisual, plausibilityLabels, scaleLabels } from '../data/astroData';
-import type { AstroChapter, AstroConcept } from '../types';
+import { getChapterVisual, plausibilityLabels, scaleLabels, visualArchetypeLabels } from '../data/astroData';
+import type { AstroChapter, AstroConcept, ConceptVisualNarrativeLayer, DossierEvidence } from '../types';
 import { IllustrationViewer } from './IllustrationViewer';
 import { SourceList } from './SourceList';
 
@@ -16,28 +16,7 @@ interface ConceptStudyPageProps {
   onToggleCompare: (conceptId: string) => void;
 }
 
-type StudyTab = 'narrative' | 'longRead' | 'dossier';
-type EvidenceLevel = 'base' | 'inferred' | 'frontier';
-
-interface ReadingSection {
-  id: string;
-  title: string;
-  body: string[];
-  callout?: {
-    label: string;
-    body: string;
-  };
-}
-
-interface DossierSection {
-  id: string;
-  title: string;
-  items: Array<{
-    label: string;
-    body: string;
-    evidence: EvidenceLevel;
-  }>;
-}
+type ConceptTab = 'narrative' | 'longRead' | 'dossier';
 
 const metricLabels = {
   energia: 'Energía',
@@ -47,123 +26,54 @@ const metricLabels = {
 } satisfies Record<keyof AstroConcept['metrics'], string>;
 
 const evidenceLabels = {
-  base: 'Base',
-  inferred: 'Inferido',
-  frontier: 'Frontera',
-} satisfies Record<EvidenceLevel, string>;
+  fuente: 'Fuente',
+  estimacion: 'Estimación',
+  conceptual: 'Conceptual',
+} satisfies Record<DossierEvidence, string>;
 
-const getNarrativeTitle = (concept: AstroConcept) => {
-  if (concept.id === 'oneill-cylinder') {
-    return 'Un paisaje construido dentro de una máquina';
-  }
+interface VisualNarrativeFigureProps {
+  layer: ConceptVisualNarrativeLayer;
+  className?: string;
+}
 
-  return concept.keyIdea.replace(/\.$/, '');
-};
+function VisualNarrativeFigure({ layer, className }: VisualNarrativeFigureProps) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const canShowImage = Boolean(layer.src && failedSrc !== layer.src);
 
-const getNarrativeLead = (concept: AstroConcept) => {
-  if (concept.id === 'oneill-cylinder') {
-    return 'El cilindro de O Neill toma una idea casi imposible de sostener en la imaginación: construir no una estación, sino un mundo interior que gira para fabricar gravedad.';
-  }
+  useEffect(() => {
+    setFailedSrc(null);
+  }, [layer.src]);
 
-  return `${concept.title} se entiende mejor como una arquitectura de escala ${scaleLabels[concept.scale].toLocaleLowerCase('es')}: ${concept.summary}`;
-};
-
-const getReadingSections = (concept: AstroConcept): ReadingSection[] => [
-  {
-    id: 'idea',
-    title: 'Idea central',
-    body: [
-      concept.keyIdea,
-      `La imagen mental útil es esta: ${concept.mentalImage}`,
-    ],
-    callout: {
-      label: 'Clave de lectura',
-      body: concept.visualNotes,
-    },
-  },
-  {
-    id: 'mecanismo',
-    title: 'Cómo funciona',
-    body: [
-      concept.mechanism,
-      `Su promesa principal es ${concept.advantages[0]?.toLocaleLowerCase('es') ?? 'abrir una nueva forma de infraestructura espacial'}.`,
-    ],
-  },
-  {
-    id: 'limites',
-    title: 'Dónde se vuelve difícil',
-    body: [
-      concept.difficulties[0] ?? 'La dificultad principal aparece al llevar la idea desde el esquema a una operación estable.',
-      concept.difficulties[1] ?? 'También exige mantener energía, materiales y control ambiental dentro de márgenes muy estrechos.',
-    ],
-  },
-];
-
-const getDossier = (concept: AstroConcept): DossierSection[] => [
-  {
-    id: 'arquitectura',
-    title: 'Arquitectura',
-    items: [
-      {
-        label: 'Tipo',
-        body: `${concept.category} de escala ${scaleLabels[concept.scale].toLocaleLowerCase('es')}.`,
-        evidence: 'base',
-      },
-      {
-        label: 'Principio',
-        body: concept.mechanism,
-        evidence: 'base',
-      },
-      {
-        label: 'Lectura visual',
-        body: concept.mentalImage,
-        evidence: 'inferred',
-      },
-    ],
-  },
-  {
-    id: 'viabilidad',
-    title: 'Viabilidad',
-    items: [
-      {
-        label: 'Madurez',
-        body: `${plausibilityLabels[concept.plausibility]} con madurez ${concept.metrics.madurez}/5.`,
-        evidence: 'base',
-      },
-      {
-        label: 'Materiales',
-        body: `${concept.metrics.materiales}/5 en exigencia material. ${concept.difficulties[0] ?? ''}`.trim(),
-        evidence: 'inferred',
-      },
-      {
-        label: 'Energía',
-        body: `${concept.metrics.energia}/5 en demanda energética. ${concept.keyIdea}`,
-        evidence: 'inferred',
-      },
-    ],
-  },
-  {
-    id: 'operacion',
-    title: 'Operación',
-    items: [
-      {
-        label: 'Ventaja',
-        body: concept.advantages[0] ?? concept.summary,
-        evidence: 'base',
-      },
-      {
-        label: 'Riesgo',
-        body: concept.difficulties[1] ?? concept.difficulties[0] ?? 'La operación dependería de control y mantenimiento constantes.',
-        evidence: concept.plausibility === 'actual' ? 'base' : 'frontier',
-      },
-      {
-        label: 'Maravilla',
-        body: `${concept.metrics.maravilla}/5: ${concept.visualNotes}`,
-        evidence: 'inferred',
-      },
-    ],
-  },
-];
+  return (
+    <figure className={['concept-visual-layer', `is-${layer.layer}`, className].filter(Boolean).join(' ')}>
+      <div className="concept-visual-layer-head">
+        <span>{layer.label}</span>
+        <em>{layer.role}</em>
+      </div>
+      {canShowImage ? (
+        <img
+          src={layer.src}
+          alt={layer.alt}
+          loading="lazy"
+          onError={() => setFailedSrc(layer.src ?? null)}
+        />
+      ) : (
+        <div className="concept-visual-placeholder" role="img" aria-label={layer.alt}>
+          <span>{layer.label} preparado</span>
+          <p>{layer.caption}</p>
+        </div>
+      )}
+      <figcaption>{layer.caption}</figcaption>
+      {!canShowImage && (
+        <details className="concept-visual-prompt">
+          <summary>Prompt preparado</summary>
+          <p>{layer.prompt}</p>
+          <span>{layer.target}</span>
+        </details>
+      )}
+    </figure>
+  );
+}
 
 export function ConceptStudyPage({
   concept,
@@ -175,42 +85,82 @@ export function ConceptStudyPage({
   onNavigateConcept,
   onToggleCompare,
 }: ConceptStudyPageProps) {
-  const [activeTab, setActiveTab] = useState<StudyTab>('narrative');
+  const [activeTab, setActiveTab] = useState<ConceptTab>('narrative');
+  const [imageMode, setImageMode] = useState<'exterior' | 'interior'>('exterior');
   const visual = getChapterVisual(concept.chapterId);
-  const studyImage = concept.chapterId === 'habitats' ? concept.illustration.src : visual.heroImage;
-  const studyImageAlt = concept.chapterId === 'habitats' ? concept.illustration.alt : visual.visualFocus;
+  const hasInterior = Boolean(concept.illustration.interior);
+  const activeIllustration =
+    imageMode === 'interior' && concept.illustration.interior
+      ? concept.illustration.interior
+      : concept.illustration;
+  const viewingInterior = imageMode === 'interior' && hasInterior;
   const conceptIndex = Math.max(0, chapterConcepts.findIndex((item) => item.id === concept.id));
   const previousConcept = chapterConcepts[(conceptIndex - 1 + chapterConcepts.length) % chapterConcepts.length];
   const nextConcept = chapterConcepts[(conceptIndex + 1) % chapterConcepts.length];
   const relatedConcepts = concept.related
     .map((id) => allConcepts.find((item) => item.id === id))
     .filter((item): item is AstroConcept => Boolean(item));
-  const readingSections = useMemo(() => getReadingSections(concept), [concept]);
-  const dossier = useMemo(() => getDossier(concept), [concept]);
-  const sourceRefs = concept.sources ?? [];
-  const narrativeTitle = getNarrativeTitle(concept);
-  const narrativeLead = getNarrativeLead(concept);
+  const sourceRefs = concept.sources ?? chapter.sources;
 
-  const readingVisual = (
-    <figure className="concept-reading-visual">
-      <img src={studyImage} alt={studyImageAlt} />
-      <figcaption>{concept.visualNotes}</figcaption>
-    </figure>
+  useEffect(() => {
+    setImageMode('exterior');
+  }, [concept.id]);
+
+  const renderVariantSwitch = () =>
+    hasInterior ? (
+      <div className="concept-variant-switch" role="group" aria-label={`Variantes visuales de ${concept.title}`}>
+        <button
+          type="button"
+          className={imageMode === 'exterior' ? 'is-active' : ''}
+          onClick={() => setImageMode('exterior')}
+        >
+          Exterior técnico
+        </button>
+        <button
+          type="button"
+          className={imageMode === 'interior' ? 'is-active' : ''}
+          onClick={() => setImageMode('interior')}
+        >
+          Interior vivido
+        </button>
+      </div>
+    ) : null;
+
+  const renderReadingVisual = () => (
+    <VisualNarrativeFigure layer={concept.visualNarrative.exterior} className="concept-reading-visual" />
+  );
+
+  const renderTechnicalVisual = () => (
+    <div className="concept-study-visual">
+      {renderVariantSwitch()}
+      <IllustrationViewer
+        concept={concept}
+        compared={isCompared}
+        imageOverride={activeIllustration.src}
+        altOverride={activeIllustration.alt}
+        hotspotsEnabled={!viewingInterior}
+      />
+    </div>
   );
 
   return (
     <>
       <section className="concept-study-hero" aria-labelledby="concept-study-title">
-        <img className="concept-study-media" src={studyImage} alt={studyImageAlt} />
+        <img
+          className="concept-study-media"
+          src={concept.visualNarrative.exterior.src}
+          alt={concept.visualNarrative.exterior.alt}
+        />
         <div className="concept-study-scrim" />
         <div className="concept-study-copy">
           <span className="sx-kicker">{visual.missionLabel}</span>
           <h1 id="concept-study-title">{concept.title}</h1>
-          <p>{concept.summary}</p>
+          <p>{concept.narrative.lead}</p>
           <div className="modal-tags">
             <span>{scaleLabels[concept.scale]}</span>
             <span>{plausibilityLabels[concept.plausibility]}</span>
             <span>{concept.category}</span>
+            <span>{visualArchetypeLabels[concept.visualArchetype]}</span>
           </div>
         </div>
       </section>
@@ -229,14 +179,14 @@ export function ConceptStudyPage({
             <span>Volver a {chapter.title}</span>
             <ArrowUpRight aria-hidden="true" />
           </button>
-          <button type="button" className="sx-button" onClick={() => onToggleCompare(concept.id)}>
+          <button type="button" className={isCompared ? 'sx-button primary' : 'sx-button'} onClick={() => onToggleCompare(concept.id)}>
             <BarChart3 aria-hidden="true" />
             <span>{isCompared ? 'Quitar del comparador' : 'Agregar al comparador'}</span>
           </button>
         </div>
 
         <div className="concept-study-layout">
-          <div className="concept-study-tabs" role="tablist" aria-label={`Modos de estudio para ${concept.title}`}>
+          <div className="concept-study-tabs" role="tablist" aria-label={`Contenido de ${concept.title}`}>
             <button
               type="button"
               role="tab"
@@ -269,44 +219,48 @@ export function ConceptStudyPage({
             </button>
           </div>
 
-          {activeTab === 'narrative' && (
+          {activeTab === 'narrative' ? (
             <div className="concept-narrative-layout" role="tabpanel">
-              {readingVisual}
+              {renderReadingVisual()}
               <div className="concept-reading-flow">
                 <article className="concept-narrative">
                   <span className="sx-kicker">Lectura guiada</span>
-                  <h2>{narrativeTitle}</h2>
-                  <p className="concept-reading-lead">{narrativeLead}</p>
+                  <h2>{concept.narrative.title}</h2>
+                  <p className="concept-reading-lead">{concept.narrative.lead}</p>
                 </article>
+
+                <VisualNarrativeFigure
+                  layer={concept.visualNarrative.conceptual}
+                  className="concept-reading-support"
+                />
+
                 <div className="concept-reading-sections">
-                  {readingSections.map((section) => (
-                    <section className="concept-reading-section" key={section.id}>
+                  {concept.narrative.sections.map((section) => (
+                    <section key={section.id} className="concept-reading-section">
                       <h3>{section.title}</h3>
                       {section.body.map((paragraph) => (
                         <p key={paragraph}>{paragraph}</p>
                       ))}
-                      {section.callout && (
-                        <aside className="concept-longread-callout">
-                          <strong>{section.callout.label}</strong>
-                          <p>{section.callout.body}</p>
-                        </aside>
-                      )}
                     </section>
                   ))}
                 </div>
-                <blockquote className="concept-reading-closing">{concept.keyIdea}</blockquote>
+
+                <VisualNarrativeFigure
+                  layer={concept.visualNarrative.immersive}
+                  className="concept-reading-immersive"
+                />
+
+                <blockquote className="concept-reading-closing">{concept.narrative.closing}</blockquote>
               </div>
             </div>
-          )}
-
-          {activeTab === 'longRead' && (
+          ) : activeTab === 'longRead' ? (
             <div className="concept-longread-layout" role="tabpanel">
               <aside className="concept-longread-aside" aria-label={`Índice de lectura completa de ${concept.title}`}>
-                {readingVisual}
+                {renderReadingVisual()}
                 <nav className="concept-longread-index" aria-label="Secciones de lectura completa">
                   <span className="sx-kicker">Índice</span>
-                  {readingSections.map((section) => (
-                    <a href={`#longread-${section.id}`} key={section.id}>
+                  {concept.longRead.sections.map((section) => (
+                    <a key={section.id} href={`#longread-${section.id}`}>
                       {section.title}
                     </a>
                   ))}
@@ -316,12 +270,13 @@ export function ConceptStudyPage({
               <article className="concept-longread-article">
                 <header className="concept-longread-header">
                   <span className="sx-kicker">Lectura completa</span>
-                  <h2>{concept.title}</h2>
-                  <p>{narrativeLead}</p>
+                  <h2>{concept.longRead.title}</h2>
+                  <p>{concept.longRead.subtitle}</p>
                 </header>
+
                 <div className="concept-longread-sections">
-                  {readingSections.map((section) => (
-                    <section id={`longread-${section.id}`} className="concept-longread-section" key={section.id}>
+                  {concept.longRead.sections.map((section) => (
+                    <section key={section.id} id={`longread-${section.id}`} className="concept-longread-section">
                       <h3>{section.title}</h3>
                       {section.body.map((paragraph) => (
                         <p key={paragraph}>{paragraph}</p>
@@ -335,30 +290,23 @@ export function ConceptStudyPage({
                     </section>
                   ))}
                 </div>
-                <blockquote className="concept-longread-closing">{concept.mentalImage}</blockquote>
+
+                <blockquote className="concept-longread-closing">{concept.longRead.closing}</blockquote>
+
                 <section className="concept-longread-takeaways" aria-labelledby="longread-takeaways-title">
                   <h3 id="longread-takeaways-title">Para llevarse</h3>
                   <ul>
-                    {[...concept.advantages, ...concept.difficulties].map((item) => (
-                      <li key={item}>{item}</li>
+                    {concept.longRead.takeaways.map((takeaway) => (
+                      <li key={takeaway}>{takeaway}</li>
                     ))}
                   </ul>
                 </section>
               </article>
             </div>
-          )}
-
-          {activeTab === 'dossier' && (
+          ) : (
             <div className="concept-dossier-layout" role="tabpanel">
               <aside className="concept-dossier-rail" aria-label={`Resumen técnico de ${concept.title}`}>
-                <div className="concept-study-visual">
-                  <IllustrationViewer
-                    concept={concept}
-                    compared={isCompared}
-                    imageOverride={concept.chapterId === 'habitats' ? undefined : visual.heroImage}
-                  />
-                </div>
-
+                {renderTechnicalVisual()}
                 <div className="dark-metrics concept-metrics">
                   {(Object.keys(metricLabels) as Array<keyof AstroConcept['metrics']>).map((metric) => (
                     <div key={metric}>
@@ -374,12 +322,12 @@ export function ConceptStudyPage({
 
               <div className="concept-dossier-content">
                 <div className="concept-dossier-grid">
-                  {dossier.map((section) => (
+                  {concept.dossier.map((section) => (
                     <section className="concept-dossier-section" key={section.id}>
                       <h2>{section.title}</h2>
                       <dl>
                         {section.items.map((item) => (
-                          <div key={`${section.id}-${item.label}`}>
+                          <div key={`${section.id}-${item.label}-${item.body}`}>
                             <dt>
                               <span>{item.label}</span>
                               <em>{evidenceLabels[item.evidence]}</em>
@@ -416,19 +364,6 @@ export function ConceptStudyPage({
           )}
         </div>
       </section>
-
-      {sourceRefs.length > 0 && (
-        <section className="sx-section sources-section concept-sources" aria-labelledby="concept-sources-title">
-          <div className="sx-section-head split">
-            <div>
-              <span className="sx-kicker">References</span>
-              <h2 id="concept-sources-title">Fuentes del concepto</h2>
-            </div>
-            <p>Referencias específicas para profundizar este concepto.</p>
-          </div>
-          <SourceList sources={sourceRefs} />
-        </section>
-      )}
     </>
   );
 }

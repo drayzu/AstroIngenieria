@@ -1,0 +1,150 @@
+{
+  "generatedAt": "2026-05-06T20:35:27.644Z",
+  "source": "OpenAI image generation via Codex built-in image_gen",
+  "format": "webp",
+  "size": "1920x1080",
+  "quality": 84,
+  "credit": "Imagen IA generada para AstroIngenieria; sin logos, texto incrustado ni marcas.",
+  "concepts": [
+    {
+      "id": "chemical-rockets",
+      "title": "Cohetes químicos",
+      "file": "chemical-rockets.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Cohetes químicos.\nMission context: propulsion avanzada. Category: Propulsión. Scale: nave. Plausibility: actual.\nCore idea: Son potentes, conocidos y limitados por energía química.\nVisual mental image: Un lanzamiento brillante rompiendo la atmósfera con una columna de fuego.\nMechanism to imply visually: Combustible y oxidante reaccionan, calientan gases y los expulsan por una tobera para generar empuje.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "ion-engines",
+      "title": "Motores iónicos",
+      "file": "ion-engines.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Motores iónicos.\nMission context: propulsion avanzada. Category: Propulsión eléctrica. Scale: nave. Plausibility: actual.\nCore idea: Cambian fuerza inmediata por paciencia y eficiencia.\nVisual mental image: Un brillo azul débil empujando una sonda durante meses.\nMechanism to imply visually: Ionizan un gas como xenón y lo aceleran mediante campos eléctricos; funcionan mejor en misiones largas.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "hall-thruster",
+      "title": "Hall thrusters",
+      "file": "hall-thruster.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Hall thrusters.\nMission context: propulsion avanzada. Category: Propulsión eléctrica. Scale: nave. Plausibility: actual.\nCore idea: Son una pieza real de la transición hacia naves eléctricas eficientes.\nVisual mental image: Un anillo luminoso expulsando plasma violeta desde un satélite.\nMechanism to imply visually: Campos eléctricos y magnéticos aceleran plasma para producir empuje con alta eficiencia respecto a propulsión química.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "solar-electric",
+      "title": "Propulsión solar eléctrica",
+      "file": "solar-electric.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Propulsión solar eléctrica.\nMission context: propulsion avanzada. Category: Propulsión eléctrica. Scale: nave. Plausibility: actual.\nCore idea: La luz solar puede ser combustible indirecto para viajes largos.\nVisual mental image: Alas solares enormes alimentando motores de plasma suaves y persistentes.\nMechanism to imply visually: Convierte luz en electricidad y electricidad en aceleración de propulsor mediante motores iónicos o Hall.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "nuclear-thermal",
+      "title": "Propulsión nuclear térmica",
+      "file": "nuclear-thermal.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Propulsión nuclear térmica.\nMission context: propulsion avanzada. Category: Propulsión nuclear. Scale: nave. Plausibility: plausible.\nCore idea: La energía nuclear puede acortar viajes a Marte y mover más carga.\nVisual mental image: Un motor oscuro calentando hidrógeno hasta expulsarlo como un chorro invisible y poderoso.\nMechanism to imply visually: El reactor transfiere calor al propelente, normalmente hidrógeno, que sale por una tobera para generar empuje.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "nuclear-electric",
+      "title": "Propulsión nuclear eléctrica",
+      "file": "nuclear-electric.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Propulsión nuclear eléctrica.\nMission context: propulsion avanzada. Category: Propulsión nuclear. Scale: nave. Plausibility: plausible.\nCore idea: Separa fuente de energía y motor: el reactor alimenta una aceleración eficiente.\nVisual mental image: Radiadores desplegados junto a un reactor compacto y motores de plasma brillando a baja intensidad.\nMechanism to imply visually: El reactor produce calor, el sistema lo convierte en electricidad y los motores aceleran propelente con alta eficiencia.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "solar-sail",
+      "title": "Velas solares",
+      "file": "solar-sail.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Velas solares.\nMission context: propulsion avanzada. Category: Velas. Scale: nave. Plausibility: actual.\nCore idea: La luz no solo ilumina: también empuja.\nVisual mental image: Una vela plateada desplegada como cometa geométrico cerca del Sol.\nMechanism to imply visually: Fotones transfieren momento a una superficie reflectante; el empuje es pequeño pero no consume propelente.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "laser-sail",
+      "title": "Velas láser",
+      "file": "laser-sail.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Velas láser.\nMission context: propulsion avanzada. Category: Propulsión por haces. Scale: nave. Plausibility: frontera.\nCore idea: La nave puede ser ligera si la infraestructura energética queda atrás.\nVisual mental image: Un rayo concentrado empujando una vela brillante hacia otra estrella.\nMechanism to imply visually: Una matriz láser transmite energía a una vela reflectante; la aceleración depende de potencia, masa, distancia y puntería.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "beamed-propulsion",
+      "title": "Propulsión por haces de energía",
+      "file": "beamed-propulsion.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Propulsión por haces de energía.\nMission context: propulsion avanzada. Category: Infraestructura externa. Scale: nave. Plausibility: frontera.\nCore idea: Mover la planta de energía fuera de la nave cambia por completo la ecuación de masa.\nVisual mental image: Naves pequeñas cabalgando corredores de energía entre estaciones solares.\nMechanism to imply visually: La infraestructura entrega potencia a velas, receptores térmicos o sistemas eléctricos a bordo.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "magnetic-sail",
+      "title": "Magnetic sails",
+      "file": "magnetic-sail.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Magnetic sails.\nMission context: propulsion avanzada. Category: Frenado y velas. Scale: nave. Plausibility: frontera.\nCore idea: El medio espacial puede convertirse en algo contra lo que empujar.\nVisual mental image: Un lazo magnético invisible abriendo una burbuja azul alrededor de una nave.\nMechanism to imply visually: Un campo magnético desvía partículas cargadas; la transferencia de momento produce arrastre o empuje.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "electric-sail",
+      "title": "Electric sails",
+      "file": "electric-sail.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Electric sails.\nMission context: propulsion avanzada. Category: Velas. Scale: nave. Plausibility: frontera.\nCore idea: Una nave puede navegar el plasma solar con hilos cargados.\nVisual mental image: Filamentos finísimos desplegados como una estrella alrededor de una sonda.\nMechanism to imply visually: Tethers cargados repelen protones del viento solar, transfiriendo momento a la nave.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "project-orion",
+      "title": "Project Orion",
+      "file": "project-orion.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Project Orion.\nMission context: propulsion avanzada. Category: Propulsión nuclear pulsada. Scale: nave. Plausibility: especulativo.\nCore idea: Es brutalmente potente y políticamente casi imposible.\nVisual mental image: Una nave blindada avanzando por pulsos de luz nuclear detrás de una placa gigante.\nMechanism to imply visually: Dispositivos nucleares detonan detrás de la nave; una placa amortiguada absorbe impulso y protege estructura.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "fusion-propulsion",
+      "title": "Propulsión de fusión",
+      "file": "fusion-propulsion.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Propulsión de fusión.\nMission context: propulsion avanzada. Category: Propulsión avanzada. Scale: nave. Plausibility: frontera.\nCore idea: La fusión es una de las rutas más imaginadas para viajes interestelares serios.\nVisual mental image: Un motor magnético conteniendo plasma azul-blanco detrás de una nave enorme.\nMechanism to imply visually: Combina confinamiento, ignición o pulsos de fusión con toberas magnéticas para transformar energía nuclear en empuje.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "antimatter",
+      "title": "Propulsión de antimateria",
+      "file": "antimatter.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Propulsión de antimateria.\nMission context: propulsion avanzada. Category: Propulsión extrema. Scale: nave. Plausibility: especulativo.\nCore idea: Es la batería más intensa que conocemos, pero casi imposible de producir y almacenar en cantidad.\nVisual mental image: Un núcleo brillante atrapado por campos magnéticos, alimentando una nave relativista.\nMechanism to imply visually: Antimateria se aniquila con materia y libera energía; se necesitaría canalizarla de forma controlada hacia empuje.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "bussard-ramjet",
+      "title": "Bussard Ramjet",
+      "file": "bussard-ramjet.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Bussard Ramjet.\nMission context: propulsion avanzada. Category: Interestelar. Scale: nave. Plausibility: especulativo.\nCore idea: La idea seduce porque intenta usar el espacio como combustible, pero el medio interestelar es demasiado tenue.\nVisual mental image: Un embudo magnético inmenso recogiendo átomos aislados frente a una nave.\nMechanism to imply visually: Campos magnéticos recolectarían partículas del medio y las llevarían a un reactor de fusión.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "relativistic-propulsion",
+      "title": "Propulsión relativista",
+      "file": "relativistic-propulsion.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Propulsión relativista.\nMission context: propulsion avanzada. Category: Interestelar. Scale: nave. Plausibility: frontera.\nCore idea: Acelerar es solo la mitad del problema: también hay que frenar y sobrevivir al polvo interestelar.\nVisual mental image: Una nave delgada cruzando años luz mientras partículas diminutas golpean como radiación letal.\nMechanism to imply visually: Exige energía enorme, blindaje, navegación precisa, gestión de tiempo, comunicación diferida y estrategia de frenado.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "interstellar-braking",
+      "title": "Frenado interestelar",
+      "file": "interstellar-braking.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Frenado interestelar.\nMission context: propulsion avanzada. Category: Interestelar. Scale: nave. Plausibility: frontera.\nCore idea: Llegar rápido no sirve si pasas de largo.\nVisual mental image: Una vela magnética abriéndose frente a una estrella distante para perder velocidad.\nMechanism to imply visually: Puede usar velas magnéticas, velas solares invertidas, láseres receptores, aerocaptura o propelente reservado.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "alcubierre",
+      "title": "Alcubierre Drive",
+      "file": "alcubierre.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Alcubierre Drive.\nMission context: propulsion avanzada. Category: Frontera especulativa. Scale: nave. Plausibility: especulativo.\nCore idea: Sirve para pensar relatividad extrema, no como ingeniería disponible.\nVisual mental image: Una burbuja oscura comprimiendo estrellas delante y expandiéndolas detrás.\nMechanism to imply visually: La métrica propuesta contrae espacio delante y lo expande detrás; enfrenta requisitos de energía exótica y causalidad.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "wormholes",
+      "title": "Wormholes",
+      "file": "wormholes.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Wormholes.\nMission context: propulsion avanzada. Category: Frontera especulativa. Scale: galactica. Plausibility: especulativo.\nCore idea: Un atajo sería civilizatoriamente revolucionario, pero no sabemos construirlo ni estabilizarlo.\nVisual mental image: Dos bocas esféricas mostrando cielos estelares distintos en una misma sala.\nMechanism to imply visually: En modelos teóricos, una garganta conecta regiones lejanas; mantenerla abierta suele requerir condiciones físicas no disponibles.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "reactionless",
+      "title": "Reactionless drives",
+      "file": "reactionless.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Reactionless drives.\nMission context: propulsion avanzada. Category: Conceptos dudosos. Scale: nave. Plausibility: especulativo.\nCore idea: Son útiles como caso de pensamiento crítico: no toda idea futurista merece el mismo lugar.\nVisual mental image: Una caja metálica prometiendo moverse sin chorro, vela ni campo externo.\nMechanism to imply visually: Si no hay masa expulsada ni intercambio con un campo externo, la conservación del momento exige escepticismo fuerte.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    }
+  ]
+}

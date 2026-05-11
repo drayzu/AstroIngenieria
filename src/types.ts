@@ -36,7 +36,21 @@ export interface VisualizationSpec {
 
 export type VisualLayerId = 'estructura' | 'energia' | 'riesgos' | 'escala' | 'materiales';
 
-export interface ConceptIllustration {
+export type ConceptVisualArchetype =
+  | 'introduccion-principios'
+  | 'habitats-espaciales'
+  | 'infraestructura-espacial'
+  | 'energia-estelar-computacion'
+  | 'propulsion-espacial'
+  | 'propulsion-especulativa'
+  | 'ingenieria-planetaria'
+  | 'ingenieria-estelar'
+  | 'civilizaciones-seti'
+  | 'complementarios-abstractos';
+
+export type ConceptVisualLayerKind = 'exterior' | 'conceptual' | 'immersive';
+
+export interface ConceptIllustrationVariant {
   src: string;
   alt: string;
   prompt: string;
@@ -50,6 +64,79 @@ export interface ConceptModel3d {
   kind: ConceptModel3dKind;
   label: string;
   caption: string;
+}
+
+export interface ConceptIllustration extends ConceptIllustrationVariant {
+  interior?: ConceptIllustrationVariant;
+}
+
+export interface ConceptVisualNarrativeLayer {
+  layer: ConceptVisualLayerKind;
+  label: string;
+  role: string;
+  src?: string;
+  target: string;
+  alt: string;
+  prompt: string;
+  caption: string;
+  style: string;
+  credit: string;
+}
+
+export interface ConceptVisualNarrative {
+  slug: string;
+  archetype: ConceptVisualArchetype;
+  exterior: ConceptVisualNarrativeLayer;
+  conceptual: ConceptVisualNarrativeLayer;
+  immersive: ConceptVisualNarrativeLayer;
+}
+
+export type DossierEvidence = 'fuente' | 'estimacion' | 'conceptual';
+
+export interface ConceptReadingSection {
+  id: string;
+  title: string;
+  body: string[];
+}
+
+export interface ConceptNarrative {
+  title: string;
+  lead: string;
+  paragraphs: string[];
+  sections: ConceptReadingSection[];
+  closing: string;
+}
+
+export interface ConceptLongReadCallout {
+  label: string;
+  body: string;
+}
+
+export interface ConceptLongReadSection {
+  id: string;
+  title: string;
+  body: string[];
+  callout?: ConceptLongReadCallout;
+}
+
+export interface ConceptLongRead {
+  title: string;
+  subtitle: string;
+  sections: ConceptLongReadSection[];
+  closing: string;
+  takeaways: string[];
+}
+
+export interface ConceptDossierItem {
+  label: string;
+  body: string;
+  evidence: DossierEvidence;
+}
+
+export interface ConceptDossierSection {
+  id: string;
+  title: string;
+  items: ConceptDossierItem[];
 }
 
 export interface VisualHotspot {
@@ -82,6 +169,8 @@ export interface AstroConcept {
   difficulties: string[];
   related: string[];
   illustration: ConceptIllustration;
+  visualArchetype: ConceptVisualArchetype;
+  visualNarrative: ConceptVisualNarrative;
   hotspots: VisualHotspot[];
   layers: VisualLayer[];
   visualNotes: string;
@@ -92,6 +181,9 @@ export interface AstroConcept {
     madurez: number;
     maravilla: number;
   };
+  narrative: ConceptNarrative;
+  longRead: ConceptLongRead;
+  dossier: ConceptDossierSection[];
   sources?: SourceRef[];
 }
 

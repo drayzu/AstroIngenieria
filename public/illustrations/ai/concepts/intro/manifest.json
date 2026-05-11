@@ -1,0 +1,31 @@
+{
+  "generatedAt": "2026-05-06T20:35:27.644Z",
+  "source": "OpenAI image generation via Codex built-in image_gen",
+  "format": "webp",
+  "size": "1920x1080",
+  "quality": 84,
+  "credit": "Imagen IA generada para AstroIngenieria; sin logos, texto incrustado ni marcas.",
+  "concepts": [
+    {
+      "id": "astroingenieria",
+      "title": "Astroingeniería",
+      "file": "astroingenieria.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Astroingeniería.\nMission context: introduccion y marco conceptual. Category: Marco. Scale: galactica. Plausibility: plausible.\nCore idea: No es solo construir naves: es pensar qué puede construir una civilización cuando domina energía, materiales y tiempo profundo.\nVisual mental image: Una escalera que empieza en una estación orbital y termina en una galaxia llena de infraestructura visible.\nMechanism to imply visually: Une física, astronomía, ingeniería, habitabilidad, energía, política espacial y ciencia ficción dura en un mapa de posibilidades.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "kardashev",
+      "title": "Escala de Kardashev",
+      "file": "kardashev.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Escala de Kardashev.\nMission context: introduccion y marco conceptual. Category: Civilización. Scale: galactica. Plausibility: plausible.\nCore idea: Planeta, estrella y galaxia son saltos de escala, no solo números.\nVisual mental image: Tres círculos concéntricos: un planeta iluminado, una estrella rodeada por captadores y una galaxia organizada.\nMechanism to imply visually: Tipo I usa energía planetaria, Tipo II energía estelar y Tipo III energía galáctica; sirve como brújula conceptual.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "artificial-gravity",
+      "title": "Gravedad artificial por rotación",
+      "file": "artificial-gravity.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Gravedad artificial por rotación.\nMission context: introduccion y marco conceptual. Category: Física mínima. Scale: habitat. Plausibility: plausible.\nCore idea: El tamaño permite girar más lento y reducir mareos por Coriolis.\nVisual mental image: Personas caminando por el interior de un anillo que gira lentamente alrededor de un eje luminoso.\nMechanism to imply visually: La aceleración centrípeta sostiene a los habitantes contra el suelo interior; el radio y la velocidad angular definen la comodidad.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    }
+  ]
+}

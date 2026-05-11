@@ -1,0 +1,80 @@
+{
+  "generatedAt": "2026-05-06T20:35:27.644Z",
+  "source": "OpenAI image generation via Codex built-in image_gen",
+  "format": "webp",
+  "size": "1920x1080",
+  "quality": 84,
+  "credit": "Imagen IA generada para AstroIngenieria; sin logos, texto incrustado ni marcas.",
+  "concepts": [
+    {
+      "id": "space-based-solar",
+      "title": "Energía solar espacial",
+      "file": "space-based-solar.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Energía solar espacial.\nMission context: energia estelar. Category: Energía. Scale: orbital. Plausibility: plausible.\nCore idea: La energía solar en el espacio evita noche, clima y atmósfera, pero exige transmisión segura.\nVisual mental image: Kilómetros de paneles brillando siempre, enviando un haz invisible hacia una rectenna terrestre.\nMechanism to imply visually: Satélites convierten luz en electricidad y la transmiten; receptores la convierten de vuelta para uso local.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "microwave-power",
+      "title": "Transmisión por microondas y láser",
+      "file": "microwave-power.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Transmisión por microondas y láser.\nMission context: energia estelar. Category: Energía. Scale: orbital. Plausibility: plausible.\nCore idea: La infraestructura energética espacial depende tanto de transmitir como de capturar energía.\nVisual mental image: Haces precisos conectando satélites, estaciones y ciudades nocturnas.\nMechanism to imply visually: Microondas favorecen grandes receptores y tolerancia atmosférica; láseres permiten haces estrechos con más exigencia de puntería.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "radiators",
+      "title": "Calor residual y radiadores",
+      "file": "radiators.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Calor residual y radiadores.\nMission context: energia estelar. Category: Termodinámica. Scale: estelar. Plausibility: actual.\nCore idea: El calor es la firma inevitable de la actividad energética.\nVisual mental image: Aletas rojas gigantes irradiando infrarrojo desde una estación oscura.\nMechanism to imply visually: Radiadores emiten energía térmica al espacio; a mayor potencia usada, mayor necesidad de área, temperatura o ingeniería térmica.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "dyson-swarm",
+      "title": "Dyson Swarm",
+      "file": "dyson-swarm.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Dyson Swarm.\nMission context: energia estelar. Category: Megaestructura estelar. Scale: estelar. Plausibility: frontera.\nCore idea: La versión plausible de Dyson no es una cáscara sólida: es una ecología orbital de colectores.\nVisual mental image: Una estrella rodeada por incontables puntos y velas que forman una nube artificial brillante.\nMechanism to imply visually: Satélites solares, hábitats, fábricas y radiadores se distribuyen en órbitas coordinadas para captar una fracción creciente de luz.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "dyson-shell",
+      "title": "Dyson Shell",
+      "file": "dyson-shell.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Dyson Shell.\nMission context: energia estelar. Category: Megaestructura estelar. Scale: estelar. Plausibility: especulativo.\nCore idea: La imagen clásica es poderosa, pero su estabilidad y materiales la vuelven poco plausible.\nVisual mental image: Una esfera opaca conteniendo una estrella entera como una lámpara encerrada.\nMechanism to imply visually: Requeriría una estructura rígida de escala astronómica capaz de gestionar gravedad, tensión, impactos y calor.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "dyson-bubble",
+      "title": "Dyson Bubble y statites",
+      "file": "dyson-bubble.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Dyson Bubble y statites.\nMission context: energia estelar. Category: Megaestructura estelar. Scale: estelar. Plausibility: frontera.\nCore idea: La luz de una estrella también puede ser soporte estructural.\nVisual mental image: Velas quietas respecto a la estrella, suspendidas como escamas luminosas.\nMechanism to imply visually: Statites usan velas ultraligeras para equilibrar gravedad y presión de radiación; una burbuja sería un conjunto enorme de estos elementos.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "dyson-ring",
+      "title": "Dyson Ring y Dyson Net",
+      "file": "dyson-ring.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Dyson Ring y Dyson Net.\nMission context: energia estelar. Category: Megaestructura parcial. Scale: estelar. Plausibility: frontera.\nCore idea: Las megaestructuras realistas probablemente empiezan como redes incompletas.\nVisual mental image: Arcos, bandas y mallas alrededor de una estrella, dejando grandes regiones abiertas.\nMechanism to imply visually: Agrupan colectores en planos o redes orbitales, priorizando manufactura incremental y mantenimiento distribuido.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "matrioshka-brain",
+      "title": "Matrioshka Brain",
+      "file": "matrioshka-brain.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Matrioshka Brain.\nMission context: energia estelar. Category: Computación estelar. Scale: estelar. Plausibility: especulativo.\nCore idea: Una civilización digital podría convertir una estrella en un computador estratificado.\nVisual mental image: Esferas concéntricas de servidores cósmicos brillando cada vez más frías hacia el exterior.\nMechanism to imply visually: Capas internas operan a mayor temperatura; capas externas aprovechan radiación residual, maximizando cómputo por energía.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "jupiter-brain",
+      "title": "Jupiter Brain",
+      "file": "jupiter-brain.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Jupiter Brain.\nMission context: energia estelar. Category: Computación cósmica. Scale: planetaria. Plausibility: especulativo.\nCore idea: La materia planetaria puede imaginarse como sustrato de pensamiento artificial.\nVisual mental image: Un planeta negro cubierto de radiadores y arquitectura computacional.\nMechanism to imply visually: Reorganiza masa en computronium, con redes de energía, refrigeración, memoria y comunicación a escala planetaria.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "computronium",
+      "title": "Computronium",
+      "file": "computronium.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Computronium.\nMission context: energia estelar. Category: Computación. Scale: planetaria. Plausibility: especulativo.\nCore idea: En astroingeniería, la materia deja de ser solo estructura y se vuelve pensamiento.\nVisual mental image: Cristales, circuitos y redes térmicas formando montañas artificiales de cómputo.\nMechanism to imply visually: Sería una arquitectura física que optimiza memoria, operaciones, comunicación, energía y disipación térmica.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    }
+  ]
+}

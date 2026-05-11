@@ -1,0 +1,80 @@
+{
+  "generatedAt": "2026-05-06T20:35:27.644Z",
+  "source": "OpenAI image generation via Codex built-in image_gen",
+  "format": "webp",
+  "size": "1920x1080",
+  "quality": 84,
+  "credit": "Imagen IA generada para AstroIngenieria; sin logos, texto incrustado ni marcas.",
+  "concepts": [
+    {
+      "id": "stellar-physics",
+      "title": "Estrellas como sistemas físicos",
+      "file": "stellar-physics.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Estrellas como sistemas físicos.\nMission context: ingenieria estelar. Category: Física estelar. Scale: estelar. Plausibility: actual.\nCore idea: Manipular una estrella significa manipular un sistema físico vivo a escala astronómica.\nVisual mental image: Un corte de estrella mostrando plasma, campos magnéticos, viento solar y planetas bañados por luz.\nMechanism to imply visually: Su luminosidad, masa, viento y ciclo de vida dependen de procesos nucleares, transporte de energía y equilibrio gravitacional.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "stellar-engines",
+      "title": "Stellar engines",
+      "file": "stellar-engines.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Stellar engines.\nMission context: ingenieria estelar. Category: Motores estelares. Scale: estelar. Plausibility: especulativo.\nCore idea: Si puedes mover una estrella, puedes mover todo un sistema solar a muy largo plazo.\nVisual mental image: Un sistema planetario entero navegando lentamente por la galaxia.\nMechanism to imply visually: Motores pasivos, activos o híbridos generan empuje anisotrópico mediante radiación, plasma o reacciones alimentadas por materia estelar.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "shkadov",
+      "title": "Shkadov Thruster",
+      "file": "shkadov.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Shkadov Thruster.\nMission context: ingenieria estelar. Category: Motor estelar. Scale: estelar. Plausibility: especulativo.\nCore idea: Un espejo puede convertir radiación estelar en timón galáctico.\nVisual mental image: Una media concha reflectante junto a una estrella, empujándola durante millones de años.\nMechanism to imply visually: Refleja luz en una dirección; la presión de radiación desequilibrada produce una aceleración minúscula pero acumulativa.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "caplan",
+      "title": "Caplan Thruster",
+      "file": "caplan.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Caplan Thruster.\nMission context: ingenieria estelar. Category: Motor estelar. Scale: estelar. Plausibility: especulativo.\nCore idea: Es más potente que un Shkadov porque usa masa, no solo luz.\nVisual mental image: Una estación colosal cerca de una estrella, disparando plasma como lanza azul al espacio.\nMechanism to imply visually: Recolecta viento o material levantado de la estrella; usa fusión o energía estelar para producir chorros dirigidos.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "star-lifting",
+      "title": "Star lifting",
+      "file": "star-lifting.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Star lifting.\nMission context: ingenieria estelar. Category: Minería estelar. Scale: estelar. Plausibility: especulativo.\nCore idea: Una estrella no solo emite energía: también puede ser mina de plasma.\nVisual mental image: Arcos magnéticos arrancando corrientes de plasma desde la superficie solar.\nMechanism to imply visually: Campos magnéticos, calentamiento localizado o aumento de viento solar canalizan materia hacia colectores y procesadores.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "stellar-husbandry",
+      "title": "Stellar husbandry",
+      "file": "stellar-husbandry.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Stellar husbandry.\nMission context: ingenieria estelar. Category: Gestión estelar. Scale: estelar. Plausibility: especulativo.\nCore idea: Una civilización muy antigua podría tratar su estrella como ecosistema energético a cuidar.\nVisual mental image: Ingenieros orbitando una enana roja durante billones de años, ajustando masa y brillo.\nMechanism to imply visually: Extraer o agregar masa, redistribuir material, controlar actividad y gestionar combustible nuclear a muy largo plazo.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "stellar-navigation",
+      "title": "Navegación estelar",
+      "file": "stellar-navigation.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Navegación estelar.\nMission context: ingenieria estelar. Category: Movimiento de sistemas. Scale: estelar. Plausibility: especulativo.\nCore idea: A escala profunda, la geografía de una civilización puede ser dinámica.\nVisual mental image: Un sol y sus planetas desplazándose como una flota lenta entre brazos galácticos.\nMechanism to imply visually: Motores estelares producen pequeñas aceleraciones sostenidas, alterando trayectoria durante millones de años.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "plasma-processing",
+      "title": "Procesamiento de plasma estelar",
+      "file": "plasma-processing.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Procesamiento de plasma estelar.\nMission context: ingenieria estelar. Category: Minería estelar. Scale: estelar. Plausibility: especulativo.\nCore idea: Extraer plasma es solo el inicio: hay que convertirlo en materiales y combustible útiles.\nVisual mental image: Ríos de plasma entrando en campos magnéticos y saliendo como isótopos clasificados.\nMechanism to imply visually: Campos magnéticos, radiadores, separadores de masa y reactores transformarían material ionizado en recursos manejables.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "black-hole-engineering",
+      "title": "Ingeniería con agujeros negros",
+      "file": "black-hole-engineering.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Ingeniería con agujeros negros.\nMission context: ingenieria estelar. Category: Frontera extrema. Scale: estelar. Plausibility: especulativo.\nCore idea: En la frontera, hasta los objetos más extremos pueden imaginarse como infraestructura.\nVisual mental image: Un disco de acreción blanco alrededor de una sombra negra, rodeado por colectores de energía.\nMechanism to imply visually: Podría explotar acreción, rotación, radiación de Hawking en casos diminutos o asistencia gravitatoria extrema.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "stellar-technosignatures",
+      "title": "Tecnofirmas de ingeniería estelar",
+      "file": "stellar-technosignatures.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Tecnofirmas de ingeniería estelar.\nMission context: ingenieria estelar. Category: SETI. Scale: estelar. Plausibility: frontera.\nCore idea: Una megaestructura suficientemente grande puede ser astronomía anómala.\nVisual mental image: Curvas de luz raras, exceso infrarrojo y estrellas que se comportan de forma sospechosa.\nMechanism to imply visually: Búsquedas pueden mirar calor residual, tránsitos artificiales, espectros inusuales, aceleraciones o distribuciones estelares extrañas.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    }
+  ]
+}

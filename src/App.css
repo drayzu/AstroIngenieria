@@ -1452,6 +1452,13 @@ html.has-home-custom-cursor textarea {
   margin-bottom: 24px;
 }
 
+.concept-route-controls .sx-button {
+  min-height: 42px;
+  padding-inline: 16px;
+  border-width: 1px;
+  font-size: 0.7rem;
+}
+
 .concept-study-layout {
   display: grid;
   gap: 28px;
@@ -1819,6 +1826,396 @@ html.has-home-custom-cursor textarea {
 .concept-study-visual {
   border: 1px solid var(--line-soft);
   background: #000;
+}
+
+.concept-variant-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.concept-variant-switch button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line-soft);
+  color: rgba(255, 255, 255, 0.72);
+  background: transparent;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.concept-variant-switch button.is-active,
+.concept-variant-switch button:hover {
+  color: #000;
+  background: #fff;
+}
+
+.concept-visual-layer {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  min-width: 0;
+}
+
+.concept-reading-visual {
+  position: sticky;
+  top: 96px;
+}
+
+.concept-visual-layer-head {
+  display: grid;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.concept-visual-layer-head span {
+  color: #fff;
+  text-transform: uppercase;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.concept-visual-layer-head em {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.84rem;
+  font-style: normal;
+  line-height: 1.45;
+}
+
+.concept-visual-layer img,
+.concept-visual-placeholder {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  display: block;
+  border: 1px solid var(--line-soft);
+  background: #000;
+}
+
+.concept-visual-layer img {
+  object-fit: cover;
+}
+
+.concept-visual-placeholder {
+  display: grid;
+  align-content: end;
+  gap: 10px;
+  padding: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent 42%),
+    radial-gradient(circle at 72% 18%, rgba(255, 255, 255, 0.12), transparent 28%),
+    #030303;
+}
+
+.concept-visual-placeholder span {
+  width: fit-content;
+  padding: 6px 9px;
+  border: 1px solid var(--line-soft);
+  color: #fff;
+  text-transform: uppercase;
+  font-size: 0.66rem;
+  font-weight: 900;
+}
+
+.concept-visual-placeholder p {
+  max-width: 560px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.55;
+}
+
+.concept-visual-layer figcaption {
+  padding: 14px 0 0;
+  border-top: 1px solid var(--line-soft);
+  color: rgba(255, 255, 255, 0.68);
+  line-height: 1.55;
+}
+
+.concept-visual-prompt {
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.concept-visual-prompt summary {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  color: #fff;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.concept-visual-prompt p,
+.concept-visual-prompt span {
+  display: block;
+  padding: 0 12px 12px;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.concept-visual-prompt span {
+  color: rgba(255, 255, 255, 0.42);
+  overflow-wrap: anywhere;
+}
+
+.concept-reading-support,
+.concept-reading-immersive {
+  padding-block: 8px 4px;
+}
+
+.concept-reading-flow {
+  display: grid;
+  gap: 26px;
+  max-width: 780px;
+}
+
+.concept-narrative {
+  max-width: 760px;
+}
+
+.concept-narrative h2 {
+  max-width: 760px;
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 1;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.concept-narrative p {
+  margin-top: 22px;
+  color: #ededed;
+  font-size: clamp(1rem, 1.15vw, 1.12rem);
+  line-height: 1.82;
+}
+
+.concept-reading-lead {
+  color: #f3f3f3;
+}
+
+.concept-reading-sections {
+  display: grid;
+  gap: 22px;
+}
+
+.concept-reading-section {
+  padding-top: 22px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.concept-reading-section h3 {
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.concept-reading-section p {
+  color: #e8e8e8;
+  font-size: clamp(1rem, 1.08vw, 1.08rem);
+  line-height: 1.78;
+}
+
+.concept-reading-section p + p {
+  margin-top: 14px;
+}
+
+.concept-reading-closing {
+  margin: 30px 0 0;
+  padding: 0 0 0 18px;
+  border-left: 3px solid #fff;
+  color: #fff;
+  font-size: clamp(1.15rem, 1.5vw, 1.42rem);
+  line-height: 1.48;
+  font-weight: 800;
+}
+
+.concept-longread-article {
+  max-width: 780px;
+}
+
+.concept-longread-header {
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.concept-longread-header h2 {
+  max-width: 760px;
+  font-size: clamp(2.2rem, 5vw, 5.2rem);
+  line-height: 0.95;
+  font-weight: 900;
+  text-transform: uppercase;
+  overflow-wrap: break-word;
+}
+
+.concept-longread-header p {
+  margin-top: 22px;
+  max-width: 700px;
+  color: #ededed;
+  font-size: clamp(1.05rem, 1.35vw, 1.26rem);
+  line-height: 1.75;
+}
+
+.concept-longread-sections {
+  display: grid;
+  gap: 34px;
+  margin-top: 34px;
+}
+
+.concept-longread-section {
+  scroll-margin-top: 96px;
+}
+
+.concept-longread-section h3 {
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  font-size: clamp(1.18rem, 1.7vw, 1.55rem);
+  line-height: 1.15;
+  font-weight: 900;
+}
+
+.concept-longread-section p {
+  color: #e9e9e9;
+  font-size: clamp(1.02rem, 1.14vw, 1.13rem);
+  line-height: 1.86;
+  overflow-wrap: break-word;
+}
+
+.concept-longread-section p + p {
+  margin-top: 16px;
+}
+
+.concept-longread-callout {
+  margin-top: 20px;
+  padding: 16px 0 16px 18px;
+  border-left: 3px solid #fff;
+}
+
+.concept-longread-callout strong {
+  display: block;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0;
+}
+
+.concept-longread-callout p {
+  color: #fff;
+  font-size: clamp(1rem, 1.15vw, 1.12rem);
+  line-height: 1.65;
+  font-weight: 700;
+}
+
+.concept-longread-closing {
+  margin: 42px 0 0;
+  padding: 26px 0 0;
+  border-top: 1px solid var(--line-soft);
+  color: #fff;
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+  line-height: 1.45;
+  font-weight: 900;
+}
+
+.concept-longread-takeaways {
+  margin-top: 30px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.concept-longread-takeaways h3 {
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.concept-longread-takeaways ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.concept-longread-takeaways li {
+  color: #e7e7e7;
+  line-height: 1.62;
+}
+
+.concept-dossier-content {
+  display: grid;
+  gap: 20px;
+}
+
+.concept-dossier-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.concept-dossier-section {
+  padding: 18px;
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.concept-dossier-section h2 {
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.concept-dossier-section dl {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+}
+
+.concept-dossier-section dt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  color: #fff;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.concept-dossier-section dt em {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 1px solid var(--line-soft);
+  color: rgba(255, 255, 255, 0.68);
+  font-style: normal;
+  font-size: 0.62rem;
+}
+
+.concept-dossier-section dd {
+  margin: 7px 0 0;
+  color: #e6e6e6;
+  line-height: 1.58;
+}
+
+.concept-technical-grid {
+  margin-top: 2px;
+}
+
+.concept-dossier-sources {
+  display: grid;
+  gap: 12px;
 }
 
 .concept-study-grid {
@@ -2707,6 +3104,10 @@ html.has-home-custom-cursor textarea {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .concept-reading-visual {
+    position: static;
+  }
+
   .dark-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3102,6 +3503,7 @@ html.has-home-custom-cursor textarea {
   .sx-filter-row button,
   .concept-study-tabs button,
   .view-mode-tabs button,
+  .concept-variant-switch button,
   .layer-tabs button,
   .zoom-controls button {
     width: 100%;

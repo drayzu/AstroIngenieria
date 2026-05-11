@@ -1,0 +1,101 @@
+{
+  "generatedAt": "2026-05-06T20:35:27.644Z",
+  "source": "OpenAI image generation via Codex built-in image_gen",
+  "format": "webp",
+  "size": "1920x1080",
+  "quality": 84,
+  "credit": "Imagen IA generada para AstroIngenieria; sin logos, texto incrustado ni marcas.",
+  "concepts": [
+    {
+      "id": "reusable-launch",
+      "title": "Lanzamiento reutilizable",
+      "file": "reusable-launch.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Lanzamiento reutilizable.\nMission context: infraestructura espacial. Category: Acceso al espacio. Scale: orbital. Plausibility: actual.\nCore idea: Una civilización espacial necesita logística rutinaria, no solo misiones heroicas.\nVisual mental image: Cohetes regresando, repostando y volviendo a despegar como infraestructura industrial.\nMechanism to imply visually: La reutilización conserva etapas, motores y conocimiento operativo para mover más masa por menos costo marginal.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "orbital-ports",
+      "title": "Puertos espaciales orbitales",
+      "file": "orbital-ports.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Puertos espaciales orbitales.\nMission context: infraestructura espacial. Category: Logística. Scale: orbital. Plausibility: plausible.\nCore idea: El espacio se vuelve habitable cuando existen lugares para llegar, reparar, esperar y partir.\nVisual mental image: Un puerto iluminado donde naves pequeñas se acoplan alrededor de astilleros y depósitos.\nMechanism to imply visually: Concentran atraques, brazos robóticos, almacenes, talleres, energía, comunicaciones y control de tráfico.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "fuel-depots",
+      "title": "Depósitos de combustible orbital",
+      "file": "fuel-depots.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Depósitos de combustible orbital.\nMission context: infraestructura espacial. Category: Logística. Scale: orbital. Plausibility: plausible.\nCore idea: Repostar en el espacio cambia el diseño de misiones: no todo debe salir completo desde la Tierra.\nVisual mental image: Tanques criogénicos brillando cerca de un puerto, con naves acopladas como barcos a una estación.\nMechanism to imply visually: Almacenan propelentes, controlan evaporación, transfieren fluidos y coordinan rutas entre Tierra, Luna y Marte.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "lunar-bases",
+      "title": "Bases lunares",
+      "file": "lunar-bases.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Bases lunares.\nMission context: infraestructura espacial. Category: Superficie. Scale: planetaria. Plausibility: plausible.\nCore idea: La Luna puede ser campo de pruebas para vivir, extraer y construir fuera de la Tierra.\nVisual mental image: Módulos semienterrados bajo regolito, paneles solares bajos y robots moviendo polvo gris.\nMechanism to imply visually: Combina hábitats presurizados, protección con regolito, energía solar o nuclear, extracción local y transporte cislunar.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "isru",
+      "title": "ISRU: uso de recursos locales",
+      "file": "isru.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept ISRU: uso de recursos locales.\nMission context: infraestructura espacial. Category: Recursos. Scale: planetaria. Plausibility: plausible.\nCore idea: La expansión espacial empieza a ser real cuando aprende a vivir de materiales locales.\nVisual mental image: Plantas industriales pequeñas transformando hielo lunar o regolito en aire, combustible y piezas.\nMechanism to imply visually: Prospección, excavación, procesamiento químico, manufactura y almacenamiento convierten recursos locales en soporte operativo.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "asteroid-mining",
+      "title": "Minería de asteroides",
+      "file": "asteroid-mining.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Minería de asteroides.\nMission context: infraestructura espacial. Category: Recursos. Scale: orbital. Plausibility: frontera.\nCore idea: Los asteroides pueden ser minas, escudos, estaciones y materia prima de megaestructuras.\nVisual mental image: Robots anclados a una roca irregular, cortando hielo y metal bajo un Sol distante.\nMechanism to imply visually: Requiere identificar objetivos, acoplarse con baja gravedad, excavar, procesar y transportar material útil.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "space-elevator",
+      "title": "Ascensor espacial",
+      "file": "space-elevator.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Ascensor espacial.\nMission context: infraestructura espacial. Category: Megaestructura de transporte. Scale: orbital. Plausibility: frontera.\nCore idea: Es una autopista vertical al espacio, limitada sobre todo por materiales.\nVisual mental image: Una línea finísima saliendo del ecuador hasta perderse en el cielo, con cabinas ascendiendo lentamente.\nMechanism to imply visually: Un cable en tensión por rotación terrestre sostiene trepadores eléctricos que suben masa a órbita.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "skyhook",
+      "title": "Skyhook",
+      "file": "skyhook.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Skyhook.\nMission context: infraestructura espacial. Category: Transporte orbital. Scale: orbital. Plausibility: frontera.\nCore idea: No baja una escalera fija: pasa como una cuerda dinámica que roba y entrega velocidad.\nVisual mental image: Un cable giratorio rozando la atmósfera superior mientras captura una nave en el instante exacto.\nMechanism to imply visually: Un tether en órbita transfiere energía orbital a vehículos; versiones rotatorias reducen velocidad relativa de captura.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "tethers",
+      "title": "Tethers espaciales",
+      "file": "tethers.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Tethers espaciales.\nMission context: infraestructura espacial. Category: Transporte orbital. Scale: orbital. Plausibility: plausible.\nCore idea: Un cable orbital puede ser máquina, motor, freno y grúa a la vez.\nVisual mental image: Hilos tensos cruzando la órbita con pequeñas cargas desplazándose por su longitud.\nMechanism to imply visually: Interactúan con campos magnéticos, rotación y dinámica orbital para mover energía y momento entre sistemas.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "orbital-ring",
+      "title": "Anillo orbital",
+      "file": "orbital-ring.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Anillo orbital.\nMission context: infraestructura espacial. Category: Megaestructura de transporte. Scale: orbital. Plausibility: frontera.\nCore idea: Es infraestructura planetaria: una estación de tren que rodea el mundo.\nVisual mental image: Un aro artificial visible en el cielo, con elevadores bajando hacia ciudades de superficie.\nMechanism to imply visually: Un flujo orbital rápido dentro de una estructura estacionaria transfiere soporte dinámico a plataformas y elevadores.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "launch-loop",
+      "title": "Launch loop",
+      "file": "launch-loop.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Launch loop.\nMission context: infraestructura espacial. Category: Megaestructura de lanzamiento. Scale: orbital. Plausibility: frontera.\nCore idea: Una estructura puede sostenerse no por columnas, sino por movimiento continuo.\nVisual mental image: Una línea larga sobre el océano, vibrando con energía, lanzando cápsulas hacia el cielo.\nMechanism to imply visually: Un rotor o flujo interno rápido genera sustentación dinámica; vehículos aceleran sobre la estructura elevada.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "mass-driver",
+      "title": "Mass driver",
+      "file": "mass-driver.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Mass driver.\nMission context: infraestructura espacial. Category: Lanzamiento electromagnético. Scale: orbital. Plausibility: plausible.\nCore idea: La Luna y asteroides permiten lanzar materiales sin atmósfera ni gravedad terrestre alta.\nVisual mental image: Una vía larga en una llanura lunar disparando contenedores hacia órbita.\nMechanism to imply visually: Bobinas o rieles aceleran cápsulas; puede servir para carga resistente, minerales o propelente procesado.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "shipyards",
+      "title": "Astilleros espaciales",
+      "file": "shipyards.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Astilleros espaciales.\nMission context: infraestructura espacial. Category: Construcción. Scale: orbital. Plausibility: frontera.\nCore idea: Las grandes naves probablemente se construyen donde van a operar: en el espacio.\nVisual mental image: Brazos robóticos armando una nave enorme entre andamios luminosos y depósitos flotantes.\nMechanism to imply visually: Usan módulos, impresión, soldadura, robots, inspección y materiales locales para ensamblar estructuras grandes.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "generatedAt": "2026-05-06T20:35:27.644Z",
+  "source": "OpenAI image generation via Codex built-in image_gen",
+  "format": "webp",
+  "size": "1920x1080",
+  "quality": 84,
+  "credit": "Imagen IA generada para AstroIngenieria; sin logos, texto incrustado ni marcas.",
+  "concepts": [
+    {
+      "id": "astrobiology",
+      "title": "Astrobiología",
+      "file": "astrobiology.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Astrobiología.\nMission context: sistemas complementarios. Category: Complementario. Scale: planetaria. Plausibility: actual.\nCore idea: La astroingeniería debe saber cuándo construir, cuándo preservar y cuándo mirar mejor.\nVisual mental image: Microbios extremófilos bajo hielo, océanos internos y atmósferas analizadas por telescopios.\nMechanism to imply visually: Integra química prebiótica, extremófilos, habitabilidad, biosignatures y mundos como Europa, Encélado, Titán o Marte.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "exoplanets",
+      "title": "Exoplanetas",
+      "file": "exoplanets.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Exoplanetas.\nMission context: sistemas complementarios. Category: Complementario. Scale: planetaria. Plausibility: actual.\nCore idea: Amplían la imaginación: la Tierra no es el único laboratorio posible.\nVisual mental image: Un mosaico de mundos extraños orbitando estrellas rojas, dobles y compactas.\nMechanism to imply visually: Se detectan por tránsitos, velocidades radiales, imagen directa y espectros atmosféricos.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "ringworld",
+      "title": "Megaestructuras en ciencia ficción",
+      "file": "ringworld.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Megaestructuras en ciencia ficción.\nMission context: sistemas complementarios. Category: Imaginación. Scale: galactica. Plausibility: especulativo.\nCore idea: La ficción no siempre es plausible, pero puede enseñar escala, estética y preguntas correctas.\nVisual mental image: Un anillo de mundo alrededor de una estrella, tan grande que el horizonte se pierde en cielo artificial.\nMechanism to imply visually: Se comparan por estabilidad, gravedad, materiales, iluminación, ecología y valor narrativo.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "future-universe",
+      "title": "Futuro lejano del universo",
+      "file": "future-universe.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Futuro lejano del universo.\nMission context: sistemas complementarios. Category: Tiempo profundo. Scale: galactica. Plausibility: actual.\nCore idea: La astroingeniería extrema aparece cuando una civilización piensa más allá de una estrella.\nVisual mental image: Civilizaciones migrando lentamente mientras el universo se enfría y se vacía.\nMechanism to imply visually: Analiza fuentes de energía futuras, expansión acelerada, evolución estelar y límites de computación y vida a largo plazo.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "space-law",
+      "title": "Derecho, economía y política espacial",
+      "file": "space-law.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Derecho, economía y política espacial.\nMission context: sistemas complementarios. Category: Sociedad. Scale: orbital. Plausibility: actual.\nCore idea: La infraestructura espacial también necesita reglas, no solo motores.\nVisual mental image: Una asamblea orbital decidiendo minería, tráfico, derechos y protección de mundos.\nMechanism to imply visually: Incluye tratados, economía cislunar, independencia colonial, derechos, seguridad y gestión de bienes comunes orbitales.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "cosmic-ethics",
+      "title": "Ética cósmica",
+      "file": "cosmic-ethics.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Ética cósmica.\nMission context: sistemas complementarios. Category: Sociedad. Scale: galactica. Plausibility: plausible.\nCore idea: Poder cósmico sin criterio puede ser más peligroso que inspirador.\nVisual mental image: Una balanza entre un planeta virgen, una colonia humana y una biosfera posible.\nMechanism to imply visually: Evalúa daño, consentimiento, irreversibilidad, derechos de inteligencias, protección planetaria y responsabilidades intergeneracionales.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    }
+  ]
+}

@@ -3,12 +3,14 @@ import type {
   AstroConcept,
   AstroScale,
   ChapterVisual,
+  ConceptVisualArchetype,
   Plausibility,
   SourceRef,
   VisualHotspot,
   VisualLayer,
   VisualLayerId,
 } from '../types';
+import { createConceptEditorial } from './conceptEditorial';
 
 const sources = {
   nasaSettlements: {
@@ -159,22 +161,10 @@ const concept = (
   related: string[],
   metrics: AstroConcept['metrics'],
   conceptSources?: SourceRef[],
-): AstroConcept => ({
-  id,
-  chapterId,
-  title,
-  category,
-  scale,
-  plausibility,
-  summary,
-  keyIdea,
-  mentalImage,
-  mechanism,
-  advantages,
-  difficulties,
-  related,
-  ...createVisualProfile({
+): AstroConcept => {
+  const visualProfile = createVisualProfile({
     id,
+    chapterId,
     title,
     category,
     scale,
@@ -186,19 +176,40 @@ const concept = (
     advantages,
     difficulties,
     metrics,
-  }),
-  model3d:
-    id === 'oneill-cylinder'
-      ? {
-          kind: 'oneill-cylinder',
-          label: 'Modelo 3D',
-          caption:
-            'Corte interactivo del cilindro: casco exterior, espejos solares, radiadores y franjas habitables internas.',
-        }
-      : undefined,
-  metrics,
-  sources: conceptSources,
-});
+  });
+  const baseConcept = {
+    id,
+    chapterId,
+    title,
+    category,
+    scale,
+    plausibility,
+    summary,
+    keyIdea,
+    mentalImage,
+    mechanism,
+    advantages,
+    difficulties,
+    related,
+    ...visualProfile,
+    model3d:
+      id === 'oneill-cylinder'
+        ? {
+            kind: 'oneill-cylinder',
+            label: 'Modelo 3D',
+            caption:
+              'Corte interactivo del cilindro: casco exterior, espejos solares, radiadores y franjas habitables internas.',
+          } as const
+        : undefined,
+    metrics,
+    sources: conceptSources,
+  };
+
+  return {
+    ...baseConcept,
+    ...createConceptEditorial(baseConcept),
+  };
+};
 
 const layerDescriptions: Record<VisualLayerId, string> = {
   estructura: 'Forma, arquitectura y partes visibles del sistema.',
@@ -251,7 +262,278 @@ const habitatConceptVisualPrompts: Record<string, string> = {
     'Photorealistic bioregenerative life support system inside an orbital habitat, greenhouse cylinders, water recycling loops, pipes, radiators, soft grow lights, sterile aerospace modules and black space beyond windows, no text, no logos, no watermark.',
 };
 
+const habitatInteriorVisualPrompts: Record<string, string> = {
+  iss:
+    'Photorealistic lived-in interior of a current orbital station module, compact laboratory corridor, windows showing Earth, floating tools, soft instrument light and two tiny human silhouettes in practical flight clothing seen from behind, contemplative wonder, no text, no logos, no watermark.',
+  'bernal-sphere':
+    'Photorealistic interior of a Bernal sphere habitat, curved garden terraces and compact neighborhoods rising up the spherical horizon, mirror daylight, quiet public walkway, tiny human silhouettes seen from behind for scale, cinematic sense of wonder, no text, no logos, no watermark.',
+  'stanford-torus':
+    'Photorealistic interior of a Stanford torus habitat, broad curved valley under a visible ring ceiling, parks, water channels, small neighborhoods, central hub and spokes overhead, tiny human silhouettes on a balcony, awe and calm, no text, no logos, no watermark.',
+  'oneill-cylinder':
+    'Photorealistic interior of an O Neill cylinder, vast cylindrical landscape curving overhead, alternating window and land bands, distant farms, towns and clouds, small people on an observation deck seen from behind, natural sunlight and cinematic wonder, no text, no logos, no watermark.',
+  'bishop-ring':
+    'Photorealistic lived perspective inside a Bishop ring, immense open horizon curving upward with atmospheric haze, green habitat band, rivers, transit lines and tiny human silhouettes on a rim overlook, grand scale and quiet awe, no text, no logos, no watermark.',
+  'mckendree-cylinder':
+    'Photorealistic interior of a McKendree cylinder, ultra-large inhabited landscape curving into the sky, layered cities, forests, lakes and atmospheric depth inside a colossal carbon structure, tiny silhouettes on a viewing platform, sublime realistic scale, no text, no logos, no watermark.',
+  'asteroid-habitat':
+    'Photorealistic interior of an asteroid habitat, carved cavern settlement with pressurized glass gardens, warm lights, exposed rock ceiling, industrial airlocks and tiny human silhouettes looking into a green atrium, realistic frontier wonder, no text, no logos, no watermark.',
+  worldship:
+    'Photorealistic interior of an interstellar worldship, rotating habitat valley with gardens, water, compact homes and structural ribs overhead, deep-space observation windows, tiny human silhouettes on a walkway, contemplative generational voyage mood, no text, no logos, no watermark.',
+  'life-support':
+    'Photorealistic lived-in bioregenerative life support bay inside a habitat, greenhouse corridors, water recycling loops, algae bioreactors, soft grow lights, tiny human silhouettes tending plants from behind, intimate scientific wonder, no text, no logos, no watermark.',
+};
+
+const habitatInteriorAssets = new Set(Object.keys(habitatInteriorVisualPrompts));
+
+export const visualArchetypeLabels = {
+  'introduccion-principios': 'Introducción y principios base',
+  'habitats-espaciales': 'Hábitats espaciales',
+  'infraestructura-espacial': 'Infraestructura espacial',
+  'energia-estelar-computacion': 'Energía estelar y computación cósmica',
+  'propulsion-espacial': 'Propulsión espacial',
+  'propulsion-especulativa': 'Propulsión especulativa o hipotética',
+  'ingenieria-planetaria': 'Ingeniería planetaria',
+  'ingenieria-estelar': 'Ingeniería estelar',
+  'civilizaciones-seti': 'Civilizaciones cósmicas y SETI',
+  'complementarios-abstractos': 'Temas complementarios y abstractos',
+} satisfies Record<ConceptVisualArchetype, string>;
+
+const visualArchetypeByChapter: Record<string, ConceptVisualArchetype> = {
+  intro: 'introduccion-principios',
+  habitats: 'habitats-espaciales',
+  infrastructure: 'infraestructura-espacial',
+  energy: 'energia-estelar-computacion',
+  propulsion: 'propulsion-espacial',
+  planetary: 'ingenieria-planetaria',
+  stellar: 'ingenieria-estelar',
+  civilizations: 'civilizaciones-seti',
+  complements: 'complementarios-abstractos',
+};
+
+const speculativePropulsionConcepts = new Set(['alcubierre', 'wormholes', 'reactionless']);
+
+const generatedVisualLayerAssets = new Set([
+  'intro/conceptual/astroingenieria',
+  'intro/immersive/astroingenieria',
+  'intro/conceptual/kardashev',
+  'intro/immersive/kardashev',
+  'intro/conceptual/artificial-gravity',
+  'intro/immersive/artificial-gravity',
+  'habitats/conceptual/iss',
+  'habitats/immersive/iss',
+  'habitats/conceptual/bernal-sphere',
+  'habitats/immersive/bernal-sphere',
+  'habitats/conceptual/stanford-torus',
+  'habitats/immersive/stanford-torus',
+  'habitats/conceptual/oneill-cylinder',
+  'habitats/immersive/oneill-cylinder',
+  'habitats/conceptual/bishop-ring',
+  'habitats/immersive/bishop-ring',
+  'habitats/conceptual/mckendree-cylinder',
+  'habitats/immersive/mckendree-cylinder',
+  'habitats/conceptual/asteroid-habitat',
+  'habitats/immersive/asteroid-habitat',
+  'habitats/conceptual/worldship',
+  'habitats/immersive/worldship',
+  'habitats/conceptual/life-support',
+  'habitats/immersive/life-support',
+  'civilizations/conceptual/fermi',
+  'civilizations/immersive/fermi',
+  'propulsion/conceptual/alcubierre',
+  'propulsion/immersive/alcubierre',
+]);
+
+const getConceptVisualArchetype = (chapterId: string, id: string): ConceptVisualArchetype => {
+  if (speculativePropulsionConcepts.has(id)) {
+    return 'propulsion-especulativa';
+  }
+  return visualArchetypeByChapter[chapterId] ?? 'complementarios-abstractos';
+};
+
+const visualArchetypeGuidance = {
+  'introduccion-principios': {
+    conceptual:
+      'Represent the principle as an explanatory notebook page: energy scales, rotation, civilization levels, orbital arcs, planets, stars and simple comparative diagrams.',
+    immersive:
+      'Communicate deep future astroengineering: humanity building at planetary, orbital or stellar scale, with cosmic wonder and civilizational ambition.',
+  },
+  'habitats-espaciales': {
+    conceptual:
+      'Show structure and function: cross-section, rotation axis, habitable zones, life support, mirrors, radiators, docking modules, fields or closed ecological loops.',
+    immersive:
+      'Show the lived interior experience when appropriate: curved landscapes, overhead cities, light bands, water, fields, transit and human scale inside a built world.',
+  },
+  'infraestructura-espacial': {
+    conceptual:
+      'Show operations and mechanisms: assembly steps, modules, trajectories, cargo transfer, anchors, vehicles, mining tools, local resources or technical cutaways.',
+    immersive:
+      'Show an operational scene with robots, astronauts, vehicles, orbital construction, mining, launches, maintenance or industrial activity at space scale.',
+  },
+  'energia-estelar-computacion': {
+    conceptual:
+      'Show collectors, orbits, energy flows, radiators, transmission beams, computational layers, modular structure and thermal dissipation around stars or planets.',
+    immersive:
+      'Show cosmic scale: stars surrounded by swarms, power beams, illuminated planets, giant radiators or civilization capturing stellar energy.',
+  },
+  'propulsion-espacial': {
+    conceptual:
+      'Show the working principle: engine geometry, chamber, reactor, sail, beam, magnetic field, particles, propellant flow, thrust vector or braking system.',
+    immersive:
+      'Show the phenomenon in action: spacecraft accelerating, sails lit by beams, plasma glow, radiation, interstellar travel, braking near a star or extreme speed.',
+  },
+  'propulsion-especulativa': {
+    conceptual:
+      'Treat it as theoretical physics, not confirmed technology: spacetime geometry, relativistic diagrams, field bubbles, curvature and explicit uncertainty through visual language.',
+    immersive:
+      'Keep the scene evocative but sober: spacecraft near gravitational distortion, warped star fields or a theoretical spacetime tunnel without making it look solved.',
+  },
+  'ingenieria-planetaria': {
+    conceptual:
+      'Show planetary systems: atmospheric layers, mirrors, sunshades, domes, processors, artificial magnetospheres, ecological cycles or staged transformation.',
+    immersive:
+      'Show the experience of living or working during transformation: domed cities, Venusian clouds, protected habitats, changing landscapes and adaptive civilization.',
+  },
+  'ingenieria-estelar': {
+    conceptual:
+      'Show stars as physical systems: magnetic fields, collectors, mirrors, plasma extraction, jets, stellar acceleration structures or black hole energy interfaces.',
+    immersive:
+      'Show extreme scale: civilization manipulating a star, plasma streams, structures around a sun, stellar engines, black hole power systems or distant technosignatures.',
+  },
+  'civilizaciones-seti': {
+    conceptual:
+      'Avoid turning every idea into a machine; use galactic maps, timelines, expansion fronts, light cones, signals, nodes, probes, filters or civilizational diagrams.',
+    immersive:
+      'Use a philosophical cosmic mood: galactic colonization patterns, lost signals, observatories listening, silent civilizations, autonomous probes or deep time.',
+  },
+  'complementarios-abstractos': {
+    conceptual:
+      'Use editorial or diagrammatic composition: maps, organisms, planets, documents, orbits, timelines, decision networks or governance diagrams without false machinery.',
+    immersive:
+      'Communicate the central feeling: discovering life, distant worlds, deep future, cosmic decisions, megastructure ruins, ethical dilemmas or humanity facing vast scales.',
+  },
+} satisfies Record<ConceptVisualArchetype, { conceptual: string; immersive: string }>;
+
+const visualNegativePrompt =
+  'Avoid cartoon, childish illustration, pixel art, cold CAD render, generic stock image, generic AI art, long readable paragraphs, dense typography, logos, watermarks, flags and brand marks.';
+
+const trimCaption = (value: string, maxLength = 170) => {
+  const cleanValue = value.replace(/\s+/g, ' ').trim();
+  if (cleanValue.length <= maxLength) {
+    return cleanValue;
+  }
+  return `${cleanValue.slice(0, maxLength).replace(/\s+\S*$/, '')}...`;
+};
+
+const cleanPromptSentence = (value: string) => value.replace(/\s+/g, ' ').replace(/[.。]+$/u, '').trim();
+
+const createConceptVisualNarrative = (
+  input: Pick<
+    AstroConcept,
+    | 'id'
+    | 'chapterId'
+    | 'title'
+    | 'category'
+    | 'scale'
+    | 'plausibility'
+    | 'keyIdea'
+    | 'mentalImage'
+    | 'mechanism'
+  >,
+  illustration: AstroConcept['illustration'],
+): Pick<AstroConcept, 'visualArchetype' | 'visualNarrative'> => {
+  const visualArchetype = getConceptVisualArchetype(input.chapterId, input.id);
+  const archetypeLabel = visualArchetypeLabels[visualArchetype];
+  const guidance = visualArchetypeGuidance[visualArchetype];
+  const assetPath = `illustrations/ai/concepts/${input.chapterId}`;
+  const conceptualAssetPath = `${assetPath}/conceptual/${input.id}.webp`;
+  const immersiveAssetPath = `${assetPath}/immersive/${input.id}.webp`;
+  const conceptualAssetKey = `${input.chapterId}/conceptual/${input.id}`;
+  const immersiveAssetKey = `${input.chapterId}/immersive/${input.id}`;
+  const speculativeCaution =
+    visualArchetype === 'propulsion-especulativa'
+      ? 'Scientific caution: present this as a theoretical visualization or thought experiment, not as confirmed engineering or a solved spacecraft system.'
+      : input.plausibility === 'especulativo'
+        ? 'Scientific caution: keep the image speculative and conceptually honest; do not present the idea as confirmed technology.'
+        : 'Scientific coherence: keep the design plausible for the stated concept and avoid physically incoherent spectacle.';
+
+  const sharedContext = [
+    `Concept: ${input.title}.`,
+    `Visual archetype: ${archetypeLabel}.`,
+    `Category: ${input.category}; scale: ${input.scale}; plausibility: ${input.plausibility}.`,
+    `Core idea: ${cleanPromptSentence(input.keyIdea)}.`,
+    `Mental image to adapt: ${cleanPromptSentence(input.mentalImage)}.`,
+    `Principle or mechanism to represent: ${cleanPromptSentence(input.mechanism)}.`,
+    speculativeCaution,
+  ].join('\n');
+
+  const conceptualPrompt = [
+    'Use case: scientific-educational visual layer for a Spanish astroengineering atlas.',
+    'Layer: boceto conceptual / engineering sketch. Narrative role: how it is thought, how it works, or what principle it represents.',
+    sharedContext,
+    `Archetype-specific direction: ${guidance.conceptual}`,
+    'Style: graphite pencil and technical ink sketch on lightly textured paper, visible construction lines, sectional views, arrows, axes and dotted guides; human and preliminary, not a cold CAD blueprint.',
+    'Annotation direction: use exactly 3-5 short readable handwritten labels in English, each only 1-3 words, derived from the concept and attached to visible parts of the sketch. Every label must sit inside its own small square or rectangular callout box, with a thin hand-drawn border and an arrow pointing to the relevant part. Use simple labels such as thrust axis, heat flow, habitat ring, signal cone or energy collector only when they fit the subject. Make the boxed labels larger, separated and high-contrast like engineering notebook marginalia. Do not add title headings, bullet lists, paragraphs, tables or dense written notes inside the image. Keep one clear main structure plus 2-4 small auxiliary diagrams. Do not saturate the sheet; the image must remain understandable without relying on the labels.',
+    visualNegativePrompt,
+  ].join('\n');
+
+  const immersivePrompt = [
+    'Use case: scientific-educational visual layer for a Spanish astroengineering atlas.',
+    'Layer: vision artistica / immersive experience. Narrative role: how it would feel, what emotion, scale or meaning it communicates.',
+    sharedContext,
+    `Archetype-specific direction: ${guidance.immersive}`,
+    'Style: semi-realistic cinematic concept art, credible but evocative, atmospheric lighting, strong composition, rich but disciplined color, sense of scale and wonder without fantasy excess.',
+    visualNegativePrompt,
+  ].join('\n');
+
+  return {
+    visualArchetype,
+    visualNarrative: {
+      slug: input.id,
+      archetype: visualArchetype,
+      exterior: {
+        layer: 'exterior',
+        label: 'Vista exterior',
+        role: 'Qué es esto',
+        src: illustration.src,
+        target: `public/${assetPath}/${input.id}.webp`,
+        alt: illustration.alt,
+        prompt: illustration.prompt,
+        caption: `La estructura vista desde fuera: ${trimCaption(input.mentalImage)}`,
+        style: illustration.style,
+        credit: illustration.credit,
+      },
+      conceptual: {
+        layer: 'conceptual',
+        label: 'Boceto conceptual',
+        role: 'Cómo está pensado / cómo funciona / qué principio representa',
+        src: generatedVisualLayerAssets.has(conceptualAssetKey) ? `${assetBase}${conceptualAssetPath}` : undefined,
+        target: `public/${conceptualAssetPath}`,
+        alt: `Boceto conceptual de ${input.title}`,
+        prompt: conceptualPrompt,
+        caption: `Una lectura de diseño: ${trimCaption(input.mechanism)}`,
+        style:
+          'Boceto a lápiz y tinta técnica sobre papel texturizado, con líneas de construcción, cortes, flechas y etiquetas manuscritas breves en inglés.',
+        credit: 'Prompt preparado para generar la capa de boceto conceptual del atlas.',
+      },
+      immersive: {
+        layer: 'immersive',
+        label: 'Visión inmersiva',
+        role: 'Cómo se sentiría / qué emoción, escala o significado comunica',
+        src: generatedVisualLayerAssets.has(immersiveAssetKey) ? `${assetBase}${immersiveAssetPath}` : undefined,
+        target: `public/${immersiveAssetPath}`,
+        alt: `Visión inmersiva de ${input.title}`,
+        prompt: immersivePrompt,
+        caption: `Una interpretación de escala y experiencia: ${trimCaption(input.keyIdea)}`,
+        style:
+          'Concept art semirrealista, cinematográfico, atmosférico y plausible, con énfasis en emoción, escala y significado del concepto.',
+        credit: 'Prompt preparado para generar la capa inmersiva del atlas.',
+      },
+    },
+  };
+};
+
 const getConceptIllustration = (
+  chapterId: string,
   id: string,
   title: string,
   category: string,
@@ -261,38 +543,53 @@ const getConceptIllustration = (
   mechanism: string,
 ): AstroConcept['illustration'] => {
   const habitatPrompt = habitatConceptVisualPrompts[id];
+  const conceptPath = `${assetBase}illustrations/ai/concepts/${chapterId}/${id}.webp`;
 
   if (habitatPrompt) {
     return {
-      src: `${assetBase}illustrations/ai/concepts/habitats/${id}.webp`,
+      src: conceptPath,
       alt: `Imagen cinematográfica del concepto ${title} dentro de la misión Hábitats espaciales`,
       prompt: habitatPrompt,
       style:
         'Realismo científico cinematográfico, negro dominante, iluminación aeroespacial sobria, continuidad visual con las imágenes IA de la portada.',
       credit:
         'Imagen IA WebP generada para el atlas con composicion cinematografica y realismo cientifico especifico del concepto.',
+      ...(habitatInteriorAssets.has(id)
+        ? {
+            interior: {
+              src: `${assetBase}illustrations/ai/concepts/habitats/interiors/${id}.webp`,
+              alt: `Vista interior vivida del concepto ${title}`,
+              prompt: habitatInteriorVisualPrompts[id],
+              style:
+                'Realismo cientifico artistico, habitabilidad plausible, siluetas humanas pequenas para escala y emocion, sin texto incrustado.',
+              credit:
+                'Imagen IA WebP generada para imaginar la experiencia de vivir dentro del habitat.',
+            },
+          }
+        : {}),
     };
   }
 
   return {
-    src: `${assetBase}illustrations/${id}.webp`,
-    alt: `Ilustración realista y minimalista de ${title}`,
+    src: conceptPath,
+    alt: `Imagen cinematografica del concepto ${title}`,
     prompt: [
-      'Scientific educational realistic concept illustration.',
+      'Photorealistic scientific educational concept image for a cinematic astroengineering atlas.',
       `Subject: ${title}.`,
       `Category: ${category}; scale: ${scale}; plausibility: ${plausibility}.`,
       `Mental image: ${mentalImage}.`,
       `Mechanism: ${mechanism}.`,
-      'Editorial black and white museum style, natural cinematic light, no poster look, no neon excess, no text in image.',
+      'Dark premium aerospace visual language, black dominant background, sober high contrast, realistic materials, no poster look, no neon excess, no text, no logos, no watermark.',
     ].join(' '),
     style:
-      'Realismo científico sobrio, museo blanco/negro, iluminación natural, composición con mucho aire, sin texto incrustado.',
-    credit: 'Asset generativo local WebP, preparado para reemplazo por IA curada.',
+      'Realismo cientifico cinematografico, negro dominante, iluminacion aeroespacial sobria, sin texto incrustado.',
+    credit: 'Imagen IA WebP generada para el atlas con realismo cientifico especifico del concepto.',
   };
 };
 
 const createVisualProfile = ({
   id,
+  chapterId,
   title,
   category,
   scale,
@@ -307,6 +604,7 @@ const createVisualProfile = ({
 }: Pick<
   AstroConcept,
   | 'id'
+  | 'chapterId'
   | 'title'
   | 'category'
   | 'scale'
@@ -320,6 +618,21 @@ const createVisualProfile = ({
   | 'metrics'
 >) => {
   const layers = visualLayers(pickLayers(scale, plausibility));
+  const illustration = getConceptIllustration(chapterId, id, title, category, scale, plausibility, mentalImage, mechanism);
+  const visualNarrative = createConceptVisualNarrative(
+    {
+      id,
+      chapterId,
+      title,
+      category,
+      scale,
+      plausibility,
+      keyIdea,
+      mentalImage,
+      mechanism,
+    },
+    illustration,
+  );
   const hotspotSeed = id.length + title.length + category.length;
   const hotspots: VisualHotspot[] = [
     {
@@ -365,7 +678,8 @@ const createVisualProfile = ({
   ].filter((hotspot) => layers.some((layer) => layer.id === hotspot.layer));
 
   return {
-    illustration: getConceptIllustration(id, title, category, scale, plausibility, mentalImage, mechanism),
+    illustration,
+    ...visualNarrative,
     hotspots,
     layers,
     visualNotes: `Observa ${title} como ${category.toLocaleLowerCase('es')}: ${keyIdea}`,

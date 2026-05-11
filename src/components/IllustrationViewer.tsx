@@ -13,6 +13,8 @@ interface IllustrationViewerProps {
   compared?: boolean;
   compact?: boolean;
   imageOverride?: string;
+  altOverride?: string;
+  hotspotsEnabled?: boolean;
 }
 
 export function IllustrationViewer({
@@ -20,6 +22,8 @@ export function IllustrationViewer({
   compared = false,
   compact = false,
   imageOverride,
+  altOverride,
+  hotspotsEnabled = true,
 }: IllustrationViewerProps) {
   const [activeLayer, setActiveLayer] = useState<VisualLayerId | 'all'>('all');
   const [viewerMode, setViewerMode] = useState<ViewerMode>('image');
@@ -43,9 +47,9 @@ export function IllustrationViewer({
     [concept.hotspots, activeHotspotId],
   );
 
-  const visibleHotspots = concept.hotspots.filter(
-    (hotspot) => activeLayer === 'all' || hotspot.layer === activeLayer,
-  );
+  const visibleHotspots = hotspotsEnabled
+    ? concept.hotspots.filter((hotspot) => activeLayer === 'all' || hotspot.layer === activeLayer)
+    : [];
 
   const updatePan = (axis: 'x' | 'y', value: number) => {
     setPan((current) => ({ ...current, [axis]: value }));
@@ -70,7 +74,7 @@ export function IllustrationViewer({
         ) : (
           <img
             src={imageOverride ?? concept.illustration.src}
-            alt={concept.illustration.alt}
+            alt={altOverride ?? concept.illustration.alt}
             loading="lazy"
             style={{
               transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`,
@@ -115,26 +119,26 @@ export function IllustrationViewer({
           </div>
         )}
 
-        {viewerMode === 'image' && (
+        {viewerMode === 'image' && hotspotsEnabled && (
           <div className="layer-tabs">
-          <button
-            type="button"
-            className={activeLayer === 'all' ? 'is-active' : ''}
-            onClick={() => setActiveLayer('all')}
-          >
-            Todo
-          </button>
-          {concept.layers.map((layer) => (
             <button
               type="button"
-              key={layer.id}
-              className={activeLayer === layer.id ? 'is-active' : ''}
-              onClick={() => setActiveLayer(layer.id)}
-              title={layer.description}
+              className={activeLayer === 'all' ? 'is-active' : ''}
+              onClick={() => setActiveLayer('all')}
             >
-              {layer.label}
+              Todo
             </button>
-          ))}
+            {concept.layers.map((layer) => (
+              <button
+                type="button"
+                key={layer.id}
+                className={activeLayer === layer.id ? 'is-active' : ''}
+                onClick={() => setActiveLayer(layer.id)}
+                title={layer.description}
+              >
+                {layer.label}
+              </button>
+            ))}
           </div>
         )}
 
@@ -185,7 +189,7 @@ export function IllustrationViewer({
         </div>
       )}
 
-      {!compact && (
+      {!compact && hotspotsEnabled && (
         <div className="hotspot-caption">
           <strong>{viewerMode === 'model3d' ? concept.model3d?.label : (activeHotspot?.title ?? concept.title)}</strong>
           <p>{viewerMode === 'model3d' ? modelCaption : (activeHotspot?.description ?? concept.visualNotes)}</p>
