@@ -187,6 +187,15 @@ const concept = (
     difficulties,
     metrics,
   }),
+  model3d:
+    id === 'oneill-cylinder'
+      ? {
+          kind: 'oneill-cylinder',
+          label: 'Modelo 3D',
+          caption:
+            'Corte interactivo del cilindro: casco exterior, espejos solares, radiadores y franjas habitables internas.',
+        }
+      : undefined,
   metrics,
   sources: conceptSources,
 });

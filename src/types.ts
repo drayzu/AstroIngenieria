@@ -44,6 +44,14 @@ export interface ConceptIllustration {
   credit: string;
 }
 
+export type ConceptModel3dKind = 'oneill-cylinder';
+
+export interface ConceptModel3d {
+  kind: ConceptModel3dKind;
+  label: string;
+  caption: string;
+}
+
 export interface VisualHotspot {
   id: string;
   x: number;
@@ -77,6 +85,7 @@ export interface AstroConcept {
   hotspots: VisualHotspot[];
   layers: VisualLayer[];
   visualNotes: string;
+  model3d?: ConceptModel3d;
   metrics: {
     energia: number;
     materiales: number;

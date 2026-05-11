@@ -4,10 +4,11 @@ import { allConcepts, chapters, plausibilityLabels, scaleLabels } from './data/a
 import { CinematicGallery } from './components/CinematicGallery';
 import { ConceptStudyPage } from './components/ConceptStudyPage';
 import { ComparisonMatrix } from './components/ComparisonMatrix';
-import { MissionChapter } from './components/MissionChapter';
+import { HomeInteractionLayer } from './components/HomeInteractionLayer';
+import { InteractiveAstroHero } from './components/InteractiveAstroHero';
+import { MissionScrollShowcase } from './components/MissionScrollShowcase';
 import { MissionSideNav } from './components/MissionSideNav';
 import { SourceList } from './components/SourceList';
-import { SpacexHero } from './components/SpacexHero';
 import type { AstroChapter, AstroConcept, AstroScale, Plausibility } from './types';
 
 type FilterValue<T extends string> = 'all' | T;
@@ -15,6 +16,7 @@ type AppRoute =
   | { page: 'home' }
   | { page: 'mission'; chapterId: string }
   | { page: 'concept'; conceptId: string };
+type HomeUtility = 'compare' | 'sources';
 
 const scaleOptions = Object.keys(scaleLabels) as AstroScale[];
 const plausibilityOptions = Object.keys(plausibilityLabels) as Plausibility[];
@@ -87,6 +89,7 @@ function App() {
   const [comparisonIds, setComparisonIds] = useState<string[]>(defaultComparisonIds);
   const [sideNavOpen, setSideNavOpen] = useState(false);
   const [pendingScrollId, setPendingScrollId] = useState<string | null>(null);
+  const [activeHomeUtility, setActiveHomeUtility] = useState<HomeUtility | null>(null);
 
   const activeConcept = route.page === 'concept'
     ? allConcepts.find((concept) => concept.id === route.conceptId) ?? null
@@ -139,6 +142,7 @@ function App() {
     const onPopState = () => {
       setRoute(getRouteFromLocation());
       setSideNavOpen(false);
+      setActiveHomeUtility(null);
       setPendingScrollId('top');
     };
 
@@ -181,8 +185,9 @@ function App() {
     setPendingScrollId(scrollId);
   };
 
-  const navigateHome = (scrollId = 'top') => {
+  const navigateHome = (scrollId = 'top', utility: HomeUtility | null = null) => {
     resetMissionFilters();
+    setActiveHomeUtility(utility);
     pushRoute({ page: 'home' }, import.meta.env.BASE_URL, scrollId);
   };
 
@@ -212,6 +217,18 @@ function App() {
     });
   };
 
+  const openHomeUtility = (utility: HomeUtility) => {
+    setActiveHomeUtility(utility);
+    setSideNavOpen(false);
+
+    if (route.page === 'home') {
+      window.requestAnimationFrame(() => scrollToSection(utility));
+      return;
+    }
+
+    navigateHome(utility, utility);
+  };
+
   const handleSideMission = (chapter: AstroChapter) => {
     if (route.page === 'home') {
       setSideNavOpen(false);
@@ -238,58 +255,67 @@ function App() {
   };
 
   const renderHome = () => (
-    <>
-      <SpacexHero chapter={chapters[0]} conceptCount={allConcepts.length} />
+    <HomeInteractionLayer>
+      <InteractiveAstroHero chapter={chapters[0]} conceptCount={allConcepts.length} />
 
-      <section id="missions" className="sx-section mission-section" aria-labelledby="missions-title">
-        <div className="sx-section-head">
-          <span className="sx-kicker">Flight plan</span>
-          <h2 id="missions-title">Nueve misiones para entender la astroingeniería</h2>
-        </div>
-        <div className="mission-stack">
-          {chapters.map((chapter, index) => (
-            <MissionChapter
-              key={chapter.id}
-              chapter={chapter}
-              index={index}
-              onExploreChapter={navigateChapter}
-            />
-          ))}
-        </div>
-      </section>
+      <MissionScrollShowcase chapters={chapters} onExploreChapter={navigateChapter} />
 
-      <section id="compare" className="sx-section compare-section" aria-labelledby="compare-title">
-        <div className="sx-section-head">
-          <span className="sx-kicker">Telemetry</span>
-          <h2 id="compare-title">Comparar arquitectura, energía y madurez</h2>
-          <p>Un resumen técnico para contrastar ideas sin perder el contexto visual.</p>
-        </div>
-        <ComparisonMatrix
-          concepts={allConcepts}
-          comparisonIds={comparisonIds}
-          onToggleConcept={toggleComparison}
-          onSelectConcept={navigateConcept}
-        />
-      </section>
-
-      <section id="sources" className="sx-section sources-section" aria-labelledby="sources-title">
+      <section className="sx-section home-utility-section" aria-labelledby="home-utility-title">
         <div className="sx-section-head split">
           <div>
-            <span className="sx-kicker">References</span>
-            <h2 id="sources-title">Fuentes y documentación</h2>
+            <span className="sx-kicker">Utilities</span>
+            <h2 id="home-utility-title">Herramientas del atlas</h2>
           </div>
           <p>
-            El contenido parte del TXT original y se apoya en referencias técnicas para mantener
-            el atlas visual conectado con fuentes reales.
+            El recorrido principal termina en las misiones. Comparador y fuentes quedan a mano,
+            pero solo se despliegan cuando hacen falta.
           </p>
         </div>
-        <SourceList sources={sourceRefs} />
-        <a className="sx-button source-link" href="https://github.com/drayo00/AstroIngenieria" target="_blank" rel="noreferrer">
-          <span>Ver repositorio</span>
-          <ArrowUpRight aria-hidden="true" />
-        </a>
+
+        <div className="home-utility-grid">
+          <article id="compare" className={activeHomeUtility === 'compare' ? 'home-utility-card is-active' : 'home-utility-card'} aria-labelledby="compare-title">
+            <span className="sx-kicker">Telemetry</span>
+            <h3 id="compare-title">Comparador</h3>
+            <p>Contrasta arquitectura, energía, escala y madurez sin salir del mapa principal.</p>
+            <button type="button" className="sx-button primary" onClick={() => setActiveHomeUtility('compare')}>
+              <span>Abrir comparador</span>
+              <ArrowUpRight aria-hidden="true" />
+            </button>
+          </article>
+
+          <article id="sources" className={activeHomeUtility === 'sources' ? 'home-utility-card is-active' : 'home-utility-card'} aria-labelledby="sources-title">
+            <span className="sx-kicker">References</span>
+            <h3 id="sources-title">Fuentes</h3>
+            <p>Consulta la documentación técnica y el repositorio cuando quieras validar el atlas.</p>
+            <button type="button" className="sx-button primary" onClick={() => setActiveHomeUtility('sources')}>
+              <span>Ver fuentes</span>
+              <ArrowUpRight aria-hidden="true" />
+            </button>
+          </article>
+        </div>
+
+        {activeHomeUtility === 'compare' && (
+          <div className="home-utility-panel" aria-label="Comparador completo">
+            <ComparisonMatrix
+              concepts={allConcepts}
+              comparisonIds={comparisonIds}
+              onToggleConcept={toggleComparison}
+              onSelectConcept={navigateConcept}
+            />
+          </div>
+        )}
+
+        {activeHomeUtility === 'sources' && (
+          <div className="home-utility-panel" aria-label="Fuentes completas">
+            <SourceList sources={sourceRefs} />
+            <a className="sx-button source-link" href="https://github.com/drayo00/AstroIngenieria" target="_blank" rel="noreferrer">
+              <span>Ver repositorio</span>
+              <ArrowUpRight aria-hidden="true" />
+            </a>
+          </div>
+        )}
       </section>
-    </>
+    </HomeInteractionLayer>
   );
 
   const renderMissionPage = (chapter: AstroChapter) => {
@@ -446,8 +472,8 @@ function App() {
         <nav className="sx-nav" aria-label="Secciones principales">
           <button type="button" onClick={() => navigateHome('missions')}>Misiones</button>
           <button type="button" onClick={handleSideConcepts}>Conceptos</button>
-          <button type="button" onClick={() => navigateHome('compare')}>Comparador</button>
-          <button type="button" onClick={() => navigateHome('sources')}>Fuentes</button>
+          <button type="button" onClick={() => openHomeUtility('compare')}>Comparador</button>
+          <button type="button" onClick={() => openHomeUtility('sources')}>Fuentes</button>
           <a
             href="https://github.com/drayo00/AstroIngenieria"
             target="_blank"
