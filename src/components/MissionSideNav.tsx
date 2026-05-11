@@ -54,6 +54,8 @@ export function MissionSideNav({
             <button
               type="button"
               key={chapter.id}
+              data-cursor-label={`${chapter.number}${chapter.title.toLocaleUpperCase('es')}`}
+              data-cursor-tone={chapter.color}
               onClick={(event) => {
                 releasePointerFocus(event);
                 onGoMission(chapter);

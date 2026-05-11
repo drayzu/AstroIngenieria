@@ -1,0 +1,115 @@
+{
+  "generatedAt": "2026-05-06T20:35:27.644Z",
+  "source": "OpenAI image generation via Codex built-in image_gen",
+  "format": "webp",
+  "size": "1920x1080",
+  "quality": 84,
+  "credit": "Imagen IA generada para AstroIngenieria; sin logos, texto incrustado ni marcas.",
+  "concepts": [
+    {
+      "id": "habitability",
+      "title": "Habitabilidad planetaria",
+      "file": "habitability.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Habitabilidad planetaria.\nMission context: ingenieria planetaria. Category: Marco. Scale: planetaria. Plausibility: actual.\nCore idea: Antes de terraformar hay que entender qué hace habitable a un mundo.\nVisual mental image: Un planeta visto por capas: océano, atmósfera, campo magnético, hielo y biosfera.\nMechanism to imply visually: Depende de energía estelar, presión, atmósfera, agua, química, radiación, gravedad y estabilidad temporal.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "habitable-zone",
+      "title": "Zona habitable",
+      "file": "habitable-zone.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Zona habitable.\nMission context: ingenieria planetaria. Category: Astrobiología. Scale: planetaria. Plausibility: actual.\nCore idea: No es una garantía de vida: es una primera pista térmica.\nVisual mental image: Un anillo azul-verde alrededor de una estrella, con planetas demasiado calientes y demasiado fríos a los lados.\nMechanism to imply visually: Depende de luminosidad estelar, atmósfera, albedo, efecto invernadero, órbita y evolución del sistema.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "terraforming",
+      "title": "Terraformación",
+      "file": "terraforming.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Terraformación.\nMission context: ingenieria planetaria. Category: Ingeniería planetaria. Scale: planetaria. Plausibility: frontera.\nCore idea: Terraformar es ingeniería climática, química, biológica y ética a escala planetaria.\nVisual mental image: Un planeta rojo cambiando lentamente hacia nubes, mares oscuros y manchas verdes.\nMechanism to imply visually: Podría implicar calentar, aumentar presión, liberar volátiles, introducir biología y estabilizar ciclos durante siglos o milenios.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "mars-terraforming",
+      "title": "Terraformación de Marte",
+      "file": "mars-terraforming.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Terraformación de Marte.\nMission context: ingenieria planetaria. Category: Marte. Scale: planetaria. Plausibility: frontera.\nCore idea: Marte parece cercano, pero su atmósfera perdida y baja gravedad hacen difícil una terraformación completa.\nVisual mental image: Valles marcianos bajo espejos orbitales, con domos y fábricas liberando volátiles.\nMechanism to imply visually: Propuestas incluyen gases de efecto invernadero, espejos, liberación de CO2, importación de volátiles y magnetosferas artificiales.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "venus-terraforming",
+      "title": "Terraformación de Venus",
+      "file": "venus-terraforming.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Terraformación de Venus.\nMission context: ingenieria planetaria. Category: Venus. Scale: planetaria. Plausibility: frontera.\nCore idea: Venus exige primero enfriar y rediseñar una atmósfera planetaria completa.\nVisual mental image: Un planeta cubierto por parasoles gigantes, nubes brillantes y futuras ciudades flotantes.\nMechanism to imply visually: Ideas incluyen parasoles solares, fijación de carbono, importación de hidrógeno, enfriamiento global y ciudades atmosféricas previas.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "floating-venus",
+      "title": "Ciudades flotantes en Venus",
+      "file": "floating-venus.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Ciudades flotantes en Venus.\nMission context: ingenieria planetaria. Category: Venus. Scale: planetaria. Plausibility: frontera.\nCore idea: A veces vivir sobre Venus es más plausible que vivir en su superficie.\nVisual mental image: Dirigibles-ciudad navegando nubes doradas sobre un infierno de presión y calor.\nMechanism to imply visually: Estructuras llenas de aire respirable podrían flotar en atmósfera densa, usando protección química y energía solar.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "paraterraforming",
+      "title": "Paraterraformación",
+      "file": "paraterraforming.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Paraterraformación.\nMission context: ingenieria planetaria. Category: Habitabilidad parcial. Scale: planetaria. Plausibility: frontera.\nCore idea: A menudo es más sensato construir bolsillos habitables que cambiar un mundo completo.\nVisual mental image: Una región marciana cubierta por techos transparentes con bosques bajo presión controlada.\nMechanism to imply visually: Domos, worldhouses o cubiertas retienen atmósfera local, temperatura y ecosistemas sobre áreas seleccionadas.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "worldhouse",
+      "title": "Worldhouse",
+      "file": "worldhouse.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Worldhouse.\nMission context: ingenieria planetaria. Category: Habitabilidad parcial. Scale: planetaria. Plausibility: frontera.\nCore idea: Es una terraformación con techo: más controlada, menos total.\nVisual mental image: Un valle entero bajo una membrana transparente, con clima azul dentro y desierto rojo fuera.\nMechanism to imply visually: Grandes membranas, soportes o campos contienen presión; sistemas climáticos internos mantienen temperatura, aire y agua.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "domed-cities",
+      "title": "Domos y ciudades cerradas",
+      "file": "domed-cities.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Domos y ciudades cerradas.\nMission context: ingenieria planetaria. Category: Habitabilidad local. Scale: planetaria. Plausibility: plausible.\nCore idea: La primera ciudad fuera de la Tierra probablemente será más cueva y máquina que utopía abierta.\nVisual mental image: Una ciudad compacta bajo vidrio y regolito, con luz filtrada y esclusas de entrada.\nMechanism to imply visually: Usan presurización, blindaje, soporte vital, agricultura controlada y redundancia para sostener población local.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "orbital-mirrors",
+      "title": "Espejos orbitales",
+      "file": "orbital-mirrors.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Espejos orbitales.\nMission context: ingenieria planetaria. Category: Clima planetario. Scale: planetaria. Plausibility: frontera.\nCore idea: La arquitectura orbital puede convertirse en herramienta climática.\nVisual mental image: Láminas brillantes moviendo amaneceres artificiales sobre cráteres polares.\nMechanism to imply visually: Espejos ajustan flujo solar local o global; pueden calentar polos, alimentar ciudades o modificar estaciones.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "sunshades",
+      "title": "Parasoles espaciales",
+      "file": "sunshades.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Parasoles espaciales.\nMission context: ingenieria planetaria. Category: Clima planetario. Scale: planetaria. Plausibility: frontera.\nCore idea: Enfriar un planeta puede empezar por controlar cuánta luz recibe.\nVisual mental image: Una sombra inmensa suspendida entre Venus y el Sol.\nMechanism to imply visually: Un parasol en punto Lagrange o enjambre de pantallas atenúa luz; versiones dinámicas ajustan clima y estaciones.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "volatile-import",
+      "title": "Importación de volátiles",
+      "file": "volatile-import.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Importación de volátiles.\nMission context: ingenieria planetaria. Category: Recursos planetarios. Scale: planetaria. Plausibility: frontera.\nCore idea: Un planeta seco puede necesitar materia, no solo energía.\nVisual mental image: Cometas redirigidos con precisión, llegando como cargueros helados a largo plazo.\nMechanism to imply visually: Desvío de cuerpos ricos en volátiles, procesamiento orbital o entrega controlada para aumentar inventarios planetarios.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "magnetosphere",
+      "title": "Magnetosferas artificiales",
+      "file": "magnetosphere.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Magnetosferas artificiales.\nMission context: ingenieria planetaria. Category: Protección planetaria. Scale: planetaria. Plausibility: frontera.\nCore idea: Un planeta puede necesitar un escudo invisible antes que un océano.\nVisual mental image: Un arco magnético gigante desviando plasma solar antes de tocar Marte.\nMechanism to imply visually: Bobinas, satélites o estructuras en puntos estratégicos generarían campos para desviar partículas cargadas.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "ecopoiesis",
+      "title": "Ecopoiesis",
+      "file": "ecopoiesis.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Ecopoiesis.\nMission context: ingenieria planetaria. Category: Biología planetaria. Scale: planetaria. Plausibility: frontera.\nCore idea: Antes de bosques hay microbios, ciclos químicos y estabilidad básica.\nVisual mental image: Biopelículas oscuras creciendo en rocas bajo atmósferas artificiales tenues.\nMechanism to imply visually: Microorganismos seleccionados podrían modificar química local, producir gases, fijar nutrientes y preparar ecosistemas más complejos.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "planetary-protection",
+      "title": "Protección planetaria",
+      "file": "planetary-protection.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Protección planetaria.\nMission context: ingenieria planetaria. Category: Ética. Scale: planetaria. Plausibility: actual.\nCore idea: No todo mundo debe ser usado antes de ser entendido.\nVisual mental image: Sondas esterilizadas, laboratorios sellados y regiones marcianas marcadas como sensibles.\nMechanism to imply visually: Controla biocarga, misiones, muestras, zonas especiales y protocolos científicos para preservar evidencia de vida.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    }
+  ]
+}

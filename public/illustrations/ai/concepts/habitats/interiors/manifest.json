@@ -1,0 +1,73 @@
+{
+  "generatedAt": "2026-05-06T20:35:27.644Z",
+  "source": "OpenAI image generation via Codex built-in image_gen",
+  "format": "webp",
+  "size": "1920x1080",
+  "quality": 84,
+  "credit": "Imagen IA generada para AstroIngenieria; variantes interiores de habitats con siluetas humanas pequenas para escala.",
+  "concepts": [
+    {
+      "id": "iss",
+      "title": "Estaciones espaciales actuales",
+      "file": "iss.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 interior variant for a Spanish astroengineering atlas concept page.\nPrimary request: Photorealistic lived-in interior of a current orbital station module, compact laboratory corridor, windows showing Earth, floating tools, soft instrument light and two tiny human silhouettes in practical flight clothing seen from behind, contemplative wonder, no text, no logos, no watermark.\nConcept: Estaciones espaciales actuales. Category: Presencia humana. Key idea: Son el primer escalón práctico antes de pensar en colonias rotatorias gigantes.\nStyle: photorealistic but slightly more artistic and contemplative than the exterior technical images, realistic habitat architecture, emotional sense of wonder, not anime, not a poster.\nPeople: include only very small realistic human silhouettes or people seen from behind for scale, no visible protagonist face, no stylized character.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "bernal-sphere",
+      "title": "Bernal Sphere",
+      "file": "bernal-sphere.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 interior variant for a Spanish astroengineering atlas concept page.\nPrimary request: Photorealistic interior of a Bernal sphere habitat, curved garden terraces and compact neighborhoods rising up the spherical horizon, mirror daylight, quiet public walkway, tiny human silhouettes seen from behind for scale, cinematic sense of wonder, no text, no logos, no watermark.\nConcept: Bernal Sphere. Category: Hábitat clásico. Key idea: Una esfera puede concentrar vida, agricultura y comunidad alrededor de un ecuador habitable.\nStyle: photorealistic but slightly more artistic and contemplative than the exterior technical images, realistic habitat architecture, emotional sense of wonder, not anime, not a poster.\nPeople: include only very small realistic human silhouettes or people seen from behind for scale, no visible protagonist face, no stylized character.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "stanford-torus",
+      "title": "Stanford Torus",
+      "file": "stanford-torus.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 interior variant for a Spanish astroengineering atlas concept page.\nPrimary request: Photorealistic interior of a Stanford torus habitat, broad curved valley under a visible ring ceiling, parks, water channels, small neighborhoods, central hub and spokes overhead, tiny human silhouettes on a balcony, awe and calm, no text, no logos, no watermark.\nConcept: Stanford Torus. Category: Hábitat clásico. Key idea: El anillo hace visible la idea de vivir en el interior de una estructura orbital.\nStyle: photorealistic but slightly more artistic and contemplative than the exterior technical images, realistic habitat architecture, emotional sense of wonder, not anime, not a poster.\nPeople: include only very small realistic human silhouettes or people seen from behind for scale, no visible protagonist face, no stylized character.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "oneill-cylinder",
+      "title": "Cilindro de O’Neill",
+      "file": "oneill-cylinder.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 interior variant for a Spanish astroengineering atlas concept page.\nPrimary request: Photorealistic interior of an O Neill cylinder, vast cylindrical landscape curving overhead, alternating window and land bands, distant farms, towns and clouds, small people on an observation deck seen from behind, natural sunlight and cinematic wonder, no text, no logos, no watermark.\nConcept: Cilindro de O’Neill. Category: Mega-hábitat. Key idea: No es una estación: es un paisaje entero construido dentro de una máquina.\nStyle: photorealistic but slightly more artistic and contemplative than the exterior technical images, realistic habitat architecture, emotional sense of wonder, not anime, not a poster.\nPeople: include only very small realistic human silhouettes or people seen from behind for scale, no visible protagonist face, no stylized character.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "bishop-ring",
+      "title": "Bishop Ring",
+      "file": "bishop-ring.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 interior variant for a Spanish astroengineering atlas concept page.\nPrimary request: Photorealistic lived perspective inside a Bishop ring, immense open horizon curving upward with atmospheric haze, green habitat band, rivers, transit lines and tiny human silhouettes on a rim overlook, grand scale and quiet awe, no text, no logos, no watermark.\nConcept: Bishop Ring. Category: Mega-hábitat. Key idea: Si los materiales avanzan lo suficiente, un anillo puede convertirse en continente artificial.\nStyle: photorealistic but slightly more artistic and contemplative than the exterior technical images, realistic habitat architecture, emotional sense of wonder, not anime, not a poster.\nPeople: include only very small realistic human silhouettes or people seen from behind for scale, no visible protagonist face, no stylized character.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "mckendree-cylinder",
+      "title": "McKendree Cylinder",
+      "file": "mckendree-cylinder.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 interior variant for a Spanish astroengineering atlas concept page.\nPrimary request: Photorealistic interior of a McKendree cylinder, ultra-large inhabited landscape curving into the sky, layered cities, forests, lakes and atmospheric depth inside a colossal carbon structure, tiny silhouettes on a viewing platform, sublime realistic scale, no text, no logos, no watermark.\nConcept: McKendree Cylinder. Category: Mega-hábitat. Key idea: Muestra hasta dónde escala la idea de O’Neill si los materiales dejan de ser el límite principal.\nStyle: photorealistic but slightly more artistic and contemplative than the exterior technical images, realistic habitat architecture, emotional sense of wonder, not anime, not a poster.\nPeople: include only very small realistic human silhouettes or people seen from behind for scale, no visible protagonist face, no stylized character.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "asteroid-habitat",
+      "title": "Hábitats dentro de asteroides",
+      "file": "asteroid-habitat.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 interior variant for a Spanish astroengineering atlas concept page.\nPrimary request: Photorealistic interior of an asteroid habitat, carved cavern settlement with pressurized glass gardens, warm lights, exposed rock ceiling, industrial airlocks and tiny human silhouettes looking into a green atrium, realistic frontier wonder, no text, no logos, no watermark.\nConcept: Hábitats dentro de asteroides. Category: Hábitat alternativo. Key idea: En vez de llevar toda la masa, se aprovecha una roca espacial como cuerpo protector.\nStyle: photorealistic but slightly more artistic and contemplative than the exterior technical images, realistic habitat architecture, emotional sense of wonder, not anime, not a poster.\nPeople: include only very small realistic human silhouettes or people seen from behind for scale, no visible protagonist face, no stylized character.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "worldship",
+      "title": "Naves generacionales y worldships",
+      "file": "worldship.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 interior variant for a Spanish astroengineering atlas concept page.\nPrimary request: Photorealistic interior of an interstellar worldship, rotating habitat valley with gardens, water, compact homes and structural ribs overhead, deep-space observation windows, tiny human silhouettes on a walkway, contemplative generational voyage mood, no text, no logos, no watermark.\nConcept: Naves generacionales y worldships. Category: Hábitat móvil. Key idea: La nave deja de ser vehículo y se convierte en civilización transportada.\nStyle: photorealistic but slightly more artistic and contemplative than the exterior technical images, realistic habitat architecture, emotional sense of wonder, not anime, not a poster.\nPeople: include only very small realistic human silhouettes or people seen from behind for scale, no visible protagonist face, no stylized character.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "life-support",
+      "title": "Ecosistemas cerrados y soporte vital",
+      "file": "life-support.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 interior variant for a Spanish astroengineering atlas concept page.\nPrimary request: Photorealistic lived-in bioregenerative life support bay inside a habitat, greenhouse corridors, water recycling loops, algae bioreactors, soft grow lights, tiny human silhouettes tending plants from behind, intimate scientific wonder, no text, no logos, no watermark.\nConcept: Ecosistemas cerrados y soporte vital. Category: Sistema vital. Key idea: Un hábitat grande no puede ser solo arquitectura: debe funcionar como metabolismo artificial.\nStyle: photorealistic but slightly more artistic and contemplative than the exterior technical images, realistic habitat architecture, emotional sense of wonder, not anime, not a poster.\nPeople: include only very small realistic human silhouettes or people seen from behind for scale, no visible protagonist face, no stylized character.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    }
+  ]
+}

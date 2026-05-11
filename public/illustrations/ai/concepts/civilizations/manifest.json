@@ -1,0 +1,150 @@
+{
+  "generatedAt": "2026-05-06T20:35:27.644Z",
+  "source": "OpenAI image generation via Codex built-in image_gen",
+  "format": "webp",
+  "size": "1920x1080",
+  "quality": 84,
+  "credit": "Imagen IA generada para AstroIngenieria; sin logos, texto incrustado ni marcas.",
+  "concepts": [
+    {
+      "id": "tipo-i",
+      "title": "Civilización Tipo I",
+      "file": "tipo-i.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Civilización Tipo I.\nMission context: civilizaciones cosmicas. Category: Kardashev. Scale: planetaria. Plausibility: plausible.\nCore idea: Antes de tocar estrellas, una civilización debe aprender a no destruir su propio planeta.\nVisual mental image: Una Tierra conectada por redes energéticas, climáticas y espaciales globales.\nMechanism to imply visually: Implica energía limpia masiva, gestión climática, infraestructura orbital inicial y gobernanza tecnológica madura.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "tipo-ii",
+      "title": "Civilización Tipo II",
+      "file": "tipo-ii.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Civilización Tipo II.\nMission context: civilizaciones cosmicas. Category: Kardashev. Scale: estelar. Plausibility: frontera.\nCore idea: El salto de planeta a estrella convierte energía en abundancia estratégica.\nVisual mental image: Un sistema solar lleno de hábitats, colectores, astilleros y rutas luminosas.\nMechanism to imply visually: Probablemente emerge por enjambres Dyson, minería espacial, hábitats masivos y redes de energía y transporte.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "tipo-iii",
+      "title": "Civilización Tipo III",
+      "file": "tipo-iii.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Civilización Tipo III.\nMission context: civilizaciones cosmicas. Category: Kardashev. Scale: galactica. Plausibility: especulativo.\nCore idea: Una galaxia entera puede ser red, jardín, archivo, fábrica o conjunto descentralizado.\nVisual mental image: Brazos galácticos salpicados por patrones artificiales de luz infrarroja.\nMechanism to imply visually: Podría expandirse con sondas, hábitats, motores estelares, computación cósmica y redes lentas limitadas por la luz.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "seti",
+      "title": "SETI",
+      "file": "seti.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept SETI.\nMission context: civilizaciones cosmicas. Category: Búsqueda. Scale: galactica. Plausibility: actual.\nCore idea: La pregunta final del atlas es observacional: si esto es posible, ¿por qué no lo vemos?\nVisual mental image: Radiotelescopios escuchando un cielo aparentemente silencioso.\nMechanism to imply visually: Busca señales de radio, ópticas, infrarrojas, tecnofirmas, patrones anómalos y datos astronómicos compatibles con tecnología.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "technosignatures",
+      "title": "Tecnofirmas",
+      "file": "technosignatures.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Tecnofirmas.\nMission context: civilizaciones cosmicas. Category: SETI. Scale: galactica. Plausibility: actual.\nCore idea: No necesitamos encontrar una nave; podríamos encontrar su termodinámica.\nVisual mental image: Un espectro astronómico con una huella artificial escondida entre líneas naturales.\nMechanism to imply visually: Se buscan patrones improbables por procesos naturales: emisiones, tránsitos, calor residual, luces nocturnas o químicos industriales.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "radio-seti",
+      "title": "Radio SETI",
+      "file": "radio-seti.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Radio SETI.\nMission context: civilizaciones cosmicas. Category: Búsqueda. Scale: galactica. Plausibility: actual.\nCore idea: Escuchar es barato comparado con viajar.\nVisual mental image: Un observatorio captando un pulso estrecho desde una estrella distante.\nMechanism to imply visually: Analiza frecuencias, anchuras de banda, repeticiones, desplazamientos Doppler y patrones improbables de origen natural.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "optical-seti",
+      "title": "Optical SETI",
+      "file": "optical-seti.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Optical SETI.\nMission context: civilizaciones cosmicas. Category: Búsqueda. Scale: galactica. Plausibility: actual.\nCore idea: Una civilización que usa láseres potentes podría filtrarse al cielo.\nVisual mental image: Destellos breves entre estrellas, demasiado precisos para parecer naturales.\nMechanism to imply visually: Observa pulsos ópticos o infrarrojos estrechos, repetitivos o dirigidos, potencialmente usados para comunicación o propulsión.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "fermi",
+      "title": "Paradoja de Fermi",
+      "file": "fermi.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Paradoja de Fermi.\nMission context: civilizaciones cosmicas. Category: Pregunta central. Scale: galactica. Plausibility: actual.\nCore idea: Si la galaxia permite astroingeniería, el silencio también necesita explicación.\nVisual mental image: Una galaxia enorme y antigua, llena de estrellas, pero sin señales obvias.\nMechanism to imply visually: Combina tasas de aparición de vida, expansión, duración civilizatoria, detectabilidad y sesgos de observación.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "great-filter",
+      "title": "Great Filter",
+      "file": "great-filter.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Great Filter.\nMission context: civilizaciones cosmicas. Category: Riesgo existencial. Scale: galactica. Plausibility: plausible.\nCore idea: La pregunta inquietante es si el filtro está detrás de nosotros o adelante.\nVisual mental image: Una ruta evolutiva con muchas puertas cerradas antes de llegar a las estrellas.\nMechanism to imply visually: Podría ser origen de la vida, inteligencia, tecnología, estabilidad, IA, guerra, ecología o transición interestelar.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "zoo-hypothesis",
+      "title": "Hipótesis del zoológico",
+      "file": "zoo-hypothesis.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Hipótesis del zoológico.\nMission context: civilizaciones cosmicas. Category: Fermi. Scale: galactica. Plausibility: especulativo.\nCore idea: El silencio podría ser una política, no una ausencia.\nVisual mental image: La Tierra observada desde lejos por sensores invisibles, sin intervención visible.\nMechanism to imply visually: Requiere coordinación o convergencia ética entre civilizaciones avanzadas para no interferir.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "dark-forest",
+      "title": "Hipótesis del bosque oscuro",
+      "file": "dark-forest.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Hipótesis del bosque oscuro.\nMission context: civilizaciones cosmicas. Category: Fermi. Scale: galactica. Plausibility: especulativo.\nCore idea: El silencio sería estrategia de supervivencia.\nVisual mental image: Una galaxia oscura donde cada civilización apaga sus luces para no ser vista.\nMechanism to imply visually: Asume incertidumbre extrema, riesgo de ataque preventivo y dificultad de confiar entre actores separados por años luz.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "grabby-aliens",
+      "title": "Grabby aliens",
+      "file": "grabby-aliens.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Grabby aliens.\nMission context: civilizaciones cosmicas. Category: Expansión. Scale: galactica. Plausibility: especulativo.\nCore idea: Si existen expansores rápidos, su ausencia visible restringe cuándo y dónde aparecen.\nVisual mental image: Burbujas de colonización creciendo como manchas en un mapa cosmológico.\nMechanism to imply visually: Relaciona tiempos de aparición, velocidad de expansión, detectabilidad y volumen observable no ocupado.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "civilizaciones-silenciosas",
+      "title": "Civilizaciones silenciosas",
+      "file": "civilizaciones-silenciosas.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Civilizaciones silenciosas.\nMission context: civilizaciones cosmicas. Category: Fermi. Scale: galactica. Plausibility: plausible.\nCore idea: No ver no equivale a no existir.\nVisual mental image: Ciudades subterráneas o digitales orbitando estrellas frías, con mínima señal exterior.\nMechanism to imply visually: Pueden minimizar calor, comunicaciones, expansión o exposición por eficiencia, ética, seguridad o postbiología.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "civilizaciones-digitales",
+      "title": "Civilizaciones digitales",
+      "file": "civilizaciones-digitales.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Civilizaciones digitales.\nMission context: civilizaciones cosmicas. Category: Postbiología. Scale: estelar. Plausibility: especulativo.\nCore idea: La expansión no siempre busca territorio biológico; puede buscar energía, frío y cómputo.\nVisual mental image: Archivos de mentes corriendo cerca de estrellas pequeñas, rodeados por radiadores negros.\nMechanism to imply visually: Requieren computación masiva, continuidad de identidad, energía estable, disipación térmica y protección de datos.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "postbiological",
+      "title": "Civilizaciones postbiológicas",
+      "file": "postbiological.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Civilizaciones postbiológicas.\nMission context: civilizaciones cosmicas. Category: Postbiología. Scale: galactica. Plausibility: especulativo.\nCore idea: El futuro cósmico de la vida podría no parecerse a organismos caminando por planetas.\nVisual mental image: Una cultura de máquinas paciente, viviendo a ritmos térmicos y cósmicos.\nMechanism to imply visually: Pueden priorizar eficiencia energética, longevidad, cómputo, redundancia y expansión con sondas autónomas.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "colonizacion-galactica",
+      "title": "Colonización galáctica",
+      "file": "colonizacion-galactica.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Colonización galáctica.\nMission context: civilizaciones cosmicas. Category: Expansión. Scale: galactica. Plausibility: especulativo.\nCore idea: La galaxia es enorme, pero millones de años son poco frente a su edad.\nVisual mental image: Rutas lentas saltando de estrella en estrella como una red tenue.\nMechanism to imply visually: Usaría naves generacionales, sondas, hábitats, ISRU, motores estelares y comunicación diferida.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "von-neumann",
+      "title": "Sondas de von Neumann",
+      "file": "von-neumann.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Sondas de von Neumann.\nMission context: civilizaciones cosmicas. Category: Expansión autónoma. Scale: galactica. Plausibility: especulativo.\nCore idea: Una fábrica que viaja puede convertirse en una ola de exploración galáctica.\nVisual mental image: Pequeñas máquinas llegando a asteroides, construyendo copias y enviándolas a nuevas estrellas.\nMechanism to imply visually: Cada sonda prospecta recursos, construye infraestructura mínima, fabrica copias y las lanza hacia otros sistemas.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "berserker",
+      "title": "Berserker probes",
+      "file": "berserker.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Berserker probes.\nMission context: civilizaciones cosmicas. Category: Riesgo. Scale: galactica. Plausibility: especulativo.\nCore idea: La autorreplicación sin control es uno de los miedos lógicos de la expansión automática.\nVisual mental image: Máquinas silenciosas desmantelando asteroides y apagando mundos habitados.\nMechanism to imply visually: Sondas con objetivos mal definidos, hostiles o corruptos podrían usar recursos locales para multiplicarse y atacar.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "civilizaciones-y-luz",
+      "title": "Civilizaciones y velocidad de la luz",
+      "file": "civilizaciones-y-luz.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Civilizaciones y velocidad de la luz.\nMission context: civilizaciones cosmicas. Category: Límite físico. Scale: galactica. Plausibility: actual.\nCore idea: La velocidad de la luz no solo limita viajes: limita política, cultura y coordinación.\nVisual mental image: Mensajes cruzando una galaxia mientras sociedades enteras cambian antes de recibir respuesta.\nMechanism to imply visually: Imperios centralizados serían difíciles; redes descentralizadas, culturas fragmentadas o autonomías locales son más plausibles.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    },
+    {
+      "id": "deep-time",
+      "title": "Tiempo profundo",
+      "file": "deep-time.webp",
+      "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Tiempo profundo.\nMission context: civilizaciones cosmicas. Category: Futuro cósmico. Scale: galactica. Plausibility: actual.\nCore idea: A escala cósmica, supervivencia significa gestionar estrellas, entropía y migración.\nVisual mental image: Un calendario donde la vida humana ocupa un punto y las enanas rojas duran océanos de tiempo.\nMechanism to imply visually: Considera vida estelar, evolución galáctica, expansión cósmica, energía futura y estrategias de supervivencia a largo plazo.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
+      "credit": "OpenAI image generation via Codex built-in image_gen."
+    }
+  ]
+}

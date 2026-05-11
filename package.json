@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "generate:illustrations": "node scripts/generateIllustrations.mjs",
+    "prepare:visual-layers": "node scripts/prepareVisualLayers.mjs",
     "lint": "eslint .",
     "build": "tsc && vite build && node scripts/createSpaFallback.mjs",
     "preview": "vite preview",
