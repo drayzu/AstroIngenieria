@@ -68,3 +68,6 @@ El deploy publica `dist/` en GitHub Pages mediante `gh-pages`.
 
 La base documental original está en `docs/AstroIngenieria.txt`. La aplicación usa datos estructurados derivados y enriquecidos en `src/data/astroData.ts`, manteniendo rutas internas para misiones y conceptos individuales.
 
+![Cilindro de O'Neill interior](public/illustrations/ai/concepts/habitats/interiors/oneill-cylinder.webp)
+
+![Cilindro de O'Neill conceptual](public/illustrations/ai/concepts/habitats/conceptual/oneill-cylinder.webp)
