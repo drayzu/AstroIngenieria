@@ -4,10 +4,6 @@ Un atlas interactivo en español para explorar ideas de astroingeniería: hábit
 
 La app combina narrativa, visualización, comparación y fuentes técnicas para convertir conceptos enormes en un recorrido navegable.
 
-## Demo
-
-[Abrir AstroIngeniería en GitHub Pages](https://drayo00.github.io/AstroIngenieria/)
-
 ## Qué Incluye
 
 - 9 misiones temáticas, desde una introducción mínima hasta civilizaciones cósmicas.
