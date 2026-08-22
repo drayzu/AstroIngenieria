@@ -4,28 +4,20 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type PointerEvent as ReactPointerEvent,
+  type MouseEvent as ReactMouseEvent,
 } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { plausibilityLabels, scaleLabels } from '../../data/astroData';
-import type { AstroChapter, AstroConcept, VisualLayerId } from '../../types';
+import type { AstroChapter, AstroConcept } from '../../types';
 import { getConceptImageVariants } from '../shared/conceptImages';
 import './museoOrbital.css';
 
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 
-type StudioTab = 'pieza' | 'narrativa' | 'lectura' | 'dossier';
+type StudioTab = 'narrativa' | 'lectura' | 'dossier';
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 const roman = (index: number) => ROMAN[index] ?? String(index + 1);
-
-const LAYER_COLORS: Record<VisualLayerId, string> = {
-  estructura: '#c9a86a',
-  escala: '#8fd0ff',
-  energia: '#ffd27a',
-  riesgos: '#ff8f7a',
-  materiales: '#a8e08f',
-};
 
 const EVIDENCE_META = {
   fuente: { label: 'Fuente', color: '#a8e08f' },
@@ -34,11 +26,12 @@ const EVIDENCE_META = {
 } as const;
 
 const tabs: { id: StudioTab; label: string }[] = [
-  { id: 'pieza', label: 'Pieza' },
   { id: 'narrativa', label: 'Narrativa' },
   { id: 'lectura', label: 'Lectura larga' },
   { id: 'dossier', label: 'Dossier técnico' },
 ];
+
+const ZOOM_LEVELS = [1, 1.5, 2];
 
 interface StudioProps {
   concept: AstroConcept;
@@ -59,16 +52,13 @@ export const StudioRoom = ({
 }: StudioProps) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [tab, setTab] = useState<StudioTab>('pieza');
+  const zoomerRef = useRef<HTMLDivElement>(null);
+  const figureRef = useRef<HTMLDivElement>(null);
+  const [tab, setTab] = useState<StudioTab>('narrativa');
+  const [zoom, setZoom] = useState(1);
 
   const variants = useMemo(() => getConceptImageVariants(concept), [concept]);
   const [variantIndex, setVariantIndex] = useState(0);
-  const [visibleLayers, setVisibleLayers] = useState<Set<string>>(
-    () => new Set(concept.layers.map((layer) => layer.id)),
-  );
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const dragRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
 
   const index = siblings.findIndex((item) => item.id === concept.id);
   const previous = index > 0 ? siblings[index - 1] : null;
@@ -79,10 +69,9 @@ export const StudioRoom = ({
 
   useEffect(() => {
     setVariantIndex(0);
-    setVisibleLayers(new Set(concept.layers.map((layer) => layer.id)));
     setZoom(1);
-    setPan({ x: 0, y: 0 });
-    setTab('pieza');
+    setOrigin(50, 50);
+    setTab('narrativa');
     scrollRef.current?.scrollTo({ top: 0 });
   }, [concept]);
 
@@ -125,34 +114,27 @@ export const StudioRoom = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [next, previous, onClose, onSelect]);
 
-  const toggleLayer = (layerId: string) => {
-    setVisibleLayers((current) => {
-      const nextSet = new Set(current);
-      if (nextSet.has(layerId)) nextSet.delete(layerId);
-      else nextSet.add(layerId);
-      return nextSet;
-    });
+  const setOrigin = (x: number, y: number) => {
+    if (zoomerRef.current) {
+      zoomerRef.current.style.transformOrigin = `${x}% ${y}%`;
+    }
   };
 
-  const hotspots = concept.hotspots.filter((hotspot) => visibleLayers.has(hotspot.layer));
-  const variant = variants[Math.min(variantIndex, variants.length - 1)];
-  const allLayerIds = new Set(concept.layers.map((layer) => layer.id));
+  const trackOrigin = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (zoom <= 1 || !figureRef.current) return;
+    const rect = figureRef.current.getBoundingClientRect();
+    const x = Math.min(100, Math.max(0, ((event.clientX - rect.left) / rect.width) * 100));
+    const y = Math.min(100, Math.max(0, ((event.clientY - rect.top) / rect.height) * 100));
+    setOrigin(x, y);
+  };
 
-  const startDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (zoom <= 1) return;
-    (event.target as HTMLElement).setPointerCapture(event.pointerId);
-    dragRef.current = { x: event.clientX, y: event.clientY, ox: pan.x, oy: pan.y };
+  const applyZoom = (level: number) => {
+    setZoom(level);
+    if (level === 1) setOrigin(50, 50);
   };
-  const moveDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!dragRef.current || zoom <= 1) return;
-    const limit = 260 * (zoom - 1);
-    setPan({
-      x: Math.max(-limit, Math.min(limit, dragRef.current.ox + event.clientX - dragRef.current.x)),
-      y: Math.max(-limit, Math.min(limit, dragRef.current.oy + event.clientY - dragRef.current.y)),
-    });
-  };
-  const endDrag = () => {
-    dragRef.current = null;
+
+  const toggleZoomDblClick = () => {
+    applyZoom(zoom === 1 ? 2 : 1);
   };
 
   const goTab = (nextTab: StudioTab) => {
@@ -166,6 +148,8 @@ export const StudioRoom = ({
     ['Madurez', concept.metrics.madurez],
     ['Maravilla', concept.metrics.maravilla],
   ];
+
+  const variant = variants[Math.min(variantIndex, variants.length - 1)];
 
   return (
     <motion.div
@@ -217,19 +201,21 @@ export const StudioRoom = ({
 
         <div className="mo-studio-scroll" ref={scrollRef}>
           <section className="mo-studio-hero">
-            <div className="mo-studio-figure">
+            <div
+              className="mo-studio-figure"
+              ref={figureRef}
+              onMouseMove={trackOrigin}
+              onDoubleClick={toggleZoomDblClick}
+              data-cursor-label={zoom > 1 ? 'Mueve el ratón para explorar' : 'Doble clic para acercar'}
+            >
               <motion.div
                 className="mo-studio-imgframe"
                 layoutId={enableFlight ? `obra-${concept.id}` : undefined}
               >
                 <div
                   className="mo-studio-zoomer"
-                  data-cursor-label={zoom > 1 ? 'Arrastra' : undefined}
-                  style={{ transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)` }}
-                  onPointerDown={startDrag}
-                  onPointerMove={moveDrag}
-                  onPointerUp={endDrag}
-                  onPointerLeave={endDrag}
+                  ref={zoomerRef}
+                  style={{ transform: `scale(${zoom})` }}
                 >
                   <AnimatePresence mode="wait">
                     <motion.img
@@ -245,26 +231,19 @@ export const StudioRoom = ({
                 </div>
               </motion.div>
 
-              {hotspots.map((hotspot) => (
-                <button
-                  key={hotspot.id}
-                  type="button"
-                  className={`mo-hotspot${hotspot.x > 62 ? ' flip-left' : ''}`}
-                  style={
-                    {
-                      left: `${hotspot.x}%`,
-                      top: `${hotspot.y}%`,
-                      '--layer-color': LAYER_COLORS[hotspot.layer],
-                    } as CSSProperties
-                  }
-                >
-                  <i />
-                  <span>
-                    <b>{hotspot.title}</b>
-                    {hotspot.description}
-                  </span>
-                </button>
-              ))}
+              <div className="mo-zoom-hud" role="group" aria-label="Acercamiento">
+                {ZOOM_LEVELS.map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    className={zoom === level ? 'is-active' : ''}
+                    onClick={() => applyZoom(level)}
+                    data-cursor-label={`Zoom ×${String(level).replace('.', ',')}`}
+                  >
+                    ×{String(level).replace('.', ',')}
+                  </button>
+                ))}
+              </div>
 
               <figcaption>{variant.caption}</figcaption>
             </div>
@@ -301,11 +280,7 @@ export const StudioRoom = ({
                       key={item.id}
                       type="button"
                       className={itemIndex === variantIndex ? 'is-active' : ''}
-                      onClick={() => {
-                        setVariantIndex(itemIndex);
-                        setZoom(1);
-                        setPan({ x: 0, y: 0 });
-                      }}
+                      onClick={() => setVariantIndex(itemIndex)}
                     >
                       {item.label}
                     </button>
@@ -327,65 +302,6 @@ export const StudioRoom = ({
               </button>
             ))}
           </nav>
-
-          {tab === 'pieza' && (
-            <section className="mo-tab-pane" aria-label="La pieza">
-              <div className="mo-legend">
-                <span className="mo-legend-title">Capas de lectura</span>
-                <div className="mo-legend-row">
-                  <button
-                    type="button"
-                    className={
-                      visibleLayers.size === allLayerIds.size ? 'mo-layer-pill is-on' : 'mo-layer-pill'
-                    }
-                    onClick={() => setVisibleLayers(new Set(allLayerIds))}
-                  >
-                    Todas
-                  </button>
-                  {concept.layers.map((layer) => {
-                    const count = concept.hotspots.filter((h) => h.layer === layer.id).length;
-                    const isOn = visibleLayers.has(layer.id);
-                    return (
-                      <button
-                        key={layer.id}
-                        type="button"
-                        className={`mo-layer-pill${isOn ? ' is-on' : ' is-off'}`}
-                        title={layer.description}
-                        onClick={() => toggleLayer(layer.id)}
-                      >
-                        <i style={{ background: LAYER_COLORS[layer.id] }} />
-                        {layer.label}
-                        <b>{count}</b>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="mo-zoom-row">
-                  <span className="mo-legend-title">Acercamiento</span>
-                  {[1, 1.5, 2].map((level) => (
-                    <button
-                      key={level}
-                      type="button"
-                      className={zoom === level ? 'mo-layer-pill is-on' : 'mo-layer-pill'}
-                      onClick={() => {
-                        setZoom(level);
-                        setPan({ x: 0, y: 0 });
-                      }}
-                    >
-                      ×{String(level).replace('.', ',')}
-                    </button>
-                  ))}
-                  {zoom > 1 && <em>arrastra sobre la imagen para explorar el detalle</em>}
-                </div>
-              </div>
-
-              <div className="mo-piece-hint">
-                {concept.hotspots.length === 0
-                  ? 'Esta pieza no tiene marcadores de detalle.'
-                  : `${hotspots.length} de ${concept.hotspots.length} marcadores visibles sobre la pieza.`}
-              </div>
-            </section>
-          )}
 
           {tab === 'narrativa' && (
             <section className="mo-tab-pane mo-reader" aria-label="Narrativa">
