@@ -1,0 +1,392 @@
+/* Orrería Solar — el sistema solar como obra (prefijo or-) */
+
+.or-root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #030711;
+  color: #dbe6f4;
+  font-family: 'Space Grotesk Variable', system-ui, sans-serif;
+}
+
+/* ── Título ── */
+
+.or-title {
+  position: absolute;
+  top: 18px;
+  left: 20px;
+  z-index: 20;
+  max-width: 320px;
+  pointer-events: none;
+}
+
+.or-title-kicker {
+  margin: 0 0 6px;
+  font-family: 'JetBrains Mono Variable', monospace;
+  font-size: 9px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: #ffb35c;
+}
+
+.or-title-name {
+  margin: 0;
+  font-family: 'Fraunces Variable', Georgia, serif;
+  font-size: 30px;
+  font-weight: 360;
+  color: #eef4fb;
+}
+
+.or-title-note {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: #71829c;
+}
+
+/* ── Leyenda de misiones ── */
+
+.or-legend {
+  position: absolute;
+  left: 20px;
+  bottom: 76px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 46vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.or-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 10px 5px 6px;
+  font-family: 'JetBrains Mono Variable', monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #5d6e88;
+  background: rgba(5, 10, 20, 0.62);
+  border: 1px solid rgba(34, 52, 79, 0.9);
+  border-radius: 2px;
+  cursor: pointer;
+  transition:
+    color 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.or-legend-item:hover {
+  color: #dbe6f4;
+  border-color: #3a5378;
+}
+
+.or-legend-item.is-built {
+  color: #c7d6e8;
+  border-left: 2px solid var(--or-accent);
+}
+
+.or-legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid #44577a;
+  flex-shrink: 0;
+}
+
+.or-legend-item.is-built .or-legend-dot {
+  background: var(--or-accent);
+  border-color: var(--or-accent);
+  box-shadow: 0 0 8px var(--or-accent);
+}
+
+.or-legend-name {
+  white-space: nowrap;
+}
+
+.or-legend-count {
+  margin-left: auto;
+  padding-left: 10px;
+  color: #44577a;
+}
+
+/* ── Scrubber ── */
+
+.or-scrubber {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  background: rgba(5, 10, 20, 0.74);
+  border: 1px solid rgba(34, 52, 79, 0.9);
+  border-radius: 3px;
+  backdrop-filter: blur(10px);
+}
+
+.or-play {
+  width: 30px;
+  height: 30px;
+  font-size: 10px;
+  color: #ffb35c;
+  background: transparent;
+  border: 1px solid #3a5378;
+  border-radius: 2px;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.or-play:hover,
+.or-play.is-active {
+  background: #ffb35c;
+  color: #0a1322;
+  border-color: #ffb35c;
+}
+
+.or-scrubber input[type='range'] {
+  width: min(38vw, 420px);
+  accent-color: #ffb35c;
+  cursor: pointer;
+}
+
+.or-scrubber-label {
+  font-family: 'JetBrains Mono Variable', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  white-space: nowrap;
+  color: #8fa2bc;
+}
+
+.or-scrubber-count {
+  font-family: 'JetBrains Mono Variable', monospace;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: #ffb35c;
+  white-space: nowrap;
+}
+
+/* ── Tooltip ── */
+
+.or-tooltip {
+  position: fixed;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  background: rgba(6, 12, 24, 0.88);
+  border: 1px solid #2a4266;
+  border-radius: 2px;
+  pointer-events: none;
+  transform: translateY(-100%);
+}
+
+.or-tooltip-chapter {
+  font-family: 'JetBrains Mono Variable', monospace;
+  font-size: 8px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: #ffb35c;
+}
+
+.or-tooltip-title {
+  font-size: 12px;
+  color: #e6eef8;
+  white-space: nowrap;
+}
+
+/* ── Dossier ── */
+
+.or-dossier {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  width: 330px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 64px 24px 24px;
+  background: linear-gradient(to left, rgba(3, 7, 15, 0.94), rgba(3, 7, 15, 0.72));
+  border-left: 1px solid color-mix(in srgb, var(--or-accent) 36%, #16283e);
+  backdrop-filter: blur(12px);
+  overflow-y: auto;
+  animation: or-slide 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes or-slide {
+  from {
+    transform: translateX(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.or-dossier-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+  color: #8fa2bc;
+  background: transparent;
+  border: 1px solid #2a4266;
+  border-radius: 2px;
+  cursor: pointer;
+  transition:
+    color 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.or-dossier-close:hover {
+  color: #e6eef8;
+  border-color: var(--or-accent);
+}
+
+.or-dossier-kicker {
+  margin: 0;
+  font-family: 'JetBrains Mono Variable', monospace;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  color: var(--or-accent);
+}
+
+.or-dossier-title {
+  margin: 0;
+  font-family: 'Fraunces Variable', Georgia, serif;
+  font-size: 27px;
+  font-weight: 370;
+  line-height: 1.12;
+  color: #f0f5fb;
+}
+
+.or-dossier-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.or-tag {
+  font-family: 'JetBrains Mono Variable', monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8fa2bc;
+  border: 1px solid #25405f;
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+.or-dossier-summary {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: #b6c5d8;
+}
+
+.or-dossier-idea {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 2px solid var(--or-accent);
+  background: rgba(255, 179, 92, 0.05);
+  font-size: 12px;
+  line-height: 1.6;
+  color: #dbe6f4;
+}
+
+.or-dossier-idea span {
+  display: block;
+  margin-bottom: 4px;
+  font-family: 'JetBrains Mono Variable', monospace;
+  font-size: 8px;
+  letter-spacing: 0.3em;
+  color: #67798f;
+}
+
+.or-dossier-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.or-metric {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.or-metric-label {
+  font-family: 'JetBrains Mono Variable', monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.18em;
+  color: #67798f;
+}
+
+.or-metric-track {
+  display: flex;
+  gap: 3px;
+}
+
+.or-metric-track i {
+  flex: 1;
+  height: 5px;
+  background: #17263c;
+}
+
+.or-metric-track i.is-on {
+  background: var(--or-accent);
+}
+
+.or-dossier-hint {
+  margin: auto 0 0;
+  padding-top: 14px;
+  border-top: 1px solid #14233a;
+  font-family: 'JetBrains Mono Variable', monospace;
+  font-size: 9px;
+  line-height: 1.8;
+  letter-spacing: 0.06em;
+  color: #4d6178;
+}
+
+.or-dossier-hint kbd {
+  font-family: inherit;
+  font-size: 8.5px;
+  border: 1px solid #25405f;
+  border-radius: 2px;
+  padding: 1px 5px;
+  color: #67798f;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .or-dossier {
+    animation: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .or-legend {
+    display: none;
+  }
+
+  .or-title-note {
+    display: none;
+  }
+
+  .or-dossier {
+    width: min(300px, 84vw);
+  }
+}
