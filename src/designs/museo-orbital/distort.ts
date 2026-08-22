@@ -17,7 +17,7 @@ uniform float u_aspect;
 varying vec2 v_uv;
 
 void main() {
-  vec2 uv = v_uv;
+  vec2 uv = vec2(v_uv.x, 1.0 - v_uv.y);
   vec2 m = u_mouse;
   float d = distance(vec2(uv.x * u_aspect, uv.y), vec2(m.x * u_aspect, m.y));
   float infl = smoothstep(0.55, 0.0, d) * u_strength;
@@ -130,7 +130,7 @@ export const mountDistort = ({ canvas, image, container }: MountOptions): Distor
     move(clientX: number, clientY: number) {
       const rect = container.getBoundingClientRect();
       const nx = (clientX - rect.left) / rect.width;
-      const ny = 1 - (clientY - rect.top) / rect.height;
+      const ny = (clientY - rect.top) / rect.height;
       const speed = Math.hypot(nx - mouse.x, ny - mouse.y);
       targetStrength = Math.min(1.6, targetStrength * 0.85 + speed * 14);
       mouse.x = nx;
