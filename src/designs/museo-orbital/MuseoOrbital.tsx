@@ -39,15 +39,19 @@ const conceptFromHash = (): AstroConcept | null => {
 
 /* ---------------- Chip de salida al atlas ---------------- */
 
-const AtlasChip = () => (
-  <a
-    className="mo-atlas-chip"
-    href={import.meta.env.BASE_URL}
-    data-cursor-label="Salir"
-  >
-    ← Atlas clásico
-  </a>
-);
+const AtlasChip = () => {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+  if (window.location.pathname === base || window.location.pathname === `${base}/`) return null;
+  return (
+    <a
+      className="mo-atlas-chip"
+      href={import.meta.env.BASE_URL}
+      data-cursor-label="Salir"
+    >
+      ← Atlas clásico
+    </a>
+  );
+};
 
 /* ---------------- Cursor + Hero ---------------- */
 
