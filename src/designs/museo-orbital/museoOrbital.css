@@ -2105,3 +2105,27 @@ body:has(.mo-root) {
   transition: transform 0.18s ease-out;
   will-change: transform;
 }
+
+/* Estela de polvo estelar */
+
+.mo-trail {
+  position: fixed;
+  inset: 0;
+  z-index: 320;
+  pointer-events: none;
+}
+
+/* Contadores del hero */
+
+.mo-counter {
+  font-family: var(--mo-mono);
+  font-weight: 400;
+  color: color-mix(in srgb, var(--accent, #c9a86a) 80%, white);
+}
+
+/* Parallax interno del marco */
+
+.mo-frame-mask img {
+  transition: translate 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: translate;
+}
