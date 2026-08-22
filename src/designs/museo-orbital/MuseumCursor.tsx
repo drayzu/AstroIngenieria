@@ -101,6 +101,25 @@ export const MuseumCursor = () => {
           trailCtx.arc(p.x, p.y, 2.1 * p.life + 0.4, 0, Math.PI * 2);
           trailCtx.fill();
         }
+
+        if (particles.length > 1) {
+          for (let a = 0; a < particles.length; a += 1) {
+            for (let b = a + 1; b < particles.length; b += 1) {
+              const pa = particles[a];
+              const pb = particles[b];
+              if (pa.life < 0.18 || pb.life < 0.18) continue;
+              const d = Math.hypot(pa.x - pb.x, pa.y - pb.y);
+              if (d < 48) {
+                trailCtx.strokeStyle = `rgba(230,204,150,${((1 - d / 48) * Math.min(pa.life, pb.life) * 0.3).toFixed(3)})`;
+                trailCtx.lineWidth = 0.8;
+                trailCtx.beginPath();
+                trailCtx.moveTo(pa.x, pa.y);
+                trailCtx.lineTo(pb.x, pb.y);
+                trailCtx.stroke();
+              }
+            }
+          }
+        }
       }
 
       raf = requestAnimationFrame(loop);

@@ -306,6 +306,9 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
       spawnComet();
       window.setTimeout(() => { if (document.visibilityState === 'visible') spawnComet(); }, 220);
     };
+    const onComet = () => spawnComet();
+    window.addEventListener('mo-comet', onComet);
+
     window.addEventListener('keydown', onKeyDown);
 
     window.addEventListener('mousemove', onMove, { passive: true });
@@ -318,6 +321,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
+      window.removeEventListener('mo-comet', onComet);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('pointerdown', onDown);
