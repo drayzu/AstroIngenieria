@@ -54,6 +54,29 @@ const loadVitrine = (): string[] => {
 const scrollToId = (id: string) =>
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+/* ---------------- Contador animado ---------------- */
+
+const Counter = ({ to }: { to: number }) => {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setValue(to);
+      return;
+    }
+    let raf = 0;
+    const start = performance.now();
+    const duration = 650;
+    const step = (now: number) => {
+      const p = Math.min(1, (now - start) / duration);
+      setValue(Math.round(to * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [to]);
+  return <b className="mo-counter">{value}</b>;
+};
+
 /* ---------------- Hero con título magnético ---------------- */
 
 const Hero = () => {
@@ -175,8 +198,9 @@ const Hero = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: reduced ? 0 : 1.6, duration: 1, ease: EASE_OUT }}
         >
-          Nueve salas. {totalWorks} obras. Un recorrido desde la primera estación orbital hasta
-          civilizaciones capaces de mover estrellas.
+          Nueve salas convertidas en <Counter to={chapters.length} /> puertas. <Counter to={totalWorks} /> obras
+          esperando. Un recorrido desde la primera estación orbital hasta civilizaciones capaces
+          de mover estrellas.
         </motion.p>
 
         <motion.button
@@ -315,10 +339,12 @@ const Obra = ({
     const py = (event.clientY - rect.top) / rect.height - 0.5;
     target.style.setProperty('--rx', `${(-py * 4.5).toFixed(2)}deg`);
     target.style.setProperty('--ry', `${(px * 5.5).toFixed(2)}deg`);
+    imgRef.current?.style.setProperty('translate', `${(-px * 10).toFixed(1)}px, ${(-py * 10).toFixed(1)}px`);
   };
   const untilt = (event: ReactMouseEvent<HTMLElement>) => {
     event.currentTarget.style.setProperty('--rx', '0deg');
     event.currentTarget.style.setProperty('--ry', '0deg');
+    imgRef.current?.style.setProperty('translate', '0px, 0px');
   };
 
   return (
@@ -485,13 +511,17 @@ const Vitrina = ({
         </p>
       ) : (
         <div className="mo-vitrina-grid">
-          {obras.map((concept) => {
+          {obras.map((concept, cardIndex) => {
             const chapter = resolveChapter(concept);
             return (
-              <article
+              <motion.article
                 key={concept.id}
                 className="mo-vitrina-card"
                 style={{ '--accent': chapter.color } as CSSProperties}
+                initial={{ opacity: 0, y: 34 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-50px' }}
+                transition={{ delay: Math.min(cardIndex * 0.06, 0.42), duration: 0.75, ease: EASE_OUT }}
               >
                 <header>
                   <button
@@ -538,7 +568,7 @@ const Vitrina = ({
                   ))}
                 </dl>
                 <p className="mo-vitrina-mechanism">{concept.mechanism}</p>
-              </article>
+              </motion.article>
             );
           })}
         </div>
@@ -578,7 +608,13 @@ const Archivo = ({ sources }: { sources: ArchiveSource[] }) => (
     </header>
     <ol className="mo-archivo-list">
       {sources.map((source, index) => (
-        <li key={source.url}>
+        <motion.li
+          key={source.url}
+          initial={{ opacity: 0, x: -22 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true, margin: '-30px' }}
+          transition={{ delay: Math.min(index * 0.035, 0.5), duration: 0.6, ease: EASE_OUT }}
+        >
           <b>{String(index + 1).padStart(2, '0')}</b>
           <div>
             <span>{source.publisher}</span>
@@ -589,7 +625,7 @@ const Archivo = ({ sources }: { sources: ArchiveSource[] }) => (
           <i>
             citada en {source.count} {source.count === 1 ? 'ficha' : 'fichas'}
           </i>
-        </li>
+        </motion.li>
       ))}
     </ol>
   </section>
@@ -773,6 +809,55 @@ export default function MuseoOrbital() {
     raf = requestAnimationFrame(loop);
     return () => {
       el.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, [reduced]);
+
+  useEffect(() => {
+    if (reduced || !window.matchMedia('(pointer: fine)').matches) return;
+    const offsets = new WeakMap<Element, { x: number; y: number }>();
+    const mouse = { x: -9999, y: -9999 };
+    let raf = 0;
+    let nodes: HTMLElement[] = [];
+    let lastScan = 0;
+
+    const onMove = (event: MouseEvent) => {
+      mouse.x = event.clientX;
+      mouse.y = event.clientY;
+    };
+
+    const loop = (time: number) => {
+      if (time - lastScan > 2200) {
+        nodes = Array.from(
+          document.querySelectorAll<HTMLElement>('.mo-obra.is-featured .mo-frame-mask'),
+        );
+        lastScan = time;
+      }
+      for (const node of nodes) {
+        const rect = node.getBoundingClientRect();
+        if (rect.bottom < -90 || rect.top > window.innerHeight + 90) continue;
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = mouse.x - cx;
+        const dy = mouse.y - cy;
+        const dist = Math.hypot(dx, dy);
+        const radius = Math.max(rect.width, rect.height) / 2 + 100;
+        const force = dist < radius ? Math.pow(1 - dist / radius, 1.6) : 0;
+        const state = offsets.get(node) ?? { x: 0, y: 0 };
+        const tx = force > 0 ? (dx / (dist || 1)) * force * 7 : 0;
+        const ty = force > 0 ? (dy / (dist || 1)) * force * 5 : 0;
+        state.x += (tx - state.x) * 0.12;
+        state.y += (ty - state.y) * 0.12;
+        offsets.set(node, state);
+        node.style.transform = `translate(${state.x.toFixed(2)}px, ${state.y.toFixed(2)}px)`;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+
+    window.addEventListener('mousemove', onMove, { passive: true });
+    raf = requestAnimationFrame(loop);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
       cancelAnimationFrame(raf);
     };
   }, [reduced]);
