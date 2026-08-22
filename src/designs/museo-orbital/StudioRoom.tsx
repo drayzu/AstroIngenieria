@@ -7,14 +7,19 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Suspense, lazy } from 'react';
 import { plausibilityLabels, scaleLabels } from '../../data/astroData';
 import type { AstroChapter, AstroConcept } from '../../types';
 import { getConceptImageVariants } from '../shared/conceptImages';
 import './museoOrbital.css';
 
+const ONeillCylinderModel = lazy(() =>
+  import('./ONeillCylinderModel').then((module) => ({ default: module.ONeillCylinderModel })),
+);
+
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 
-type StudioTab = 'narrativa' | 'lectura' | 'dossier';
+type StudioTab = 'narrativa' | 'lectura' | 'dossier' | 'maqueta';
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 const roman = (index: number) => ROMAN[index] ?? String(index + 1);
@@ -38,6 +43,8 @@ interface StudioProps {
   chapter: AstroChapter;
   siblings: AstroConcept[];
   enableFlight?: boolean;
+  inVitrine: boolean;
+  onToggleVitrine: (conceptId: string) => void;
   onClose: () => void;
   onSelect: (concept: AstroConcept) => void;
 }
@@ -47,6 +54,8 @@ export const StudioRoom = ({
   chapter,
   siblings,
   enableFlight = true,
+  inVitrine,
+  onToggleVitrine,
   onClose,
   onSelect,
 }: StudioProps) => {
@@ -59,6 +68,7 @@ export const StudioRoom = ({
 
   const variants = useMemo(() => getConceptImageVariants(concept), [concept]);
   const [variantIndex, setVariantIndex] = useState(0);
+  const inlineVariants = useMemo(() => variants.slice(1), [variants]);
 
   const index = siblings.findIndex((item) => item.id === concept.id);
   const previous = index > 0 ? siblings[index - 1] : null;
@@ -151,6 +161,11 @@ export const StudioRoom = ({
 
   const variant = variants[Math.min(variantIndex, variants.length - 1)];
 
+  const visibleTabs = [
+    ...tabs,
+    ...(concept.model3d ? [{ id: 'maqueta' as StudioTab, label: 'Maqueta 3D' }] : []),
+  ];
+
   return (
     <motion.div
       className="mo-studio"
@@ -201,51 +216,71 @@ export const StudioRoom = ({
 
         <div className="mo-studio-scroll" ref={scrollRef}>
           <section className="mo-studio-hero">
-            <div
-              className="mo-studio-figure"
-              ref={figureRef}
-              onMouseMove={trackOrigin}
-              onDoubleClick={toggleZoomDblClick}
-              data-cursor-label={zoom > 1 ? 'Mueve el ratón para explorar' : 'Doble clic para acercar'}
-            >
-              <motion.div
-                className="mo-studio-imgframe"
-                layoutId={enableFlight ? `obra-${concept.id}` : undefined}
+            <div className="mo-studio-figure-col">
+              <div
+                className="mo-studio-figure"
+                ref={figureRef}
+                onMouseMove={trackOrigin}
+                onDoubleClick={toggleZoomDblClick}
+                data-cursor-label={zoom > 1 ? 'Mueve el ratón para explorar' : 'Doble clic para acercar'}
               >
-                <div
-                  className="mo-studio-zoomer"
-                  ref={zoomerRef}
-                  style={{ transform: `scale(${zoom})` }}
+                <motion.div
+                  className="mo-studio-imgframe"
+                  layoutId={enableFlight ? `obra-${concept.id}` : undefined}
                 >
-                  <AnimatePresence mode="wait">
-                    <motion.img
-                      key={variant.src}
-                      src={variant.src}
-                      alt={concept.illustration.alt}
-                      initial={{ opacity: 0, scale: 1.03 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.5, ease: EASE_OUT }}
-                    />
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-
-              <div className="mo-zoom-hud" role="group" aria-label="Acercamiento">
-                {ZOOM_LEVELS.map((level) => (
-                  <button
-                    key={level}
-                    type="button"
-                    className={zoom === level ? 'is-active' : ''}
-                    onClick={() => applyZoom(level)}
-                    data-cursor-label={`Zoom ×${String(level).replace('.', ',')}`}
+                  <div
+                    className="mo-studio-zoomer"
+                    ref={zoomerRef}
+                    style={{ transform: `scale(${zoom})` }}
                   >
-                    ×{String(level).replace('.', ',')}
-                  </button>
-                ))}
+                    <AnimatePresence mode="wait">
+                      <motion.img
+                        key={variant.src}
+                        src={variant.src}
+                        alt={concept.illustration.alt}
+                        initial={{ opacity: 0, scale: 1.03 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.5, ease: EASE_OUT }}
+                      />
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+
+                <div className="mo-zoom-hud" role="group" aria-label="Acercamiento">
+                  {ZOOM_LEVELS.map((level) => (
+                    <button
+                      key={level}
+                      type="button"
+                      className={zoom === level ? 'is-active' : ''}
+                      onClick={() => applyZoom(level)}
+                      data-cursor-label={`Zoom ×${String(level).replace('.', ',')}`}
+                    >
+                      ×{String(level).replace('.', ',')}
+                    </button>
+                  ))}
+                </div>
+
+                <figcaption>{variant.caption}</figcaption>
               </div>
 
-              <figcaption>{variant.caption}</figcaption>
+              {variants.length > 1 && (
+                <div className="mo-filmstrip" role="group" aria-label="Capas visuales de la obra">
+                  {variants.map((item, itemIndex) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={itemIndex === variantIndex ? 'is-active' : ''}
+                      onClick={() => setVariantIndex(itemIndex)}
+                      data-cursor-label={item.label}
+                      aria-pressed={itemIndex === variantIndex}
+                    >
+                      <img src={item.src} alt="" loading="lazy" />
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="mo-studio-brief">
@@ -260,6 +295,15 @@ export const StudioRoom = ({
               </div>
               <p className="mo-studio-lead">{concept.summary}</p>
 
+              <button
+                type="button"
+                className={`mo-vitrine-toggle${inVitrine ? ' is-in' : ''}`}
+                onClick={() => onToggleVitrine(concept.id)}
+                data-cursor-label={inVitrine ? 'Quitar' : 'Añadir'}
+              >
+                {inVitrine ? '✓ En la vitrina de contrastes' : '+ Añadir a la vitrina de contrastes'}
+              </button>
+
               <dl className="mo-metrics-v2">
                 {metricRows.map(([label, value]) => (
                   <div key={label}>
@@ -272,33 +316,18 @@ export const StudioRoom = ({
                   </div>
                 ))}
               </dl>
-
-              {variants.length > 1 && (
-                <div className="mo-variant-row" role="group" aria-label="Capas visuales">
-                  {variants.map((item, itemIndex) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className={itemIndex === variantIndex ? 'is-active' : ''}
-                      onClick={() => setVariantIndex(itemIndex)}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           </section>
 
           <nav className="mo-studio-tabs" aria-label="Secciones de la sala de estudio">
-            {tabs.map((item) => (
+            {visibleTabs.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 className={tab === item.id ? 'is-active' : ''}
                 onClick={() => goTab(item.id)}
               >
-                <b>{roman(tabs.indexOf(item))}</b> {item.label}
+                <b>{roman(visibleTabs.indexOf(item))}</b> {item.label}
               </button>
             ))}
           </nav>
@@ -320,6 +349,24 @@ export const StudioRoom = ({
                   {section.body.map((paragraph, paragraphIndex) => (
                     <p key={paragraphIndex}>{paragraph}</p>
                   ))}
+                  {inlineVariants[sectionIndex] && (
+                    <figure className="mo-reader-figure">
+                      <div className="mo-reader-figure-frame">
+                        <img
+                          src={inlineVariants[sectionIndex].src}
+                          alt={inlineVariants[sectionIndex].caption ?? concept.title}
+                          loading="lazy"
+                        />
+                      </div>
+                      <figcaption>
+                        <b>Lámina {roman(sectionIndex + 1)}</b>
+                        {inlineVariants[sectionIndex].label}
+                        {inlineVariants[sectionIndex].caption
+                          ? ` — ${inlineVariants[sectionIndex].caption}`
+                          : ''}
+                      </figcaption>
+                    </figure>
+                  )}
                 </div>
               ))}
               {concept.narrative.closing && (
@@ -444,6 +491,17 @@ export const StudioRoom = ({
                   </ol>
                 </div>
               )}
+            </section>
+          )}
+          {tab === 'maqueta' && concept.model3d && (
+            <section className="mo-tab-pane mo-model-pane" aria-label="Maqueta 3D interactiva">
+              <p className="mo-reader-kicker">{concept.model3d.label}</p>
+              <div className="mo-model-stage">
+                <Suspense fallback={<div className="mo-model-loading">Forjando la maqueta…</div>}>
+                  <ONeillCylinderModel />
+                </Suspense>
+              </div>
+              <p className="mo-model-caption">{concept.model3d.caption}</p>
             </section>
           )}
         </div>

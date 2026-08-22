@@ -19,7 +19,7 @@ import {
   type MotionValue,
 } from 'framer-motion';
 import { chapters, conceptById, plausibilityLabels, scaleLabels } from '../../data/astroData';
-import type { AstroChapter, AstroConcept } from '../../types';
+import type { AstroChapter, AstroConcept, SourceRef } from '../../types';
 import { Grain } from '../shared/Grain';
 import { useScrollLock } from '../shared/useScrollLock';
 import { MuseumCursor } from './MuseumCursor';
@@ -28,6 +28,8 @@ import './museoOrbital.css';
 
 const totalWorks = chapters.reduce((sum, chapter) => sum + chapter.concepts.length, 0);
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+const VITRINE_CAP = 5;
+const VITRINE_KEY = 'mo-vitrine';
 
 const resolveChapter = (concept: AstroConcept): AstroChapter =>
   chapters.find((chapter) => chapter.id === concept.chapterId) ?? chapters[0];
@@ -37,17 +39,18 @@ const conceptFromHash = (): AstroConcept | null => {
   return match ? conceptById.get(match[1]) ?? null : null;
 };
 
-/* ---------------- Chip de salida al atlas ---------------- */
+const loadVitrine = (): string[] => {
+  try {
+    const raw = window.localStorage.getItem(VITRINE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((id) => conceptById.has(id)).slice(0, VITRINE_CAP) : [];
+  } catch {
+    return [];
+  }
+};
 
-const AtlasChip = () => (
-  <a
-    className="mo-atlas-chip"
-    href={import.meta.env.BASE_URL}
-    data-cursor-label="Salir"
-  >
-    ← Atlas clásico
-  </a>
-);
+const scrollToId = (id: string) =>
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
 /* ---------------- Cursor + Hero ---------------- */
 
@@ -126,9 +129,7 @@ const Hero = () => {
           type="button"
           className="mo-hero-cta"
           data-cursor-label="Descender"
-          onClick={() =>
-            document.getElementById('sala-intro')?.scrollIntoView({ behavior: 'smooth' })
-          }
+          onClick={() => scrollToId('sala-intro')}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: reduced ? 0 : 2.1, duration: 1 }}
@@ -163,16 +164,20 @@ const HallIndex = ({ activeId }: { activeId: string | null }) => (
         type="button"
         className={`mo-hall-chip${activeId === chapter.id ? ' is-active' : ''}`}
         style={{ '--accent': chapter.color } as CSSProperties}
-        onClick={() =>
-          document
-            .getElementById(`sala-${chapter.id}`)
-            ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }
+        onClick={() => scrollToId(`sala-${chapter.id}`)}
       >
         <b>{chapter.number}</b>
         {chapter.title}
       </button>
     ))}
+    <button type="button" className="mo-hall-chip is-extra" onClick={() => scrollToId('vitrina')}>
+      <b>✦</b>
+      Vitrina
+    </button>
+    <button type="button" className="mo-hall-chip is-extra" onClick={() => scrollToId('archivo')}>
+      <b>§</b>
+      Archivo
+    </button>
   </nav>
 );
 
@@ -263,7 +268,10 @@ const Obra = ({
           <span className="mo-frame-glow" aria-hidden="true" />
         </figure>
         <div className="mo-obra-meta">
-          <span className="mo-plate">N.º {String(plate).padStart(2, '0')}</span>
+          <span className="mo-plate">
+            N.º {String(plate).padStart(2, '0')}
+            {concept.model3d ? ' · maqueta' : ''}
+          </span>
           <h3>{concept.title}</h3>
           <p>
             {concept.category} · {scaleLabels[concept.scale]} ·{' '}
@@ -310,11 +318,7 @@ const Sala = ({
       style={{ '--accent': chapter.color } as CSSProperties}
     >
       <header className="mo-sala-head">
-        <SalaNo
-          value={chapter.number}
-          progress={fillProgress}
-          reduced={Boolean(reduced)}
-        />
+        <SalaNo value={chapter.number} progress={fillProgress} reduced={Boolean(reduced)} />
         <div className="mo-sala-copy">
           <p className="mo-kicker">
             Sala {chapter.number} — {chapter.concepts.length} piezas
@@ -357,6 +361,239 @@ const Sala = ({
   );
 };
 
+/* ---------------- Vitrina de contrastes ---------------- */
+
+const Vitrina = ({
+  ids,
+  onRemove,
+  onOpen,
+}: {
+  ids: string[];
+  onRemove: (conceptId: string) => void;
+  onOpen: (concept: AstroConcept) => void;
+}) => {
+  const obras = ids
+    .map((id) => conceptById.get(id))
+    .filter((item): item is AstroConcept => Boolean(item));
+
+  return (
+    <section id="vitrina" className="mo-vitrina">
+      <header className="mo-section-head">
+        <p className="mo-kicker">Vitrina de contrastes</p>
+        <h2>Obras seleccionadas</h2>
+        <p className="mo-section-sub">
+          Añade hasta {VITRINE_CAP} obras desde su sala de estudio para leerlas en paralelo.
+        </p>
+      </header>
+
+      {obras.length === 0 ? (
+        <p className="mo-vitrina-empty">
+          La vitrina está vacía. Entra a cualquier obra y pulsa «Añadir a la vitrina de
+          contrastes» para comenzar la comparación.
+        </p>
+      ) : (
+        <div className="mo-vitrina-grid">
+          {obras.map((concept) => {
+            const chapter = resolveChapter(concept);
+            return (
+              <article
+                key={concept.id}
+                className="mo-vitrina-card"
+                style={{ '--accent': chapter.color } as CSSProperties}
+              >
+                <header>
+                  <button
+                    type="button"
+                    className="mo-vitrina-title"
+                    onClick={() => onOpen(concept)}
+                    data-cursor-label="Abrir"
+                  >
+                    <span className="mo-plate">{chapter.number}·{concept.title}</span>
+                    <h3>{concept.title}</h3>
+                  </button>
+                  <button
+                    type="button"
+                    className="mo-vitrina-remove"
+                    onClick={() => onRemove(concept.id)}
+                    aria-label={`Quitar ${concept.title} de la vitrina`}
+                    data-cursor-label="Quitar"
+                  >
+                    ✕
+                  </button>
+                </header>
+                <div className="mo-chip-row">
+                  <span>{concept.category}</span>
+                  <span>{scaleLabels[concept.scale]}</span>
+                  <span>{plausibilityLabels[concept.plausibility]}</span>
+                </div>
+                <dl className="mo-metrics-v2">
+                  {(
+                    [
+                      ['Energía', concept.metrics.energia],
+                      ['Materiales', concept.metrics.materiales],
+                      ['Madurez', concept.metrics.madurez],
+                      ['Maravilla', concept.metrics.maravilla],
+                    ] as const
+                  ).map(([label, value]) => (
+                    <div key={label}>
+                      <dt>{label}</dt>
+                      <dd aria-label={`${value} de 5`}>
+                        {[1, 2, 3, 4, 5].map((cell) => (
+                          <i key={cell} className={cell <= value ? 'is-on' : ''} />
+                        ))}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className="mo-vitrina-mechanism">{concept.mechanism}</p>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+};
+
+/* ---------------- Sala archivo ---------------- */
+
+interface ArchiveSource extends SourceRef {
+  count: number;
+}
+
+const buildArchive = (): ArchiveSource[] => {
+  const map = new Map<string, ArchiveSource>();
+  const push = (source: SourceRef) => {
+    const current = map.get(source.url);
+    map.set(source.url, { ...source, count: (current?.count ?? 0) + 1 });
+  };
+  chapters.forEach((chapter) => chapter.sources.forEach(push));
+  chapters.forEach((chapter) => chapter.concepts.forEach((concept) => concept.sources?.forEach(push)));
+  return [...map.values()];
+};
+
+const Archivo = ({ sources }: { sources: ArchiveSource[] }) => (
+  <section id="archivo" className="mo-archivo">
+    <header className="mo-section-head">
+      <p className="mo-kicker">Sala archivo</p>
+      <h2>Fuentes de la colección</h2>
+      <p className="mo-section-sub">
+        Toda la documentación técnica citada en el museo: NASA, SETI y otros materiales de
+        referencia.
+      </p>
+    </header>
+    <ol className="mo-archivo-list">
+      {sources.map((source, index) => (
+        <li key={source.url}>
+          <b>{String(index + 1).padStart(2, '0')}</b>
+          <div>
+            <span>{source.publisher}</span>
+            <a href={source.url} target="_blank" rel="noreferrer" data-cursor-label="Leer">
+              {source.title} ↗
+            </a>
+          </div>
+          <i>
+            citada en {source.count} {source.count === 1 ? 'ficha' : 'fichas'}
+          </i>
+        </li>
+      ))}
+    </ol>
+  </section>
+);
+
+/* ---------------- Menú persistente ---------------- */
+
+const MenuOverlay = ({
+  open,
+  onClose,
+  onGo,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onGo: (targetId: string) => void;
+}) => {
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    closeRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  useScrollLock(open);
+
+  if (!open) return null;
+
+  return (
+    <motion.div
+      className="mo-menu"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Índice del museo"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="mo-menu-panel">
+        <button
+          ref={closeRef}
+          type="button"
+          className="mo-menu-close"
+          onClick={onClose}
+          data-cursor-label="Cerrar"
+        >
+          ✕ Cerrar índice
+        </button>
+        <p className="mo-kicker">Museo Orbital</p>
+        <h2>Índice del recorrido</h2>
+        <ol className="mo-menu-list">
+          {chapters.map((chapter) => (
+            <li key={chapter.id}>
+              <button
+                type="button"
+                style={{ '--accent': chapter.color } as CSSProperties}
+                onClick={() => onGo(`sala-${chapter.id}`)}
+                data-cursor-label={`Sala ${chapter.number}`}
+              >
+                <b>{chapter.number}</b>
+                <span>{chapter.title}</span>
+                <i>{chapter.concepts.length}</i>
+              </button>
+            </li>
+          ))}
+          <li>
+            <button
+              type="button"
+              className="is-extra"
+              onClick={() => onGo('vitrina')}
+              data-cursor-label="Comparar"
+            >
+              <b>✦</b>
+              <span>Vitrina de contrastes</span>
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              className="is-extra"
+              onClick={() => onGo('archivo')}
+              data-cursor-label="Fuentes"
+            >
+              <b>§</b>
+              <span>Sala archivo</span>
+            </button>
+          </li>
+        </ol>
+      </div>
+    </motion.div>
+  );
+};
+
 /* ---------------- Principal ---------------- */
 
 export default function MuseoOrbital() {
@@ -364,10 +601,23 @@ export default function MuseoOrbital() {
   const rootRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<AstroConcept | null>(() => conceptFromHash());
   const [activeHallId, setActiveHallId] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [vitrineIds, setVitrineIds] = useState<string[]>(loadVitrine);
+
   useScrollLock(Boolean(active));
 
   const { scrollYProgress } = useScroll({ container: rootRef });
   const railScale = useSpring(scrollYProgress, { stiffness: 90, damping: 24, mass: 0.4 });
+
+  const archiveSources = useMemo(buildArchive, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(VITRINE_KEY, JSON.stringify(vitrineIds));
+    } catch {
+      /* almacenamiento no disponible */
+    }
+  }, [vitrineIds]);
 
   useEffect(() => {
     const hash = active ? `#obra-${active.id}` : '';
@@ -401,6 +651,23 @@ export default function MuseoOrbital() {
 
   const openConcept = (concept: AstroConcept) => setActive(concept);
 
+  const toggleVitrine = (conceptId: string) => {
+    setVitrineIds((current) => {
+      if (current.includes(conceptId)) {
+        return current.filter((id) => id !== conceptId);
+      }
+      if (current.length >= VITRINE_CAP) {
+        return current;
+      }
+      return [...current, conceptId];
+    });
+  };
+
+  const goFromMenu = (targetId: string) => {
+    setMenuOpen(false);
+    window.setTimeout(() => scrollToId(targetId), 120);
+  };
+
   let plateOffset = 0;
   const activeHall = chapters.find((chapter) => chapter.id === activeHallId);
 
@@ -408,7 +675,15 @@ export default function MuseoOrbital() {
     <div className="mo-root" ref={rootRef}>
       <Grain opacity={0.06} blend="screen" zIndex={40} />
       <MuseumCursor />
-      <AtlasChip />
+
+      <button
+        type="button"
+        className="mo-index-button"
+        onClick={() => setMenuOpen(true)}
+        data-cursor-label="Índice"
+      >
+        Índice
+      </button>
 
       <Hero />
       <Marquee />
@@ -428,10 +703,18 @@ export default function MuseoOrbital() {
         );
       })}
 
+      <Vitrina
+        ids={vitrineIds}
+        onRemove={toggleVitrine}
+        onOpen={openConcept}
+      />
+
+      <Archivo sources={archiveSources} />
+
       <footer className="mo-footer">
         <blockquote>{chapters[0].sections[1]?.body}</blockquote>
         <p className="mo-footer-line">
-          ASTROINGENIERÍA — EXPOSICIÓN PERMANENTE · PLANTILLA MUSEO ORBITAL · MMXXVI
+          ASTROINGENIERÍA — EXPOSICIÓN PERMANENTE · MUSEO ORBITAL · MMXXVI
         </p>
       </footer>
 
@@ -446,17 +729,19 @@ export default function MuseoOrbital() {
             title={chapter.title}
             className={activeHallId === chapter.id ? 'is-active' : ''}
             style={{ '--accent': chapter.color } as CSSProperties}
-            onClick={() =>
-              document
-                .getElementById(`sala-${chapter.id}`)
-                ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }
+            onClick={() => scrollToId(`sala-${chapter.id}`)}
           />
         ))}
         <span className="mo-rail-label">
           {activeHall ? `Sala ${activeHall.number} — ${activeHall.title}` : ''}
         </span>
       </aside>
+
+      <AnimatePresence>
+        {menuOpen && (
+          <MenuOverlay open={menuOpen} onClose={() => setMenuOpen(false)} onGo={goFromMenu} />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {active && (
@@ -466,6 +751,8 @@ export default function MuseoOrbital() {
             chapter={resolveChapter(active)}
             siblings={resolveChapter(active).concepts}
             enableFlight={!reduced}
+            inVitrine={vitrineIds.includes(active.id)}
+            onToggleVitrine={toggleVitrine}
             onClose={() => setActive(null)}
             onSelect={openConcept}
           />

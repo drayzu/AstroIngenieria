@@ -1,7 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App';
-import './App.css';
+import './designs/museo-orbital/base.css';
 
 const root = createRoot(document.getElementById('root')!);
 
@@ -35,9 +34,11 @@ if (isLabPath('/disenos')) {
     );
   });
 } else {
-  root.render(
-    <StrictMode>
-      <App />
-    </StrictMode>,
-  );
+  void import('./designs/museo-orbital/MuseoOrbital').then(({ default: MuseoOrbital }) => {
+    root.render(
+      <StrictMode>
+        <MuseoOrbital />
+      </StrictMode>,
+    );
+  });
 }
