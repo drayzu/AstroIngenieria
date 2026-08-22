@@ -8,7 +8,7 @@ const root = createRoot(document.getElementById('root')!);
 const isLabPath = (suffix: string) =>
   window.location.pathname.replace(/\/+$/, '').endsWith(suffix);
 
-if (import.meta.env.DEV && isLabPath('/disenos')) {
+if (isLabPath('/disenos')) {
   void import('./designs/DesignLab').then(({ default: DesignLab }) => {
     root.render(
       <StrictMode>
