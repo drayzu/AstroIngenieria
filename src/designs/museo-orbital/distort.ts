@@ -44,12 +44,13 @@ interface MountOptions {
 
 export const mountDistort = ({ canvas, image, container }: MountOptions): DistortHandle | null => {
   const gl = canvas.getContext('webgl', {
-    alpha: false,
+    alpha: true,
     antialias: false,
     powerPreference: 'low-power',
     preserveDrawingBuffer: false,
   });
   if (!gl) return null;
+  gl.clearColor(0, 0, 0, 0);
 
   const compile = (type: number, source: string) => {
     const shader = gl.createShader(type)!;
@@ -97,21 +98,30 @@ export const mountDistort = ({ canvas, image, container }: MountOptions): Distor
     canvas.width = Math.max(2, Math.round(rect.width * dpr));
     canvas.height = Math.max(2, Math.round(rect.height * dpr));
     gl.viewport(0, 0, canvas.width, canvas.height);
+    drawFrame();
   };
-  resize();
 
-  const frame = () => {
-    time += 0.016;
-    strength += (targetStrength - strength) * 0.08;
-    if (strength < 0.004 && targetStrength === 0) {
-      raf = requestAnimationFrame(frame);
-      return;
-    }
+  const drawFrame = () => {
     gl.uniform2f(uMouse, mouse.x, mouse.y);
     gl.uniform1f(uTime, time);
     gl.uniform1f(uStrength, strength);
     gl.uniform1f(uAspect, canvas.width / canvas.height);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+  };
+
+  resize();
+
+  const frame = () => {
+    time += 0.016;
+    if (targetStrength > 0) {
+      strength += (targetStrength - strength) * 0.08;
+      targetStrength *= 0.94;
+      if (targetStrength < 0.003) targetStrength = 0;
+    } else if (strength > 0) {
+      strength += (0 - strength) * 0.08;
+      if (strength < 0.002) strength = 0;
+    }
+    drawFrame();
     raf = requestAnimationFrame(frame);
   };
   raf = requestAnimationFrame(frame);

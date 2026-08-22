@@ -13,6 +13,21 @@ interface Star {
   phase: number;
 }
 
+interface Comet {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+}
+
+interface Wave {
+  x: number;
+  y: number;
+  r: number;
+  alpha: number;
+}
+
 const TINTS = [
   [245, 241, 232],
   [201, 168, 106],
@@ -37,12 +52,17 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
     let width = 0;
     let height = 0;
     let stars: Star[] = [];
+    let comets: Comet[] = [];
+    let waves: Wave[] = [];
     let raf = 0;
     let time = 0;
     let scrollVel = 0;
     let lastScroll = scrollRef.current?.scrollTop ?? 0;
     let dimLevel = 0;
     let running = true;
+    let nextComet = time + 4 + Math.random() * 5;
+
+    const mouse = { x: -9999, y: -9999, sx: -9999, sy: -9999 };
 
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
 
@@ -74,6 +94,35 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
       lastScroll = top;
     };
 
+    const onMove = (event: MouseEvent) => {
+      mouse.x = event.clientX;
+      mouse.y = event.clientY;
+      if (mouse.sx < -999) {
+        mouse.sx = mouse.x;
+        mouse.sy = mouse.y;
+      }
+    };
+
+    const onDown = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest('.mo-hero')) return;
+      waves.push({ x: event.clientX, y: event.clientY, r: 6, alpha: 0.85 });
+      if (waves.length > 4) waves.shift();
+    };
+
+    const spawnComet = () => {
+      const fromLeft = Math.random() < 0.5;
+      const speed = 7 + Math.random() * 5;
+      const angle = (Math.PI / 180) * (18 + Math.random() * 16);
+      comets.push({
+        x: fromLeft ? -40 : width + 40,
+        y: Math.random() * height * 0.45,
+        vx: (fromLeft ? 1 : -1) * Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+      });
+    };
+
     const onVisibility = () => {
       running = !document.hidden;
       if (running) {
@@ -91,17 +140,38 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
       const targetDim = dimRef.current ? 0.22 : 1;
       dimLevel += (targetDim - dimLevel) * 0.06;
 
+      mouse.sx += (mouse.x - mouse.sx) * 0.055;
+      mouse.sy += (mouse.y - mouse.sy) * 0.055;
+      const parX = mouse.sx > -999 ? (mouse.sx / width - 0.5) * 2 : 0;
+      const parY = mouse.sy > -999 ? (mouse.sy / height - 0.5) * 2 : 0;
+
       ctx.clearRect(0, 0, width, height);
       const warp = Math.min(34, Math.abs(scrollVel) * 0.055);
       const dir = Math.sign(scrollVel) || 1;
 
+      const drawn: { x: number; y: number; z: number }[] = [];
+
       for (const star of stars) {
         star.x -= 0.05 * star.z;
         star.y -= scrollVel * 0.045 * star.z;
-        if (star.x < -40) star.x = width + 40;
-        if (star.x > width + 40) star.x = -40;
-        if (star.y < -60) star.y = height + 60;
-        if (star.y > height + 60) star.y = -60;
+        if (star.x < -60) star.x = width + 60;
+        if (star.x > width + 60) star.x = -60;
+        if (star.y < -80) star.y = height + 80;
+        if (star.y > height + 80) star.y = -80;
+
+        for (const wave of waves) {
+          const d = Math.hypot(star.x - wave.x, star.y - wave.y);
+          const band = Math.abs(d - wave.r);
+          if (band < 46) {
+            const push = (1 - band / 46) * wave.alpha * 7;
+            const inv = 1 / (d || 1);
+            star.x += (star.x - wave.x) * inv * push;
+            star.y += (star.y - wave.y) * inv * push;
+          }
+        }
+
+        const px = star.x + parX * star.z * 16;
+        const py = star.y + parY * star.z * 11;
 
         const [r, g, b] = TINTS[star.tint];
         const twinkle = 0.55 + 0.45 * Math.sin(time * (0.6 + star.z) + star.phase);
@@ -113,15 +183,77 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
           ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
           ctx.lineWidth = size * 0.9;
           ctx.beginPath();
-          ctx.moveTo(star.x, star.y - len * 0.5);
-          ctx.lineTo(star.x, star.y + len * 0.5);
+          ctx.moveTo(px, py - len * 0.5);
+          ctx.lineTo(px, py + len * 0.5);
           ctx.stroke();
         } else {
           ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
           ctx.beginPath();
-          ctx.arc(star.x, star.y, size, 0, Math.PI * 2);
+          ctx.arc(px, py, size, 0, Math.PI * 2);
           ctx.fill();
         }
+
+        if (mouse.sx > -999) {
+          const dc = Math.hypot(px - mouse.sx, py - mouse.sy);
+          if (dc < 130 && drawn.length < 30) drawn.push({ x: px, y: py, z: star.z });
+        }
+      }
+
+      if (drawn.length > 1 && dimLevel > 0.5) {
+        ctx.lineWidth = 0.7;
+        for (let i = 0; i < drawn.length; i += 1) {
+          for (let j = i + 1; j < drawn.length; j += 1) {
+            const dx = drawn[i].x - drawn[j].x;
+            const dy = drawn[i].y - drawn[j].y;
+            const d = Math.hypot(dx, dy);
+            if (d < 92) {
+              const near = 1 - Math.min(1, Math.hypot((drawn[i].x + drawn[j].x) / 2 - mouse.sx, (drawn[i].y + drawn[j].y) / 2 - mouse.sy) / 130);
+              ctx.strokeStyle = `rgba(245,241,232,${(0.34 * (1 - d / 92) * near * dimLevel).toFixed(3)})`;
+              ctx.beginPath();
+              ctx.moveTo(drawn[i].x, drawn[i].y);
+              ctx.lineTo(drawn[j].x, drawn[j].y);
+              ctx.stroke();
+            }
+          }
+        }
+      }
+
+      if (time > nextComet) {
+        spawnComet();
+        nextComet = time + 6 + Math.random() * 6;
+      }
+      comets = comets.filter((comet) => comet.life > 0);
+      for (const comet of comets) {
+        comet.x += comet.vx;
+        comet.y += comet.vy;
+        comet.life -= 0.012;
+        if (comet.x < -80 || comet.x > width + 80 || comet.y > height + 60) comet.life = 0;
+        const tailX = comet.x - comet.vx * 9;
+        const tailY = comet.y - comet.vy * 9;
+        const gradient = ctx.createLinearGradient(comet.x, comet.y, tailX, tailY);
+        gradient.addColorStop(0, `rgba(245,241,232,${0.85 * comet.life * dimLevel})`);
+        gradient.addColorStop(1, 'rgba(245,241,232,0)');
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(comet.x, comet.y);
+        ctx.lineTo(tailX, tailY);
+        ctx.stroke();
+        ctx.fillStyle = `rgba(255,250,240,${0.9 * comet.life * dimLevel})`;
+        ctx.beginPath();
+        ctx.arc(comet.x, comet.y, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      waves = waves.filter((wave) => wave.alpha > 0.02);
+      for (const wave of waves) {
+        wave.r += 6.5;
+        wave.alpha *= 0.94;
+        ctx.strokeStyle = `rgba(201,168,106,${(wave.alpha * 0.5 * dimLevel).toFixed(3)})`;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(wave.x, wave.y, wave.r, 0, Math.PI * 2);
+        ctx.stroke();
       }
 
       raf = requestAnimationFrame(frame);
@@ -129,6 +261,8 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
 
     resize();
     window.addEventListener('resize', resize);
+    window.addEventListener('mousemove', onMove, { passive: true });
+    window.addEventListener('pointerdown', onDown);
     const scrollEl = scrollRef.current;
     scrollEl?.addEventListener('scroll', onScroll, { passive: true });
     document.addEventListener('visibilitychange', onVisibility);
@@ -137,6 +271,8 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('pointerdown', onDown);
       scrollEl?.removeEventListener('scroll', onScroll);
       document.removeEventListener('visibilitychange', onVisibility);
     };
