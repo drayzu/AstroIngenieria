@@ -12,6 +12,7 @@ import {
 import {
   AnimatePresence,
   motion,
+  useInView,
   useReducedMotion,
   useScroll,
   useSpring,
@@ -51,36 +52,9 @@ const loadVitrine = (): string[] => {
   }
 };
 
-const scrollToId = (id: string) =>
+const scrollToId = (id: string) => {
+  window.dispatchEvent(new CustomEvent('mo-warp'));
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-/* ---------------- Hilo de descenso ---------------- */
-
-const THREAD_PATH = 'M 62 0 C 18 70, 104 130, 54 205 C 12 272, 98 330, 46 410 L 44 436';
-
-const DescentThread = () => {
-  const reduced = useReducedMotion();
-  return (
-    <button
-      type="button"
-      className="mo-thread"
-      data-cursor-label="Descender"
-      onClick={() => scrollToId('sala-intro')}
-    >
-      <svg viewBox="0 0 110 440" fill="none" aria-hidden="true">
-        <path className="mo-thread-base" d={THREAD_PATH} />
-        {!reduced && (
-          <>
-            <path className="mo-thread-glint" d={THREAD_PATH} />
-            <circle className="mo-thread-star" r="3.2">
-              <animateMotion dur="7s" repeatCount="indefinite" path={THREAD_PATH} />
-            </circle>
-          </>
-        )}
-      </svg>
-      <span className="mo-thread-tip">desciende</span>
-    </button>
-  );
 };
 
 /* ---------------- Contador animado ---------------- */
@@ -120,8 +94,15 @@ const Hero = () => {
     const motion2d = { x: -9999, y: -9999, t: 0, speed: 0 };
     const states = letters.map(() => ({ x: 0, y: 0, w: 520 }));
     const glint = { index: -1, t0: 0 };
+    let waveT0 = -10;
     let raf = 0;
     let clock = 0;
+
+    // Ola de peso que recorre el título con cada lluvia de meteoros
+    const onShowerWave = () => {
+      waveT0 = clock;
+    };
+    window.addEventListener('mo-shower', onShowerWave);
 
     const onMove = (event: MouseEvent) => {
       const now = performance.now();
@@ -167,6 +148,16 @@ const Hero = () => {
           targetW += spark * 190;
           lift = -spark * 7;
         }
+        const waveT = (clock - waveT0) / 1.15;
+        if (waveT >= 0 && waveT < 1) {
+          const front = waveT * (letters.length + 8) - 4;
+          const distL = Math.abs(index - front);
+          if (distL < 3.2) {
+            const s = Math.cos((distL / 3.2) * Math.PI * 0.5);
+            targetW += s * 240;
+            lift += -s * 9;
+          }
+        }
 
         const state = states[index];
         state.x += (targetX - state.x) * 0.09;
@@ -182,15 +173,22 @@ const Hero = () => {
     raf = requestAnimationFrame(loop);
     return () => {
       window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mo-shower', onShowerWave);
       cancelAnimationFrame(raf);
     };
   }, [reduced, letters]);
 
   const trackSpotlight = (event: ReactMouseEvent<HTMLElement>) => {
     if (reduced) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    event.currentTarget.style.setProperty('--sx', `${event.clientX - rect.left}px`);
-    event.currentTarget.style.setProperty('--sy', `${event.clientY - rect.top}px`);
+    const target = event.currentTarget;
+    const rect = target.getBoundingClientRect();
+    target.style.setProperty('--sx', `${event.clientX - rect.left}px`);
+    target.style.setProperty('--sy', `${event.clientY - rect.top}px`);
+    // Parallax sutil del cielo de fondo
+    const px = (event.clientX - rect.left) / rect.width - 0.5;
+    const py = (event.clientY - rect.top) / rect.height - 0.5;
+    target.style.setProperty('--hbx', `${(-px * 14).toFixed(1)}px`);
+    target.style.setProperty('--hby', `${(-py * 10).toFixed(1)}px`);
   };
 
   return (
@@ -199,12 +197,11 @@ const Hero = () => {
         className="mo-hero-bg"
         style={{ backgroundImage: `url(${chapters[1].visual?.heroImage})` }}
         initial={{ scale: 1.22, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
+        animate={{ scale: 1, opacity: 0.9 }}
         transition={{ duration: reduced ? 0 : 3, ease: EASE_OUT }}
       />
       <div className="mo-hero-scrim" />
       <div className="mo-hero-spot" aria-hidden="true" />
-      <DescentThread />
 
       <div className="mo-hero-copy">
         <motion.p
@@ -279,7 +276,14 @@ const Hero = () => {
           animate={{ opacity: 1 }}
           transition={{ delay: reduced ? 0 : 2.8, duration: 1 }}
         >
-          ESPACIO · estrella fugaz&ensp;—&ensp;CLIC · chispas y constelación
+          <kbd className="mo-sky-key is-pulse">espacio</kbd>
+          lluvia estelar
+          <i className="mo-sky-sep" aria-hidden="true" />
+          <kbd className="mo-sky-key">clic</kbd>
+          mantén: supernova
+          <i className="mo-sky-sep" aria-hidden="true" />
+          <kbd className="mo-sky-key">mayús+clic</kbd>
+          constelación
         </motion.span>
       </div>
     </section>
@@ -360,16 +364,21 @@ const SalaNo = ({
 const RevealWords = ({ text }: { text: string }) => {
   const reduced = useReducedMotion();
   const words = useMemo(() => text.split(' '), [text]);
+  // La visibilidad se observa sobre el CONTENEDOR: las palabras viven dentro
+  // de cajas con overflow:hidden que las recortan al 114%, y un observer
+  // sobre la palabra recortada nunca llegaría a dispararse.
+  const containerRef = useRef<HTMLSpanElement>(null);
+  const inView = useInView(containerRef, { once: true, margin: '-40px' });
+  const shown = Boolean(inView) || Boolean(reduced);
   return (
-    <span className="mo-words">
+    <span className="mo-words" ref={containerRef}>
       {words.map((word, index) => (
         <span className="mo-word-box" key={`${word}-${index}`}>
           <motion.span
             className="mo-word"
-            initial={{ y: reduced ? '0%' : '114%' }}
-            whileInView={{ y: '0%' }}
-            viewport={{ once: true, margin: '-40px' }}
-            transition={{ delay: index * 0.055, duration: 0.85, ease: EASE_OUT }}
+            initial={{ y: '114%' }}
+            animate={{ y: shown ? '0%' : '114%' }}
+            transition={{ delay: shown ? index * 0.055 : 0, duration: 0.85, ease: EASE_OUT }}
           >
             {word}
             {index < words.length - 1 ? '\u00A0' : ''}
@@ -929,6 +938,62 @@ export default function MuseoOrbital() {
     };
   }, [reduced]);
 
+  // Títulos de sala con peso tipográfico magnético, eco sutil del hero
+  useEffect(() => {
+    if (reduced || !window.matchMedia('(pointer: fine)').matches) return;
+    const weights = new WeakMap<Element, number>();
+    const mouse = { x: -9999, y: -9999 };
+    let raf = 0;
+    let nodes: HTMLElement[] = [];
+    let lastScan = 0;
+
+    const onMove = (event: MouseEvent) => {
+      mouse.x = event.clientX;
+      mouse.y = event.clientY;
+    };
+
+    const loop = (time: number) => {
+      if (time - lastScan > 2000) {
+        nodes = Array.from(
+          document.querySelectorAll<HTMLElement>('.mo-sala-copy h2 .mo-word'),
+        );
+        lastScan = time;
+      }
+
+      // Fase de lectura: medir una sola vez antes de escribir estilos
+      const rects = nodes.map((node) => node.getBoundingClientRect());
+
+      nodes.forEach((node, index) => {
+        const rect = rects[index];
+        if (rect.bottom < -80 || rect.top > window.innerHeight + 80) return;
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dist = Math.hypot(mouse.x - cx, mouse.y - cy);
+        const radius = 200;
+        const norm = dist < radius ? 1 - dist / radius : 0;
+        const eased = norm * norm * (3 - 2 * norm);
+        const current = weights.get(node) ?? 500;
+        const next = current + (500 + eased * 180 - current) * 0.2;
+        weights.set(node, next);
+        // El peso se aplica vía font-weight: la Fraunces variable interpola
+        // el eje wght sin depender de font-variation-settings.
+        if (next < 501.5 && eased === 0) {
+          if (node.style.fontWeight) node.style.fontWeight = '';
+        } else {
+          node.style.fontWeight = String(Math.round(next));
+        }
+      });
+      raf = requestAnimationFrame(loop);
+    };
+
+    window.addEventListener('mousemove', onMove, { passive: true });
+    raf = requestAnimationFrame(loop);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      cancelAnimationFrame(raf);
+    };
+  }, [reduced]);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -984,7 +1049,17 @@ export default function MuseoOrbital() {
   const activeHall = chapters.find((chapter) => chapter.id === activeHallId);
 
   return (
-    <div className="mo-root" ref={rootRef}>
+    <div
+      className="mo-root"
+      ref={rootRef}
+      onClickCapture={(event) => {
+        // Con Mayús presionado se dibujan constelaciones: ningún clic navega
+        if (event.shiftKey) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }}
+    >
       <StarfieldCanvas scrollRef={rootRef} dim={Boolean(active) || menuOpen} />
       <Grain opacity={0.06} blend="screen" zIndex={40} />
       <MuseumCursor />
@@ -1025,7 +1100,10 @@ export default function MuseoOrbital() {
       <Archivo sources={archiveSources} />
 
       <footer className="mo-footer mo-layer">
-        <blockquote>{chapters[0].sections[1]?.body}</blockquote>
+        <blockquote>
+          Quizá el universo fabricó conciencia para que, algún día, alguien le
+          encendiera sus propias estrellas. Este museo es el ensayo general.
+        </blockquote>
         <p className="mo-footer-line">
           ASTROINGENIERÍA — EXPOSICIÓN PERMANENTE · MUSEO ORBITAL · MMXXVI
         </p>

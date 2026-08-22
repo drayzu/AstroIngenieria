@@ -3,9 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 const CURSOR_CLASS = 'mo-has-custom-cursor';
 
 export const MuseumCursor = () => {
-  const dotRef = useRef<HTMLDivElement>(null);
-  const ringRef = useRef<HTMLDivElement>(null);
-  const trailRef = useRef<HTMLCanvasElement>(null);
+  const cursorRef = useRef<HTMLDivElement>(null);
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
@@ -18,55 +16,40 @@ export const MuseumCursor = () => {
     if (!enabled) return;
 
     const pos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-    const ring = { ...pos };
-    let raf = 0;
+    const prev = { x: pos.x, y: pos.y };
+    let speed = 0;
+    let tailLen = 0;
+    let tailAngle = 0;
+    let lastMoveT = performance.now();
+    let lastX = pos.x;
+    let lastY = pos.y;
+    let isActive = false;
     let wasActive = false;
     let lastLabel = '';
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-
-    const particles: { x: number; y: number; vx: number; vy: number; life: number; gold: boolean }[] = [];
-    let lastSpawn = { x: pos.x, y: pos.y };
-    let trailCtx: CanvasRenderingContext2D | null = null;
-
-    const sizeTrail = () => {
-      const canvas = trailRef.current;
-      if (!canvas) return;
-      canvas.width = Math.round(window.innerWidth * dpr);
-      canvas.height = Math.round(window.innerHeight * dpr);
-      trailCtx = canvas.getContext('2d');
-      trailCtx?.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-    sizeTrail();
+    let raf = 0;
 
     const move = (event: MouseEvent) => {
+      const now = performance.now();
+      const dt = Math.max(8, now - lastMoveT);
+      const inst = (Math.hypot(event.clientX - lastX, event.clientY - lastY) / dt) * 1000;
+      speed = speed * 0.6 + inst * 0.4;
+      lastMoveT = now;
+      lastX = event.clientX;
+      lastY = event.clientY;
+
       pos.x = event.clientX;
       pos.y = event.clientY;
 
-      const dx = pos.x - lastSpawn.x;
-      const dy = pos.y - lastSpawn.y;
-      if (dx * dx + dy * dy > 22 * 22) {
-        lastSpawn = { x: pos.x, y: pos.y };
-        particles.push({
-          x: pos.x + (Math.random() - 0.5) * 12,
-          y: pos.y + (Math.random() - 0.5) * 12,
-          vx: (Math.random() - 0.5) * 0.8,
-          vy: (Math.random() - 0.5) * 0.8 - 0.3,
-          life: 1,
-          gold: Math.random() < 0.35,
-        });
-        if (particles.length > 42) particles.splice(0, particles.length - 42);
-      }
-
       const target = event.target as HTMLElement | null;
       const hit = target?.closest('button, a, input, textarea, [data-cursor]');
-      const isActive = Boolean(hit);
+      isActive = Boolean(hit);
       const label = hit?.getAttribute('data-cursor-label') ?? '';
 
-      if (ringRef.current) {
-        ringRef.current.classList.toggle('is-active', isActive);
-        ringRef.current.classList.toggle('has-label', Boolean(label));
+      if (cursorRef.current) {
+        cursorRef.current.classList.toggle('is-active', isActive);
+        cursorRef.current.classList.toggle('has-label', Boolean(label));
         if (isActive !== wasActive || label !== lastLabel) {
-          const text = ringRef.current.querySelector('span');
+          const text = cursorRef.current.querySelector('span');
           if (text) text.textContent = label;
         }
       }
@@ -74,64 +57,50 @@ export const MuseumCursor = () => {
       lastLabel = label;
     };
 
+    // Interpolación angular por el arco corto: evita giros bruscos en ±π
+    const lerpAngle = (a: number, b: number, t: number) => {
+      let d = b - a;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      return a + d * t;
+    };
+
     const loop = () => {
-      ring.x += (pos.x - ring.x) * 0.32;
-      ring.y += (pos.y - ring.y) * 0.32;
-      if (dotRef.current) {
-        dotRef.current.style.transform = `translate(${Math.round(ring.x)}px, ${Math.round(ring.y)}px)`;
-      }
-      if (ringRef.current) {
-        ringRef.current.style.transform = `translate(${Math.round(ring.x)}px, ${Math.round(ring.y)}px)`;
-      }
+      speed *= 0.9;
 
-      if (trailCtx) {
-        trailCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-        for (let i = particles.length - 1; i >= 0; i -= 1) {
-          const p = particles[i];
-          p.life -= 0.04;
-          if (p.life <= 0) {
-            particles.splice(i, 1);
-            continue;
-          }
-          p.x += p.vx;
-          p.y += p.vy;
-          const color = p.gold ? '230,204,150' : '245,241,232';
-          trailCtx.fillStyle = `rgba(${color},${(p.life * 0.55).toFixed(3)})`;
-          trailCtx.beginPath();
-          trailCtx.arc(p.x, p.y, 2.1 * p.life + 0.4, 0, Math.PI * 2);
-          trailCtx.fill();
-        }
+      // Dirección instantánea del movimiento (por frame)
+      const vx = pos.x - prev.x;
+      const vy = pos.y - prev.y;
+      const frameDist = Math.hypot(vx, vy);
+      prev.x = pos.x;
+      prev.y = pos.y;
 
-        if (particles.length > 1) {
-          for (let a = 0; a < particles.length; a += 1) {
-            for (let b = a + 1; b < particles.length; b += 1) {
-              const pa = particles[a];
-              const pb = particles[b];
-              if (pa.life < 0.18 || pb.life < 0.18) continue;
-              const d = Math.hypot(pa.x - pb.x, pa.y - pb.y);
-              if (d < 48) {
-                trailCtx.strokeStyle = `rgba(230,204,150,${((1 - d / 48) * Math.min(pa.life, pb.life) * 0.3).toFixed(3)})`;
-                trailCtx.lineWidth = 0.8;
-                trailCtx.beginPath();
-                trailCtx.moveTo(pa.x, pa.y);
-                trailCtx.lineTo(pb.x, pb.y);
-                trailCtx.stroke();
-              }
-            }
-          }
-        }
+      if (frameDist > 1.2) {
+        // La estela apunta hacia ATRÁS del movimiento y nace en el puntito
+        tailAngle = lerpAngle(tailAngle, Math.atan2(-vy, -vx), 0.35);
+      }
+      const targetLen = Math.min(88, speed * 0.05);
+      tailLen += (targetLen - tailLen) * 0.22;
+
+      if (cursorRef.current) {
+        cursorRef.current.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+        cursorRef.current.style.setProperty(
+          '--s',
+          ((isActive ? 1.28 : 1) + Math.min(0.55, speed / 2200)).toFixed(3),
+        );
+        cursorRef.current.style.opacity = (0.6 + Math.min(0.4, speed / 1600)).toFixed(3);
+        cursorRef.current.style.setProperty('--tail-len', `${tailLen.toFixed(1)}px`);
+        cursorRef.current.style.setProperty('--tail-angle', `${tailAngle.toFixed(3)}rad`);
       }
 
       raf = requestAnimationFrame(loop);
     };
 
     window.addEventListener('mousemove', move, { passive: true });
-    window.addEventListener('resize', sizeTrail);
     raf = requestAnimationFrame(loop);
 
     return () => {
       window.removeEventListener('mousemove', move);
-      window.removeEventListener('resize', sizeTrail);
       cancelAnimationFrame(raf);
     };
   }, [enabled]);
@@ -146,14 +115,10 @@ export const MuseumCursor = () => {
   if (!enabled) return null;
 
   return (
-    <>
-      <canvas ref={trailRef} className="mo-trail" aria-hidden="true" />
-      <div ref={dotRef} className="mo-cursor-dot" aria-hidden="true">
-        <i />
-      </div>
-      <div ref={ringRef} className="mo-cursor-ring" aria-hidden="true">
-        <span />
-      </div>
-    </>
+    <div ref={cursorRef} className="mo-cursor" aria-hidden="true">
+      <i className="mo-cursor-tail" />
+      <i className="mo-cursor-ring" />
+      <span />
+    </div>
   );
 };
