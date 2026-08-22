@@ -2129,3 +2129,37 @@ body:has(.mo-root) {
   transition: translate 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: translate;
 }
+
+/* Hint del cielo */
+
+.mo-sky-hint {
+  position: absolute;
+  right: clamp(20px, 4vw, 56px);
+  bottom: clamp(28px, 5vh, 48px);
+  font-family: var(--mo-mono);
+  font-size: 9px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(245, 241, 232, 0.42);
+  pointer-events: none;
+}
+
+/* Tilt 3D de la figura del estudio */
+
+.mo-studio-figure {
+  transform: perspective(1300px) rotateX(var(--frx, 0deg)) rotateY(var(--fry, 0deg));
+  transition: transform 0.3s ease-out;
+  will-change: transform;
+}
+
+/* Glow de vitrina al hover */
+
+.mo-vitrina-card {
+  transition: border-color 0.3s ease, box-shadow 0.35s ease, transform 0.3s ease;
+}
+
+.mo-vitrina-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: 0 26px 60px -26px color-mix(in srgb, var(--accent) 40%, transparent);
+  transform: translateY(-4px);
+}

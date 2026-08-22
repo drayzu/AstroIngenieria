@@ -108,9 +108,9 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
       const target = event.target as HTMLElement | null;
       if (!target?.closest('.mo-hero')) return;
       waves.push({ x: event.clientX, y: event.clientY, r: 6, alpha: 0.85 });
-      for (let s = 0; s < 12; s += 1) {
+      for (let s = 0; s < 18; s += 1) {
         const ang = (Math.PI * 2 * s) / 12 + Math.random() * 0.4;
-        const spd = 2.4 + Math.random() * 2.6;
+        const spd = 3.2 + Math.random() * 3.4;
         sparkles.push({ x: event.clientX, y: event.clientY, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, life: 1, tint: Math.random() < 0.6 ? 0 : 1 });
       }
       if (sparkles.length > 90) sparkles.splice(0, sparkles.length - 90);
@@ -202,7 +202,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
 
         if (mouse.sx > -999) {
           const dc = Math.hypot(px - mouse.sx, py - mouse.sy);
-          if (dc < 155 && drawn.length < 34) drawn.push({ x: px, y: py, z: star.z });
+          if (dc < 185 && drawn.length < 36) drawn.push({ x: px, y: py, z: star.z });
         }
       }
 
@@ -213,9 +213,17 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
             const dx = drawn[i].x - drawn[j].x;
             const dy = drawn[i].y - drawn[j].y;
             const d = Math.hypot(dx, dy);
-            if (d < 115) {
-              const near = 1 - Math.min(1, Math.hypot((drawn[i].x + drawn[j].x) / 2 - mouse.sx, (drawn[i].y + drawn[j].y) / 2 - mouse.sy) / 155);
-              ctx.strokeStyle = `rgba(228,204,158,${(0.62 * (1 - d / 92) * near * dimLevel).toFixed(3)})`;
+            if (d < 132) {
+              const near = 1 - Math.min(1, Math.hypot((drawn[i].x + drawn[j].x) / 2 - mouse.sx, (drawn[i].y + drawn[j].y) / 2 - mouse.sy) / 185);
+              const lineAlpha = 0.85 * (1 - d / 132) * near * dimLevel;
+              ctx.strokeStyle = `rgba(226,204,158,${(lineAlpha * 0.38).toFixed(3)})`;
+              ctx.lineWidth = 3.4;
+              ctx.beginPath();
+              ctx.moveTo(drawn[i].x, drawn[i].y);
+              ctx.lineTo(drawn[j].x, drawn[j].y);
+              ctx.stroke();
+              ctx.strokeStyle = `rgba(250,240,214,${lineAlpha.toFixed(3)})`;
+              ctx.lineWidth = 1.6;
               ctx.beginPath();
               ctx.moveTo(drawn[i].x, drawn[i].y);
               ctx.lineTo(drawn[j].x, drawn[j].y);
@@ -226,9 +234,9 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
       }
 
       for (const node of drawn) {
-        ctx.fillStyle = `rgba(226,204,158,${(0.14 * dimLevel).toFixed(3)})`;
+        ctx.fillStyle = `rgba(232,208,160,${(0.32 * dimLevel).toFixed(3)})`;
         ctx.beginPath();
-        ctx.arc(node.x, node.y, node.z * 3.6, 0, Math.PI * 2);
+        ctx.arc(node.x, node.y, node.z * 5.2, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -238,11 +246,11 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
         sp.y += sp.vy;
         sp.vx *= 0.965;
         sp.vy *= 0.965;
-        sp.life -= 0.03;
+        sp.life -= 0.024;
         const [sr, sg, sb] = TINTS[sp.tint];
-        ctx.fillStyle = `rgba(${sr},${sg},${sb},${(sp.life * 0.85 * dimLevel).toFixed(3)})`;
+        ctx.fillStyle = `rgba(${sr},${sg},${sb},${Math.min(1, sp.life * 1.15 * dimLevel).toFixed(3)})`;
         ctx.beginPath();
-        ctx.arc(sp.x, sp.y, 1.4 * sp.life + 0.4, 0, Math.PI * 2);
+        ctx.arc(sp.x, sp.y, 2.3 * sp.life + 0.5, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -289,6 +297,17 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
 
     resize();
     window.addEventListener('resize', resize);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.code !== 'Space') return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('button, a, input, textarea')) return;
+      if ((scrollRef.current?.scrollTop ?? 0) > window.innerHeight * 0.9) return;
+      event.preventDefault();
+      spawnComet();
+      window.setTimeout(() => { if (document.visibilityState === 'visible') spawnComet(); }, 220);
+    };
+    window.addEventListener('keydown', onKeyDown);
+
     window.addEventListener('mousemove', onMove, { passive: true });
     window.addEventListener('pointerdown', onDown);
     const scrollEl = scrollRef.current;
@@ -299,6 +318,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
+      window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('pointerdown', onDown);
       scrollEl?.removeEventListener('scroll', onScroll);

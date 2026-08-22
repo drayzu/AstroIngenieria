@@ -9,27 +9,32 @@ export const MuseumCursor = () => {
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
-    if (!window.matchMedia('(pointer: fine)').matches) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (window.matchMedia('(pointer: fine)').matches && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setEnabled(true);
+    }
+  }, []);
 
-    setEnabled(true);
+  useEffect(() => {
+    if (!enabled) return;
 
     const pos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     const ring = { ...pos };
-    const trailCtx = trailRef.current?.getContext('2d') ?? null;
-    const particles: { x: number; y: number; vx: number; vy: number; life: number; gold: boolean }[] = [];
-    let lastSpawn = { x: pos.x, y: pos.y };
     let raf = 0;
     let wasActive = false;
     let lastLabel = '';
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
 
+    const particles: { x: number; y: number; vx: number; vy: number; life: number; gold: boolean }[] = [];
+    let lastSpawn = { x: pos.x, y: pos.y };
+    let trailCtx: CanvasRenderingContext2D | null = null;
+
     const sizeTrail = () => {
       const canvas = trailRef.current;
-      if (!canvas || !trailCtx) return;
+      if (!canvas) return;
       canvas.width = Math.round(window.innerWidth * dpr);
       canvas.height = Math.round(window.innerHeight * dpr);
-      trailCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      trailCtx = canvas.getContext('2d');
+      trailCtx?.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     sizeTrail();
 
@@ -37,21 +42,19 @@ export const MuseumCursor = () => {
       pos.x = event.clientX;
       pos.y = event.clientY;
 
-      if (trailCtx) {
-        const dx = pos.x - lastSpawn.x;
-        const dy = pos.y - lastSpawn.y;
-        if (dx * dx + dy * dy > 26 * 26) {
-          lastSpawn = { x: pos.x, y: pos.y };
-          particles.push({
-            x: pos.x + (Math.random() - 0.5) * 10,
-            y: pos.y + (Math.random() - 0.5) * 10,
-            vx: (Math.random() - 0.5) * 0.7,
-            vy: (Math.random() - 0.5) * 0.7 - 0.25,
-            life: 1,
-            gold: Math.random() < 0.3,
-          });
-          if (particles.length > 36) particles.splice(0, particles.length - 36);
-        }
+      const dx = pos.x - lastSpawn.x;
+      const dy = pos.y - lastSpawn.y;
+      if (dx * dx + dy * dy > 22 * 22) {
+        lastSpawn = { x: pos.x, y: pos.y };
+        particles.push({
+          x: pos.x + (Math.random() - 0.5) * 12,
+          y: pos.y + (Math.random() - 0.5) * 12,
+          vx: (Math.random() - 0.5) * 0.8,
+          vy: (Math.random() - 0.5) * 0.8 - 0.3,
+          life: 1,
+          gold: Math.random() < 0.35,
+        });
+        if (particles.length > 42) particles.splice(0, particles.length - 42);
       }
 
       const target = event.target as HTMLElement | null;
@@ -85,17 +88,17 @@ export const MuseumCursor = () => {
         trailCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
         for (let i = particles.length - 1; i >= 0; i -= 1) {
           const p = particles[i];
-          p.life -= 0.045;
+          p.life -= 0.04;
           if (p.life <= 0) {
             particles.splice(i, 1);
             continue;
           }
           p.x += p.vx;
           p.y += p.vy;
-          const color = p.gold ? '226,204,158' : '245,241,232';
-          trailCtx.fillStyle = `rgba(${color},${(p.life * 0.4).toFixed(3)})`;
+          const color = p.gold ? '230,204,150' : '245,241,232';
+          trailCtx.fillStyle = `rgba(${color},${(p.life * 0.55).toFixed(3)})`;
           trailCtx.beginPath();
-          trailCtx.arc(p.x, p.y, 1.6 * p.life + 0.3, 0, Math.PI * 2);
+          trailCtx.arc(p.x, p.y, 2.1 * p.life + 0.4, 0, Math.PI * 2);
           trailCtx.fill();
         }
       }
@@ -112,12 +115,12 @@ export const MuseumCursor = () => {
       window.removeEventListener('resize', sizeTrail);
       cancelAnimationFrame(raf);
     };
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     const root = document.querySelector('.mo-root');
-    if (!root) return;
-    if (enabled) root.classList.add(CURSOR_CLASS);
+    if (!root || !enabled) return;
+    root.classList.add(CURSOR_CLASS);
     return () => root.classList.remove(CURSOR_CLASS);
   }, [enabled]);
 

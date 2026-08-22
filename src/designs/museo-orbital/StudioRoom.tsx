@@ -241,7 +241,18 @@ export const StudioRoom = ({
               <div
                 className="mo-studio-figure"
                 ref={figureRef}
-                onMouseMove={trackOrigin}
+                onMouseMove={(event) => {
+                  trackOrigin(event);
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  const px = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
+                  const py = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
+                  event.currentTarget.style.setProperty('--frx', `${(-py * 1.3).toFixed(2)}deg`);
+                  event.currentTarget.style.setProperty('--fry', `${(px * 1.6).toFixed(2)}deg`);
+                }}
+                onMouseLeave={(event) => {
+                  event.currentTarget.style.setProperty('--frx', '0deg');
+                  event.currentTarget.style.setProperty('--fry', '0deg');
+                }}
                 onDoubleClick={toggleZoomDblClick}
                 data-cursor-label={zoom > 1 ? 'Mueve el ratón para explorar' : 'Doble clic para acercar'}
               >
