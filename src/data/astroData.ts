@@ -2456,7 +2456,7 @@ export const chapters: AstroChapter[] = [
   {
     id: 'intro',
     number: '0',
-    title: 'Introducción mínima',
+    title: 'Introducción',
     summary:
       'Un mapa para entender escalas, vocabulario, problemas básicos de vivir en el espacio y la progresión de planeta a galaxia.',
     scale: 'galactica',
