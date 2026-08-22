@@ -1,4 +1,6 @@
 import {
+  Suspense,
+  lazy,
   useEffect,
   useMemo,
   useRef,
@@ -7,7 +9,6 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Suspense, lazy } from 'react';
 import { plausibilityLabels, scaleLabels } from '../../data/astroData';
 import type { AstroChapter, AstroConcept } from '../../types';
 import { getConceptImageVariants } from '../shared/conceptImages';
@@ -76,6 +77,20 @@ export const StudioRoom = ({
   const related = concept.related
     .map((id) => siblings.find((s) => s.id === id))
     .filter((item): item is AstroConcept => Boolean(item));
+
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const max = el.scrollHeight - el.clientHeight;
+      setProgress(max > 4 ? Math.min(1, el.scrollTop / max) : 0);
+    };
+    onScroll();
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [concept]);
 
   useEffect(() => {
     setVariantIndex(0);
@@ -182,6 +197,12 @@ export const StudioRoom = ({
         ref={panelRef}
         style={{ '--accent': chapter.color } as CSSProperties}
       >
+        <div
+          className="mo-read-progress"
+          style={{ width: `${(progress * 100).toFixed(1)}%` }}
+          role="progressbar"
+          aria-label="Progreso de lectura"
+        />
         <header className="mo-studio-topbar">
           <button
             type="button"
@@ -228,11 +249,12 @@ export const StudioRoom = ({
                   className="mo-studio-imgframe"
                   layoutId={enableFlight ? `obra-${concept.id}` : undefined}
                 >
-                  <div
-                    className="mo-studio-zoomer"
-                    ref={zoomerRef}
-                    style={{ transform: `scale(${zoom})` }}
-                  >
+                <div
+                  className="mo-studio-zoomer"
+                  ref={zoomerRef}
+                  style={{ transform: `scale(${zoom})` }}
+                >
+                  <div className="mo-kb">
                     <AnimatePresence mode="wait">
                       <motion.img
                         key={variant.src}
@@ -245,6 +267,7 @@ export const StudioRoom = ({
                       />
                     </AnimatePresence>
                   </div>
+                </div>
                 </motion.div>
 
                 <div className="mo-zoom-hud" role="group" aria-label="Acercamiento">

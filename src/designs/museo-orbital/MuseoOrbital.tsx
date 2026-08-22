@@ -1,4 +1,4 @@
-import '@fontsource-variable/fraunces';
+﻿import '@fontsource-variable/fraunces';
 import '@fontsource-variable/space-grotesk';
 import '@fontsource-variable/jetbrains-mono';
 import {
@@ -646,8 +646,13 @@ const MenuOverlay = ({
         <p className="mo-kicker">Museo Orbital</p>
         <h2>Índice del recorrido</h2>
         <ol className="mo-menu-list">
-          {chapters.map((chapter) => (
-            <li key={chapter.id}>
+          {chapters.map((chapter, index) => (
+            <motion.li
+              key={chapter.id}
+              initial={{ opacity: 0, x: -26 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.08 + index * 0.04, duration: 0.5, ease: EASE_OUT }}
+            >
               <button
                 type="button"
                 style={{ '--accent': chapter.color } as CSSProperties}
@@ -658,9 +663,13 @@ const MenuOverlay = ({
                 <span>{chapter.title}</span>
                 <i>{chapter.concepts.length}</i>
               </button>
-            </li>
+            </motion.li>
           ))}
-          <li>
+          <motion.li
+            initial={{ opacity: 0, x: -26 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.08 + chapters.length * 0.04, duration: 0.5, ease: EASE_OUT }}
+          >
             <button
               type="button"
               className="is-extra"
@@ -670,8 +679,12 @@ const MenuOverlay = ({
               <b>✦</b>
               <span>Vitrina de contrastes</span>
             </button>
-          </li>
-          <li>
+          </motion.li>
+          <motion.li
+            initial={{ opacity: 0, x: -26 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.12 + chapters.length * 0.04, duration: 0.5, ease: EASE_OUT }}
+          >
             <button
               type="button"
               className="is-extra"
@@ -681,7 +694,7 @@ const MenuOverlay = ({
               <b>§</b>
               <span>Sala archivo</span>
             </button>
-          </li>
+          </motion.li>
         </ol>
       </div>
     </motion.div>
@@ -711,7 +724,7 @@ export default function MuseoOrbital() {
     if (reduced) return;
     setFlight(true);
     window.clearTimeout(flightTimer.current);
-    flightTimer.current = window.setTimeout(() => setFlight(false), 1150);
+    flightTimer.current = window.setTimeout(() => setFlight(false), 460);
   };
 
   useEffect(() => () => window.clearTimeout(flightTimer.current), []);
@@ -737,6 +750,32 @@ export default function MuseoOrbital() {
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
+
+  useEffect(() => {
+    if (reduced) return;
+    const el = rootRef.current;
+    if (!el) return;
+    let last = el.scrollTop;
+    let vel = 0;
+    let raf = 0;
+    const onScroll = () => {
+      const top = el.scrollTop;
+      vel = vel * 0.8 + (top - last) * 0.2;
+      last = top;
+    };
+    const loop = () => {
+      vel *= 0.9;
+      const skew = Math.max(-5, Math.min(5, vel * 0.012));
+      el.style.setProperty('--marquee-skew', `${skew.toFixed(2)}deg`);
+      raf = requestAnimationFrame(loop);
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    raf = requestAnimationFrame(loop);
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, [reduced]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -859,32 +898,38 @@ export default function MuseoOrbital() {
 
       <AnimatePresence>
         {flight && (
-          <>
-            <motion.div
-              key="bar-top"
-              className="mo-letterbox is-top"
-              initial={{ y: '-100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '-100%' }}
-              transition={{ duration: 0.55, ease: EASE_OUT }}
-            />
-            <motion.div
-              key="bar-bottom"
-              className="mo-letterbox is-bottom"
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ duration: 0.55, ease: EASE_OUT }}
-            />
-            <motion.div
-              key="flash"
-              className="mo-flash"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 0.22, 0] }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.9, times: [0, 0.3, 1] }}
-            />
-          </>
+          <motion.div
+            key="bar-top"
+            className="mo-letterbox is-top"
+            initial={{ y: '-100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '-100%' }}
+            transition={{ duration: 0.25, ease: EASE_OUT }}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {flight && (
+          <motion.div
+            key="bar-bottom"
+            className="mo-letterbox is-bottom"
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ duration: 0.25, ease: EASE_OUT }}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {flight && (
+          <motion.div
+            key="flash"
+            className="mo-flash"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0.18, 0] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.55, times: [0, 0.3, 1] }}
+          />
         )}
       </AnimatePresence>
 
