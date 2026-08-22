@@ -111,6 +111,7 @@ export const mountDistort = ({ canvas, image, container }: MountOptions): Distor
 
   resize();
 
+  let firstDraws = 2;
   const frame = () => {
     time += 0.016;
     if (targetStrength > 0) {
@@ -121,7 +122,10 @@ export const mountDistort = ({ canvas, image, container }: MountOptions): Distor
       strength += (0 - strength) * 0.08;
       if (strength < 0.002) strength = 0;
     }
-    drawFrame();
+    if (strength > 0 || firstDraws > 0) {
+      if (firstDraws > 0) firstDraws -= 1;
+      drawFrame();
+    }
     raf = requestAnimationFrame(frame);
   };
   raf = requestAnimationFrame(frame);
