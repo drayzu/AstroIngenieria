@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import './App.css';
+import './designs/museo-orbital/base.css';
 
 const root = createRoot(document.getElementById('root')!);
 
