@@ -475,6 +475,14 @@ function App() {
           <button type="button" onClick={() => openHomeUtility('compare')}>Comparador</button>
           <button type="button" onClick={() => openHomeUtility('sources')}>Fuentes</button>
           <a
+            className="sx-beta-link"
+            href={`${import.meta.env.BASE_URL}disenos`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Nueva exposición <b>β</b>
+          </a>
+          <a
             href="https://github.com/drayo00/AstroIngenieria"
             target="_blank"
             rel="noreferrer"
