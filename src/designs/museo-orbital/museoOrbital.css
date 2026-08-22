@@ -177,18 +177,19 @@ body:has(.mo-root) {
   font-optical-sizing: auto;
   font-variation-settings: 'opsz' 144;
   font-weight: 520;
-  font-size: clamp(44px, 10.6vw, 158px);
+  font-size: clamp(38px, 9vw, 126px);
   line-height: 0.94;
   letter-spacing: -0.02em;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .mo-hero-letterbox {
   display: inline-block;
   overflow: hidden;
-  padding-bottom: 0.06em;
-  margin-bottom: -0.06em;
+  padding: 0.34em 0.07em 0.28em;
+  margin: -0.34em -0.07em -0.28em;
 }
 
 .mo-hero-hover {
@@ -488,7 +489,7 @@ body:has(.mo-root) {
 }
 
 .mo-obra {
-  grid-column: span 4;
+  grid-column: span 6;
 }
 
 .mo-obra:nth-child(even):not(.is-featured) {
@@ -496,7 +497,7 @@ body:has(.mo-root) {
 }
 
 .mo-obra.is-featured {
-  grid-column: span 8;
+  grid-column: span 12;
 }
 
 .mo-obra-hit {
@@ -526,14 +527,14 @@ body:has(.mo-root) {
 
 .mo-frame img {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 10;
   object-fit: cover;
   filter: saturate(0.85);
   transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s ease;
 }
 
 .mo-obra.is-featured .mo-frame img {
-  aspect-ratio: 16 / 9.5;
+  aspect-ratio: 16 / 7.2;
 }
 
 .mo-frame-shine {
@@ -810,14 +811,13 @@ body:has(.mo-root) {
 }
 
 .mo-studio-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.9fr);
+  display: block;
   border-bottom: 1px solid var(--mo-line);
 }
 
 .mo-studio-figure {
   position: relative;
-  min-height: 480px;
+  min-height: clamp(380px, 62vh, 700px);
   background: #060606;
   overflow: hidden;
 }
@@ -897,8 +897,9 @@ body:has(.mo-root) {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 44px 42px;
-  border-left: 1px solid var(--mo-line);
+  width: min(1150px, 100%);
+  margin: 0 auto;
+  padding: 40px clamp(24px, 5vw, 72px) 50px;
 }
 
 .mo-studio-brief h2 {
@@ -1868,12 +1869,8 @@ body:has(.mo-root) {
 /* ---------- RESPONSIVE ---------- */
 
 @media (max-width: 1180px) {
-  .mo-studio-hero {
-    grid-template-columns: 1fr;
-  }
-
   .mo-studio-figure {
-    min-height: 320px;
+    height: min(46vh, 380px);
   }
 
   .mo-studio-brief {
@@ -1901,7 +1898,7 @@ body:has(.mo-root) {
 
   .mo-obra,
   .mo-obra.is-featured {
-    grid-column: span 6;
+    grid-column: span 12;
   }
 
   .mo-rail {
@@ -1988,4 +1985,71 @@ body:has(.mo-root) {
   .mo-menu {
     padding: 4vh 5vw;
   }
+}
+/* Letterbox cinematografico */
+
+.mo-letterbox {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 11vh;
+  background: #000;
+  z-index: 130;
+  pointer-events: none;
+}
+
+.mo-letterbox.is-top {
+  top: 0;
+}
+
+.mo-letterbox.is-bottom {
+  bottom: 0;
+}
+
+.mo-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 129;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 34%, rgba(245, 241, 232, 0.55), transparent 62%);
+}
+
+/* Reveals por palabras */
+
+.mo-words {
+  display: inline;
+}
+
+.mo-word-box {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  padding-bottom: 0.1em;
+  margin-bottom: -0.1em;
+}
+
+.mo-word {
+  display: inline-block;
+  will-change: transform;
+}
+
+/* Distorsion WebGL */
+
+.mo-distort {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.mo-distort canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+.mo-distort canvas.is-live {
+  opacity: 1;
 }

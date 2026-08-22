@@ -22,9 +22,6 @@ export const MuseumCursor = () => {
     const move = (event: MouseEvent) => {
       pos.x = event.clientX;
       pos.y = event.clientY;
-      if (dotRef.current) {
-        dotRef.current.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
-      }
 
       const target = event.target as HTMLElement | null;
       const hit = target?.closest('button, a, input, textarea, [data-cursor]');
@@ -44,8 +41,11 @@ export const MuseumCursor = () => {
     };
 
     const loop = () => {
-      ring.x += (pos.x - ring.x) * 0.16;
-      ring.y += (pos.y - ring.y) * 0.16;
+      ring.x += (pos.x - ring.x) * 0.32;
+      ring.y += (pos.y - ring.y) * 0.32;
+      if (dotRef.current) {
+        dotRef.current.style.transform = `translate(${Math.round(ring.x)}px, ${Math.round(ring.y)}px)`;
+      }
       if (ringRef.current) {
         ringRef.current.style.transform = `translate(${Math.round(ring.x)}px, ${Math.round(ring.y)}px)`;
       }
