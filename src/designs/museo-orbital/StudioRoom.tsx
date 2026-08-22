@@ -7,14 +7,19 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Suspense, lazy } from 'react';
 import { plausibilityLabels, scaleLabels } from '../../data/astroData';
 import type { AstroChapter, AstroConcept } from '../../types';
 import { getConceptImageVariants } from '../shared/conceptImages';
 import './museoOrbital.css';
 
+const ONeillCylinderModel = lazy(() =>
+  import('./ONeillCylinderModel').then((module) => ({ default: module.ONeillCylinderModel })),
+);
+
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 
-type StudioTab = 'narrativa' | 'lectura' | 'dossier';
+type StudioTab = 'narrativa' | 'lectura' | 'dossier' | 'maqueta';
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 const roman = (index: number) => ROMAN[index] ?? String(index + 1);
@@ -38,6 +43,8 @@ interface StudioProps {
   chapter: AstroChapter;
   siblings: AstroConcept[];
   enableFlight?: boolean;
+  inVitrine: boolean;
+  onToggleVitrine: (conceptId: string) => void;
   onClose: () => void;
   onSelect: (concept: AstroConcept) => void;
 }
@@ -47,6 +54,8 @@ export const StudioRoom = ({
   chapter,
   siblings,
   enableFlight = true,
+  inVitrine,
+  onToggleVitrine,
   onClose,
   onSelect,
 }: StudioProps) => {
@@ -151,6 +160,11 @@ export const StudioRoom = ({
   ];
 
   const variant = variants[Math.min(variantIndex, variants.length - 1)];
+
+  const visibleTabs = [
+    ...tabs,
+    ...(concept.model3d ? [{ id: 'maqueta' as StudioTab, label: 'Maqueta 3D' }] : []),
+  ];
 
   return (
     <motion.div
@@ -281,6 +295,15 @@ export const StudioRoom = ({
               </div>
               <p className="mo-studio-lead">{concept.summary}</p>
 
+              <button
+                type="button"
+                className={`mo-vitrine-toggle${inVitrine ? ' is-in' : ''}`}
+                onClick={() => onToggleVitrine(concept.id)}
+                data-cursor-label={inVitrine ? 'Quitar' : 'Añadir'}
+              >
+                {inVitrine ? '✓ En la vitrina de contrastes' : '+ Añadir a la vitrina de contrastes'}
+              </button>
+
               <dl className="mo-metrics-v2">
                 {metricRows.map(([label, value]) => (
                   <div key={label}>
@@ -297,14 +320,14 @@ export const StudioRoom = ({
           </section>
 
           <nav className="mo-studio-tabs" aria-label="Secciones de la sala de estudio">
-            {tabs.map((item) => (
+            {visibleTabs.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 className={tab === item.id ? 'is-active' : ''}
                 onClick={() => goTab(item.id)}
               >
-                <b>{roman(tabs.indexOf(item))}</b> {item.label}
+                <b>{roman(visibleTabs.indexOf(item))}</b> {item.label}
               </button>
             ))}
           </nav>
@@ -468,6 +491,17 @@ export const StudioRoom = ({
                   </ol>
                 </div>
               )}
+            </section>
+          )}
+          {tab === 'maqueta' && concept.model3d && (
+            <section className="mo-tab-pane mo-model-pane" aria-label="Maqueta 3D interactiva">
+              <p className="mo-reader-kicker">{concept.model3d.label}</p>
+              <div className="mo-model-stage">
+                <Suspense fallback={<div className="mo-model-loading">Forjando la maqueta…</div>}>
+                  <ONeillCylinderModel />
+                </Suspense>
+              </div>
+              <p className="mo-model-caption">{concept.model3d.caption}</p>
             </section>
           )}
         </div>
