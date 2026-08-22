@@ -1,6 +1,8 @@
-# AstroIngeniería
+# AstroIngeniería — Museo Orbital
 
-Un atlas interactivo en español para explorar ideas de astroingeniería: hábitats espaciales, infraestructura orbital, energía estelar, propulsión avanzada, ingeniería planetaria, ingeniería estelar y civilizaciones cósmicas.
+> ✦ **[ENTRAR AL MUSEO](https://drayai.github.io/AstroIngenieria/)** — exposición permanente interactiva, en vivo
+
+Un museo nocturno de la astroingeniería: nueve salas con hábitats espaciales, megaestructuras orbitales, energía estelar, propulsión avanzada, terraformación, ingeniería estelar y civilizaciones cósmicas. Cada obra se abre en una sala de estudio con narrativa, lectura larga, dossier técnico y —en el caso del cilindro de O'Neill— una maqueta 3D explorable.
 
 La app combina narrativa, visualización, comparación y fuentes técnicas para convertir conceptos enormes en un recorrido navegable.
 

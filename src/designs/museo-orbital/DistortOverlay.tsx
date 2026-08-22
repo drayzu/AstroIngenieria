@@ -9,15 +9,11 @@ interface DistortOverlayProps {
 export const DistortOverlay = ({ imageRef, active }: DistortOverlayProps) => {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const handleRef = useRef<DistortHandle | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!active) {
-      setReady(false);
-      return;
-    }
     let disposed = false;
-    let handle: DistortHandle | null = null;
     let detachMove: (() => void) | null = null;
     let detachLoad: (() => void) | null = null;
 
@@ -32,12 +28,13 @@ export const DistortOverlay = ({ imageRef, active }: DistortOverlayProps) => {
         detachLoad = () => img.removeEventListener('load', mount);
         return;
       }
+      if (handleRef.current) return;
 
       import('./distort').then(({ mountDistort }) => {
-        if (disposed) return;
-        handle = mountDistort({ canvas, image: img, container: wrap });
-        if (!handle) return;
-        const onMove = (event: MouseEvent) => handle?.move(event.clientX, event.clientY);
+        if (disposed || handleRef.current) return;
+        handleRef.current = mountDistort({ canvas, image: img, container: wrap });
+        if (!handleRef.current) return;
+        const onMove = (event: MouseEvent) => handleRef.current?.move(event.clientX, event.clientY);
         wrap.addEventListener('mousemove', onMove, { passive: true });
         detachMove = () => wrap.removeEventListener('mousemove', onMove);
         requestAnimationFrame(() => {
@@ -51,13 +48,14 @@ export const DistortOverlay = ({ imageRef, active }: DistortOverlayProps) => {
       disposed = true;
       detachMove?.();
       detachLoad?.();
-      handle?.destroy();
+      handleRef.current?.destroy();
+      handleRef.current = null;
     };
-  }, [active, imageRef]);
+  }, [imageRef]);
 
   return (
-    <div ref={wrapRef} className="mo-distort" aria-hidden="true">
-      <canvas ref={canvasRef} className={ready ? 'is-live' : ''} />
+    <div ref={wrapRef} className={ready ? 'mo-distort is-ready' : 'mo-distort'} aria-hidden="true">
+      <canvas ref={canvasRef} className={active ? 'is-live' : ''} />
     </div>
   );
 };

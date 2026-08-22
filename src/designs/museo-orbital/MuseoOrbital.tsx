@@ -54,6 +54,35 @@ const loadVitrine = (): string[] => {
 const scrollToId = (id: string) =>
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+/* ---------------- Hilo de descenso ---------------- */
+
+const THREAD_PATH = 'M 62 0 C 18 70, 104 130, 54 205 C 12 272, 98 330, 46 410 L 44 436';
+
+const DescentThread = () => {
+  const reduced = useReducedMotion();
+  return (
+    <button
+      type="button"
+      className="mo-thread"
+      data-cursor-label="Descender"
+      onClick={() => scrollToId('sala-intro')}
+    >
+      <svg viewBox="0 0 110 440" fill="none" aria-hidden="true">
+        <path className="mo-thread-base" d={THREAD_PATH} />
+        {!reduced && (
+          <>
+            <path className="mo-thread-glint" d={THREAD_PATH} />
+            <circle className="mo-thread-star" r="3.2">
+              <animateMotion dur="7s" repeatCount="indefinite" path={THREAD_PATH} />
+            </circle>
+          </>
+        )}
+      </svg>
+      <span className="mo-thread-tip">desciende</span>
+    </button>
+  );
+};
+
 /* ---------------- Contador animado ---------------- */
 
 const Counter = ({ to }: { to: number }) => {
@@ -88,12 +117,22 @@ const Hero = () => {
     if (reduced || !window.matchMedia('(pointer: fine)').matches) return;
 
     const mouse = { x: -9999, y: -9999 };
+    const motion2d = { x: -9999, y: -9999, t: 0, speed: 0 };
     const states = letters.map(() => ({ x: 0, y: 0, w: 520 }));
     const glint = { index: -1, t0: 0 };
     let raf = 0;
     let clock = 0;
 
     const onMove = (event: MouseEvent) => {
+      const now = performance.now();
+      if (motion2d.t > 0) {
+        const dt = Math.max(8, now - motion2d.t);
+        const inst = (Math.hypot(event.clientX - motion2d.x, event.clientY - motion2d.y) / dt) * 1000;
+        motion2d.speed = motion2d.speed * 0.7 + inst * 0.3;
+      }
+      motion2d.x = event.clientX;
+      motion2d.y = event.clientY;
+      motion2d.t = now;
       mouse.x = event.clientX;
       mouse.y = event.clientY;
     };
@@ -105,6 +144,7 @@ const Hero = () => {
         glint.t0 = clock;
       }
       const glintP = (clock - glint.t0) / 0.85;
+      const calm = Math.max(0.25, 1 - motion2d.speed / 1100);
 
       letterRefs.current.forEach((el, index) => {
         if (!el) return;
@@ -115,12 +155,12 @@ const Hero = () => {
         const dy = mouse.y - cy;
         const dist = Math.hypot(dx, dy);
         const radius = 170;
-        const force = dist < radius ? 1 - dist / radius : 0;
+        const force = (dist < radius ? 1 - dist / radius : 0) * calm;
         const eased = force * force * (3 - 2 * force);
 
-        const targetX = (dx / (dist || 1)) * eased * 13;
-        const targetY = (dy / (dist || 1)) * eased * 10;
-        let targetW = 520 + eased * 240;
+        const targetX = (dx / (dist || 1)) * eased * 9;
+        const targetY = (dy / (dist || 1)) * eased * 6.5;
+        let targetW = 520 + eased * 170;
         let lift = 0;
         if (index === glint.index && glintP < 1) {
           const spark = Math.sin(Math.PI * glintP);
@@ -129,9 +169,9 @@ const Hero = () => {
         }
 
         const state = states[index];
-        state.x += (targetX - state.x) * 0.14;
-        state.y += (targetY + lift - state.y) * 0.14;
-        state.w += (targetW - state.w) * 0.16;
+        state.x += (targetX - state.x) * 0.09;
+        state.y += (targetY + lift - state.y) * 0.09;
+        state.w += (targetW - state.w) * 0.12;
 
         el.style.transform = `translate(${state.x.toFixed(2)}px, ${state.y.toFixed(2)}px)`;
         el.style.fontVariationSettings = `'opsz' 144, 'wght' ${Math.round(state.w)}`;
@@ -139,7 +179,6 @@ const Hero = () => {
       raf = requestAnimationFrame(loop);
     };
 
-    window.addEventListener('mousemove', onMove, { passive: true });
     raf = requestAnimationFrame(loop);
     return () => {
       window.removeEventListener('mousemove', onMove);
@@ -165,6 +204,7 @@ const Hero = () => {
       />
       <div className="mo-hero-scrim" />
       <div className="mo-hero-spot" aria-hidden="true" />
+      <DescentThread />
 
       <div className="mo-hero-copy">
         <motion.p
@@ -220,13 +260,15 @@ const Hero = () => {
 
         <motion.button
           type="button"
-          className="mo-hero-cta"
+          className="mo-hero-cta mo-orbital"
           data-cursor-label="Descender"
           onClick={() => scrollToId('sala-intro')}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: reduced ? 0 : 2.1, duration: 1 }}
         >
+          <i className="mo-orbit a" aria-hidden="true" />
+          <i className="mo-orbit b" aria-hidden="true" />
           Descender a la Sala 00
           <span aria-hidden="true">↓</span>
         </motion.button>
@@ -402,7 +444,6 @@ const Obra = ({
             />
             {featured && <DistortOverlay imageRef={imgRef} active={hovered} />}
           </div>
-          <span className="mo-frame-shine" aria-hidden="true" />
           <span className="mo-frame-glow" aria-hidden="true" />
         </figure>
         <div className="mo-obra-meta">
@@ -772,11 +813,13 @@ export default function MuseoOrbital() {
   const [vitrineIds, setVitrineIds] = useState<string[]>(loadVitrine);
   const [flight, setFlight] = useState(false);
   const flightTimer = useRef(0);
+  const prevHall = useRef<string | null>(null);
 
   useScrollLock(Boolean(active));
 
   const { scrollYProgress } = useScroll({ container: rootRef });
   const railScale = useSpring(scrollYProgress, { stiffness: 90, damping: 24, mass: 0.4 });
+  const railStarTop = useTransform(railScale, [0, 1], ['2%', '98%']);
 
   const archiveSources = useMemo(buildArchive, []);
 
@@ -902,6 +945,14 @@ export default function MuseoOrbital() {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (!activeHallId) return;
+    if (prevHall.current && prevHall.current !== activeHallId) {
+      window.dispatchEvent(new CustomEvent('mo-comet'));
+    }
+    prevHall.current = activeHallId;
+  }, [activeHallId]);
+
   const openConcept = (concept: AstroConcept) => {
     triggerFlight();
     setActive(concept);
@@ -983,6 +1034,11 @@ export default function MuseoOrbital() {
       <aside className="mo-rail" aria-label="Progreso del recorrido">
         <div className="mo-rail-track">
           <motion.div className="mo-rail-fill" style={{ scaleY: railScale }} />
+          <motion.i
+            className="mo-rail-star"
+            style={{ top: railStarTop }}
+            aria-hidden="true"
+          />
         </div>
         {chapters.map((chapter) => (
           <button
