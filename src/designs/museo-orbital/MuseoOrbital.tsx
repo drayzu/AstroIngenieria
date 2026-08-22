@@ -1,3 +1,6 @@
+import '@fontsource-variable/fraunces';
+import '@fontsource-variable/space-grotesk';
+import '@fontsource-variable/jetbrains-mono';
 import {
   useEffect,
   useMemo,
@@ -33,6 +36,18 @@ const conceptFromHash = (): AstroConcept | null => {
   const match = window.location.hash.match(/^#obra-(.+)$/);
   return match ? conceptById.get(match[1]) ?? null : null;
 };
+
+/* ---------------- Chip de salida al atlas ---------------- */
+
+const AtlasChip = () => (
+  <a
+    className="mo-atlas-chip"
+    href={import.meta.env.BASE_URL}
+    data-cursor-label="Salir"
+  >
+    ← Atlas clásico
+  </a>
+);
 
 /* ---------------- Cursor + Hero ---------------- */
 
@@ -393,6 +408,7 @@ export default function MuseoOrbital() {
     <div className="mo-root" ref={rootRef}>
       <Grain opacity={0.06} blend="screen" zIndex={40} />
       <MuseumCursor />
+      <AtlasChip />
 
       <Hero />
       <Marquee />

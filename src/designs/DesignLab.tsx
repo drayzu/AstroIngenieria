@@ -1,6 +1,3 @@
-import '@fontsource-variable/fraunces';
-import '@fontsource-variable/space-grotesk';
-import '@fontsource-variable/jetbrains-mono';
 import { Suspense, lazy, useEffect, useState } from 'react';
 import './designLab.css';
 
