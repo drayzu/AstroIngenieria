@@ -5,9 +5,10 @@ import './App.css';
 
 const root = createRoot(document.getElementById('root')!);
 
-const devPath = import.meta.env.DEV ? window.location.pathname.replace(/\/+$/, '') : '';
+const isLabPath = (suffix: string) =>
+  window.location.pathname.replace(/\/+$/, '').endsWith(suffix);
 
-if (devPath.endsWith('/disenos')) {
+if (import.meta.env.DEV && isLabPath('/disenos')) {
   void import('./designs/DesignLab').then(({ default: DesignLab }) => {
     root.render(
       <StrictMode>
@@ -15,7 +16,7 @@ if (devPath.endsWith('/disenos')) {
       </StrictMode>,
     );
   });
-} else if (devPath.endsWith('/forja')) {
+} else if (import.meta.env.DEV && isLabPath('/forja')) {
   void import('./forja/ForjaLab').then(({ default: ForjaLab }) => {
     root.render(
       <StrictMode>
