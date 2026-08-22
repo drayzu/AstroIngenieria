@@ -79,7 +79,23 @@ export const mountDistort = ({ canvas, image, container }: MountOptions): Distor
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+
+  // La textura se sube desde un lienzo reducido: evita límites de tamaño
+  // de textura y fallos de memoria que pintaban la imagen en blanco.
+  const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number | null;
+  const maxDim = Math.min(maxTex ?? 2048, 1024);
+  const scale = Math.min(1, maxDim / image.naturalWidth, maxDim / image.naturalHeight);
+  if (scale >= 1) {
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+  } else {
+    const off = document.createElement('canvas');
+    off.width = Math.max(2, Math.round(image.naturalWidth * scale));
+    off.height = Math.max(2, Math.round(image.naturalHeight * scale));
+    const offCtx = off.getContext('2d');
+    if (!offCtx) return null;
+    offCtx.drawImage(image, 0, 0, off.width, off.height);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, off);
+  }
 
   const uMouse = gl.getUniformLocation(program, 'u_mouse');
   const uTime = gl.getUniformLocation(program, 'u_time');
@@ -90,9 +106,12 @@ export const mountDistort = ({ canvas, image, container }: MountOptions): Distor
   let time = 0;
   let strength = 0;
   let targetStrength = 0;
+  // El contexto puede reciclarse en cualquier momento; se comprueba en cada uso.
+  let contextAlive = true;
   const mouse = { x: 0.5, y: 0.5 };
 
   const resize = () => {
+    if (!contextAlive) return;
     const rect = container.getBoundingClientRect();
     const dpr = Math.min(window.devicePixelRatio || 1, 1.4);
     canvas.width = Math.max(2, Math.round(rect.width * dpr));
@@ -102,6 +121,7 @@ export const mountDistort = ({ canvas, image, container }: MountOptions): Distor
   };
 
   const drawFrame = () => {
+    if (!contextAlive) return;
     gl.uniform2f(uMouse, mouse.x, mouse.y);
     gl.uniform1f(uTime, time);
     gl.uniform1f(uStrength, strength);
@@ -113,6 +133,7 @@ export const mountDistort = ({ canvas, image, container }: MountOptions): Distor
 
   let firstDraws = 2;
   const frame = () => {
+    if (!contextAlive) return;
     time += 0.016;
     if (targetStrength > 0) {
       strength += (targetStrength - strength) * 0.08;
@@ -129,6 +150,16 @@ export const mountDistort = ({ canvas, image, container }: MountOptions): Distor
     raf = requestAnimationFrame(frame);
   };
   raf = requestAnimationFrame(frame);
+
+  // Si el navegador recicla este contexto WebGL (demasiados lienzos vivos),
+  // ocultamos el overlay para que la imagen original siga visible.
+  canvas.addEventListener('webglcontextlost', (event) => {
+    event.preventDefault();
+    contextAlive = false;
+    cancelAnimationFrame(raf);
+    canvas.classList.remove('is-live');
+    canvas.style.display = 'none';
+  });
 
   return {
     move(clientX: number, clientY: number) {
