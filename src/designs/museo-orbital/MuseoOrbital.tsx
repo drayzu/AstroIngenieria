@@ -24,6 +24,8 @@ import { Grain } from '../shared/Grain';
 import { useScrollLock } from '../shared/useScrollLock';
 import { MuseumCursor } from './MuseumCursor';
 import { StudioRoom } from './StudioRoom';
+import { StarfieldCanvas } from './StarfieldCanvas';
+import { DistortOverlay } from './DistortOverlay';
 import './museoOrbital.css';
 
 const totalWorks = chapters.reduce((sum, chapter) => sum + chapter.concepts.length, 0);
@@ -52,11 +54,60 @@ const loadVitrine = (): string[] => {
 const scrollToId = (id: string) =>
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-/* ---------------- Cursor + Hero ---------------- */
+/* ---------------- Hero con título magnético ---------------- */
 
 const Hero = () => {
   const reduced = useReducedMotion();
   const letters = useMemo(() => 'ASTROINGENIERÍA'.split(''), []);
+  const letterRefs = useRef<(HTMLSpanElement | null)[]>([]);
+
+  useEffect(() => {
+    if (reduced || !window.matchMedia('(pointer: fine)').matches) return;
+
+    const mouse = { x: -9999, y: -9999 };
+    const states = letters.map(() => ({ x: 0, y: 0, w: 520 }));
+    let raf = 0;
+
+    const onMove = (event: MouseEvent) => {
+      mouse.x = event.clientX;
+      mouse.y = event.clientY;
+    };
+
+    const loop = () => {
+      letterRefs.current.forEach((el, index) => {
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = mouse.x - cx;
+        const dy = mouse.y - cy;
+        const dist = Math.hypot(dx, dy);
+        const radius = 170;
+        const force = dist < radius ? 1 - dist / radius : 0;
+        const eased = force * force * (3 - 2 * force);
+
+        const targetX = (dx / (dist || 1)) * eased * 13;
+        const targetY = (dy / (dist || 1)) * eased * 10;
+        const targetW = 520 + eased * 240;
+
+        const state = states[index];
+        state.x += (targetX - state.x) * 0.14;
+        state.y += (targetY - state.y) * 0.14;
+        state.w += (targetW - state.w) * 0.16;
+
+        el.style.transform = `translate(${state.x.toFixed(2)}px, ${state.y.toFixed(2)}px)`;
+        el.style.fontVariationSettings = `'opsz' 144, 'wght' ${Math.round(state.w)}`;
+      });
+      raf = requestAnimationFrame(loop);
+    };
+
+    window.addEventListener('mousemove', onMove, { passive: true });
+    raf = requestAnimationFrame(loop);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      cancelAnimationFrame(raf);
+    };
+  }, [reduced, letters]);
 
   const trackSpotlight = (event: ReactMouseEvent<HTMLElement>) => {
     if (reduced) return;
@@ -66,7 +117,7 @@ const Hero = () => {
   };
 
   return (
-    <section className="mo-hero" onMouseMove={trackSpotlight}>
+    <section className="mo-hero mo-layer" onMouseMove={trackSpotlight}>
       <motion.div
         className="mo-hero-bg"
         style={{ backgroundImage: `url(${chapters[1].visual?.heroImage})` }}
@@ -93,6 +144,9 @@ const Hero = () => {
               <span className="mo-hero-hover">
                 <motion.span
                   className="mo-hero-letter"
+                  ref={(el) => {
+                    letterRefs.current[index] = el;
+                  }}
                   initial={{ y: '118%' }}
                   animate={{ y: '0%' }}
                   transition={{
@@ -145,7 +199,7 @@ const Hero = () => {
 const Marquee = () => {
   const phrase = `COLECCIÓN PERMANENTE · ${chapters.length} SALAS · ${totalWorks} OBRAS · ENTRADA LIBRE · `;
   return (
-    <div className="mo-marquee" aria-hidden="true">
+    <div className="mo-marquee mo-layer" aria-hidden="true">
       <div className="mo-marquee-track">
         <span>{phrase.repeat(3)}</span>
         <span>{phrase.repeat(3)}</span>
@@ -157,7 +211,7 @@ const Marquee = () => {
 /* ---------------- Índice de salas ---------------- */
 
 const HallIndex = ({ activeId }: { activeId: string | null }) => (
-  <nav className="mo-halls" aria-label="Salas de la exposición">
+  <nav className="mo-halls mo-layer" aria-label="Salas de la exposición">
     {chapters.map((chapter) => (
       <button
         key={chapter.id}
@@ -211,6 +265,31 @@ const SalaNo = ({
   );
 };
 
+/* ---------------- Reveals por palabras ---------------- */
+
+const RevealWords = ({ text }: { text: string }) => {
+  const reduced = useReducedMotion();
+  const words = useMemo(() => text.split(' '), [text]);
+  return (
+    <span className="mo-words">
+      {words.map((word, index) => (
+        <span className="mo-word-box" key={`${word}-${index}`}>
+          <motion.span
+            className="mo-word"
+            initial={{ y: reduced ? '0%' : '114%' }}
+            whileInView={{ y: '0%' }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ delay: index * 0.055, duration: 0.85, ease: EASE_OUT }}
+          >
+            {word}
+            {index < words.length - 1 ? '\u00A0' : ''}
+          </motion.span>
+        </span>
+      ))}
+    </span>
+  );
+};
+
 /* ---------------- Obra del muro ---------------- */
 
 const Obra = ({
@@ -226,6 +305,9 @@ const Obra = ({
   enableFlight: boolean;
   onSelect: (concept: AstroConcept) => void;
 }) => {
+  const [hovered, setHovered] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
   const tilt = (event: ReactMouseEvent<HTMLElement>) => {
     const target = event.currentTarget;
     const rect = target.getBoundingClientRect();
@@ -252,17 +334,23 @@ const Obra = ({
         className="mo-obra-hit"
         data-cursor-label="Abrir sala de estudio"
         onMouseMove={tilt}
-        onMouseLeave={untilt}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={(event) => {
+          untilt(event);
+          setHovered(false);
+        }}
         onClick={() => onSelect(concept)}
       >
         <figure className="mo-frame">
           <div className="mo-frame-mask">
             <motion.img
+              ref={imgRef}
               layoutId={enableFlight ? `obra-${concept.id}` : undefined}
               src={concept.illustration.src}
               alt={concept.illustration.alt}
               loading="lazy"
             />
+            {featured && <DistortOverlay imageRef={imgRef} active={hovered} />}
           </div>
           <span className="mo-frame-shine" aria-hidden="true" />
           <span className="mo-frame-glow" aria-hidden="true" />
@@ -313,7 +401,7 @@ const Sala = ({
   return (
     <section
       id={`sala-${chapter.id}`}
-      className="mo-sala"
+      className="mo-sala mo-layer"
       ref={sectionRef}
       style={{ '--accent': chapter.color } as CSSProperties}
     >
@@ -323,7 +411,9 @@ const Sala = ({
           <p className="mo-kicker">
             Sala {chapter.number} — {chapter.concepts.length} piezas
           </p>
-          <h2>{chapter.title}</h2>
+          <h2>
+            <RevealWords text={chapter.title} />
+          </h2>
           <p className="mo-lede">{chapter.summary}</p>
           {chapter.sections.map((section) => (
             <details key={section.title} className="mo-sala-note">
@@ -377,10 +467,12 @@ const Vitrina = ({
     .filter((item): item is AstroConcept => Boolean(item));
 
   return (
-    <section id="vitrina" className="mo-vitrina">
+    <section id="vitrina" className="mo-vitrina mo-layer">
       <header className="mo-section-head">
         <p className="mo-kicker">Vitrina de contrastes</p>
-        <h2>Obras seleccionadas</h2>
+        <h2>
+          <RevealWords text="Obras seleccionadas" />
+        </h2>
         <p className="mo-section-sub">
           Añade hasta {VITRINE_CAP} obras desde su sala de estudio para leerlas en paralelo.
         </p>
@@ -473,10 +565,12 @@ const buildArchive = (): ArchiveSource[] => {
 };
 
 const Archivo = ({ sources }: { sources: ArchiveSource[] }) => (
-  <section id="archivo" className="mo-archivo">
+  <section id="archivo" className="mo-archivo mo-layer">
     <header className="mo-section-head">
       <p className="mo-kicker">Sala archivo</p>
-      <h2>Fuentes de la colección</h2>
+      <h2>
+        <RevealWords text="Fuentes de la colección" />
+      </h2>
       <p className="mo-section-sub">
         Toda la documentación técnica citada en el museo: NASA, SETI y otros materiales de
         referencia.
@@ -603,6 +697,8 @@ export default function MuseoOrbital() {
   const [activeHallId, setActiveHallId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [vitrineIds, setVitrineIds] = useState<string[]>(loadVitrine);
+  const [flight, setFlight] = useState(false);
+  const flightTimer = useRef(0);
 
   useScrollLock(Boolean(active));
 
@@ -610,6 +706,15 @@ export default function MuseoOrbital() {
   const railScale = useSpring(scrollYProgress, { stiffness: 90, damping: 24, mass: 0.4 });
 
   const archiveSources = useMemo(buildArchive, []);
+
+  const triggerFlight = () => {
+    if (reduced) return;
+    setFlight(true);
+    window.clearTimeout(flightTimer.current);
+    flightTimer.current = window.setTimeout(() => setFlight(false), 1150);
+  };
+
+  useEffect(() => () => window.clearTimeout(flightTimer.current), []);
 
   useEffect(() => {
     try {
@@ -649,7 +754,15 @@ export default function MuseoOrbital() {
     return () => observer.disconnect();
   }, []);
 
-  const openConcept = (concept: AstroConcept) => setActive(concept);
+  const openConcept = (concept: AstroConcept) => {
+    triggerFlight();
+    setActive(concept);
+  };
+
+  const closeConcept = () => {
+    triggerFlight();
+    setActive(null);
+  };
 
   const toggleVitrine = (conceptId: string) => {
     setVitrineIds((current) => {
@@ -673,6 +786,7 @@ export default function MuseoOrbital() {
 
   return (
     <div className="mo-root" ref={rootRef}>
+      <StarfieldCanvas scrollRef={rootRef} dim={Boolean(active) || menuOpen} />
       <Grain opacity={0.06} blend="screen" zIndex={40} />
       <MuseumCursor />
 
@@ -711,7 +825,7 @@ export default function MuseoOrbital() {
 
       <Archivo sources={archiveSources} />
 
-      <footer className="mo-footer">
+      <footer className="mo-footer mo-layer">
         <blockquote>{chapters[0].sections[1]?.body}</blockquote>
         <p className="mo-footer-line">
           ASTROINGENIERÍA — EXPOSICIÓN PERMANENTE · MUSEO ORBITAL · MMXXVI
@@ -744,6 +858,37 @@ export default function MuseoOrbital() {
       </AnimatePresence>
 
       <AnimatePresence>
+        {flight && (
+          <>
+            <motion.div
+              key="bar-top"
+              className="mo-letterbox is-top"
+              initial={{ y: '-100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '-100%' }}
+              transition={{ duration: 0.55, ease: EASE_OUT }}
+            />
+            <motion.div
+              key="bar-bottom"
+              className="mo-letterbox is-bottom"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ duration: 0.55, ease: EASE_OUT }}
+            />
+            <motion.div
+              key="flash"
+              className="mo-flash"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.22, 0] }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.9, times: [0, 0.3, 1] }}
+            />
+          </>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {active && (
           <StudioRoom
             key="studio"
@@ -753,7 +898,7 @@ export default function MuseoOrbital() {
             enableFlight={!reduced}
             inVitrine={vitrineIds.includes(active.id)}
             onToggleVitrine={toggleVitrine}
-            onClose={() => setActive(null)}
+            onClose={closeConcept}
             onSelect={openConcept}
           />
         )}
