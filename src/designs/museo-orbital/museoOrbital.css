@@ -1,3 +1,17 @@
+/* El museo necesita ser EL contenedor de scroll para que el índice sticky
+   y el rail de progreso funcionen: sin altura fija en html/body/#root,
+   el body scrollea y position:sticky queda anclado a un contenedor quieto. */
+html:has(.mo-root),
+body:has(.mo-root),
+#root:has(.mo-root) {
+  height: 100%;
+}
+
+html:has(.mo-root),
+body:has(.mo-root) {
+  overflow: hidden;
+}
+
 .mo-root {
   --mo-bg: #070707;
   --mo-panel: #0d0d0c;
@@ -304,6 +318,7 @@
   z-index: 30;
   display: flex;
   gap: 4px;
+  justify-content: safe center;
   overflow-x: auto;
   padding: 10px 20px;
   background: rgba(7, 7, 7, 0.88);
@@ -1062,10 +1077,123 @@
   padding: 40px clamp(24px, 5vw, 80px) 70px;
 }
 
+/* ---------- CINTA DE CAPAS VISUALES ---------- */
+
+.mo-studio-figure-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mo-studio-figure-col .mo-studio-figure {
+  flex: 1;
+  min-height: 380px;
+}
+
+.mo-filmstrip {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #060606;
+  border-top: 1px solid var(--mo-line);
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.mo-filmstrip::-webkit-scrollbar {
+  display: none;
+}
+
+.mo-filmstrip button {
+  position: relative;
+  flex-shrink: 0;
+  width: 96px;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  border: 1px solid var(--mo-line);
+  background: none;
+  opacity: 0.5;
+  transition: opacity 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+}
+
+.mo-filmstrip button img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.mo-filmstrip button span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 4px 6px 3px;
+  text-align: left;
+  font-family: var(--mo-mono);
+  font-size: 7.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mo-ink);
+  background: linear-gradient(to top, rgba(7, 7, 7, 0.92), transparent);
+}
+
+.mo-filmstrip button:hover,
+.mo-filmstrip button.is-active {
+  opacity: 1;
+}
+
+.mo-filmstrip button.is-active {
+  border-color: var(--accent);
+}
+
+/* ---------- LÁMINAS INLINE EN LECTURA ---------- */
+
+.mo-reader-figure {
+  margin: 38px 0;
+}
+
+.mo-reader-figure-frame {
+  padding: 10px;
+  background: var(--mo-panel);
+  border: 1px solid var(--mo-line);
+}
+
+.mo-reader-figure-frame img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  display: block;
+  filter: saturate(0.85) contrast(1.04);
+}
+
+.mo-reader-figure figcaption {
+  margin-top: 12px;
+  font-family: var(--mo-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mo-muted);
+  line-height: 1.7;
+}
+
+.mo-reader-figure figcaption b {
+  font-family: var(--mo-serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--accent);
+  margin-right: 8px;
+}
+
 /* ---------- PESTAÑAS DE LECTURA ---------- */
 
 .mo-reader {
   max-width: 78ch;
+  margin: 0 auto;
 }
 
 .mo-reader-kicker {
@@ -1213,6 +1341,7 @@
 
 .mo-dossier {
   max-width: 88ch;
+  margin: 0 auto;
 }
 
 .mo-dossier-section {
