@@ -1,48 +1,63 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+} from 'react';
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+  type MotionValue,
+} from 'framer-motion';
 import { chapters, conceptById, plausibilityLabels, scaleLabels } from '../../data/astroData';
 import type { AstroChapter, AstroConcept } from '../../types';
-import { getConceptImageVariants } from '../shared/conceptImages';
 import { Grain } from '../shared/Grain';
 import { useScrollLock } from '../shared/useScrollLock';
+import { MuseumCursor } from './MuseumCursor';
+import { StudioRoom } from './StudioRoom';
 import './museoOrbital.css';
 
 const totalWorks = chapters.reduce((sum, chapter) => sum + chapter.concepts.length, 0);
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 
-interface FichaState {
-  concept: AstroConcept;
-  chapter: AstroChapter;
-}
-
 const resolveChapter = (concept: AstroConcept): AstroChapter =>
   chapters.find((chapter) => chapter.id === concept.chapterId) ?? chapters[0];
 
-const MetricPlaque = ({ label, value }: { label: string; value: number }) => (
-  <div className="mo-plaque">
-    <span className="mo-plaque-label">{label}</span>
-    <span className="mo-plaque-cells" aria-label={`${value} de 5`}>
-      {[1, 2, 3, 4, 5].map((cell) => (
-        <i key={cell} className={cell <= value ? 'is-on' : ''} />
-      ))}
-    </span>
-  </div>
-);
+const conceptFromHash = (): AstroConcept | null => {
+  const match = window.location.hash.match(/^#obra-(.+)$/);
+  return match ? conceptById.get(match[1]) ?? null : null;
+};
+
+/* ---------------- Cursor + Hero ---------------- */
 
 const Hero = () => {
   const reduced = useReducedMotion();
   const letters = useMemo(() => 'ASTROINGENIERÍA'.split(''), []);
 
+  const trackSpotlight = (event: ReactMouseEvent<HTMLElement>) => {
+    if (reduced) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.style.setProperty('--sx', `${event.clientX - rect.left}px`);
+    event.currentTarget.style.setProperty('--sy', `${event.clientY - rect.top}px`);
+  };
+
   return (
-    <section className="mo-hero">
+    <section className="mo-hero" onMouseMove={trackSpotlight}>
       <motion.div
         className="mo-hero-bg"
         style={{ backgroundImage: `url(${chapters[1].visual?.heroImage})` }}
-        initial={{ scale: 1.18, opacity: 0 }}
+        initial={{ scale: 1.22, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: reduced ? 0 : 2.4, ease: EASE_OUT }}
+        transition={{ duration: reduced ? 0 : 3, ease: EASE_OUT }}
       />
       <div className="mo-hero-scrim" />
+      <div className="mo-hero-spot" aria-hidden="true" />
 
       <div className="mo-hero-copy">
         <motion.p
@@ -57,18 +72,20 @@ const Hero = () => {
         <h1 className="mo-hero-title" aria-label="Astroingeniería">
           {letters.map((letter, index) => (
             <span className="mo-hero-letterbox" key={`${letter}-${index}`} aria-hidden="true">
-              <motion.span
-                className="mo-hero-letter"
-                initial={{ y: '115%' }}
-                animate={{ y: '0%' }}
-                transition={{
-                  delay: reduced ? 0 : 0.55 + index * 0.035,
-                  duration: 1,
-                  ease: EASE_OUT,
-                }}
-              >
-                {letter}
-              </motion.span>
+              <span className="mo-hero-hover">
+                <motion.span
+                  className="mo-hero-letter"
+                  initial={{ y: '118%' }}
+                  animate={{ y: '0%' }}
+                  transition={{
+                    delay: reduced ? 0 : 0.55 + index * 0.038,
+                    duration: 1.1,
+                    ease: EASE_OUT,
+                  }}
+                >
+                  {letter}
+                </motion.span>
+              </span>
             </span>
           ))}
         </h1>
@@ -77,14 +94,14 @@ const Hero = () => {
           className="mo-hero-rule"
           initial={{ scaleX: 0 }}
           animate={{ scaleX: 1 }}
-          transition={{ delay: reduced ? 0 : 1.3, duration: 1.5, ease: EASE_OUT }}
+          transition={{ delay: reduced ? 0 : 1.4, duration: 1.6, ease: EASE_OUT }}
         />
 
         <motion.p
           className="mo-hero-sub"
           initial={{ opacity: 0, y: 22 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: reduced ? 0 : 1.5, duration: 1, ease: EASE_OUT }}
+          transition={{ delay: reduced ? 0 : 1.6, duration: 1, ease: EASE_OUT }}
         >
           Nueve salas. {totalWorks} obras. Un recorrido desde la primera estación orbital hasta
           civilizaciones capaces de mover estrellas.
@@ -93,12 +110,13 @@ const Hero = () => {
         <motion.button
           type="button"
           className="mo-hero-cta"
+          data-cursor-label="Descender"
           onClick={() =>
             document.getElementById('sala-intro')?.scrollIntoView({ behavior: 'smooth' })
           }
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: reduced ? 0 : 2, duration: 1 }}
+          transition={{ delay: reduced ? 0 : 2.1, duration: 1 }}
         >
           Descender a la Sala 00
           <span aria-hidden="true">↓</span>
@@ -119,6 +137,8 @@ const Marquee = () => {
     </div>
   );
 };
+
+/* ---------------- Índice de salas ---------------- */
 
 const HallIndex = ({ activeId }: { activeId: string | null }) => (
   <nav className="mo-halls" aria-label="Salas de la exposición">
@@ -141,68 +161,145 @@ const HallIndex = ({ activeId }: { activeId: string | null }) => (
   </nav>
 );
 
+/* ---------------- Número monumental que se rellena ---------------- */
+
+const SalaNo = ({
+  value,
+  progress,
+  reduced,
+}: {
+  value: string;
+  progress: MotionValue<number>;
+  reduced: boolean;
+}) => {
+  const clip = useTransform(
+    progress,
+    [0.02, 0.6],
+    ['inset(100% 0% 0% 0%)', 'inset(-15% -15% -15% -15%)'],
+  );
+  return (
+    <span className="mo-sala-no" aria-hidden="true">
+      <span className="mo-sala-no-outline">{value}</span>
+      {reduced ? (
+        <span className="mo-sala-no-fill">{value}</span>
+      ) : (
+        <motion.span className="mo-sala-no-fill" style={{ clipPath: clip }}>
+          {value}
+        </motion.span>
+      )}
+    </span>
+  );
+};
+
+/* ---------------- Obra del muro ---------------- */
+
 const Obra = ({
   concept,
   plate,
   featured,
+  enableFlight,
   onSelect,
 }: {
   concept: AstroConcept;
   plate: number;
   featured: boolean;
+  enableFlight: boolean;
   onSelect: (concept: AstroConcept) => void;
-}) => (
-  <motion.article
-    className={`mo-obra${featured ? ' is-featured' : ''}`}
-    initial={{ opacity: 0, y: 46 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, margin: '-60px' }}
-    transition={{ duration: 0.9, ease: EASE_OUT }}
-  >
-    <button type="button" className="mo-obra-hit" onClick={() => onSelect(concept)}>
-      <figure className="mo-frame">
-        <img src={concept.illustration.src} alt={concept.illustration.alt} loading="lazy" />
-        <span className="mo-frame-glow" aria-hidden="true" />
-      </figure>
-      <div className="mo-obra-meta">
-        <span className="mo-plate">N.º {String(plate).padStart(2, '0')}</span>
-        <h3>{concept.title}</h3>
-        <p>
-          {concept.category} · {scaleLabels[concept.scale]} ·{' '}
-          {plausibilityLabels[concept.plausibility]}
-        </p>
-        <span className="mo-obra-cta">Ver ficha →</span>
-      </div>
-    </button>
-  </motion.article>
-);
+}) => {
+  const tilt = (event: ReactMouseEvent<HTMLElement>) => {
+    const target = event.currentTarget;
+    const rect = target.getBoundingClientRect();
+    const px = (event.clientX - rect.left) / rect.width - 0.5;
+    const py = (event.clientY - rect.top) / rect.height - 0.5;
+    target.style.setProperty('--rx', `${(-py * 4.5).toFixed(2)}deg`);
+    target.style.setProperty('--ry', `${(px * 5.5).toFixed(2)}deg`);
+  };
+  const untilt = (event: ReactMouseEvent<HTMLElement>) => {
+    event.currentTarget.style.setProperty('--rx', '0deg');
+    event.currentTarget.style.setProperty('--ry', '0deg');
+  };
+
+  return (
+    <motion.article
+      className={`mo-obra${featured ? ' is-featured' : ''}`}
+      initial={{ opacity: 0, y: 60, rotateZ: plate % 2 === 0 ? -1.1 : 1.1 }}
+      whileInView={{ opacity: 1, y: 0, rotateZ: 0 }}
+      viewport={{ once: true, margin: '-60px' }}
+      transition={{ duration: 1, ease: EASE_OUT }}
+    >
+      <button
+        type="button"
+        className="mo-obra-hit"
+        data-cursor-label="Abrir sala de estudio"
+        onMouseMove={tilt}
+        onMouseLeave={untilt}
+        onClick={() => onSelect(concept)}
+      >
+        <figure className="mo-frame">
+          <div className="mo-frame-mask">
+            <motion.img
+              layoutId={enableFlight ? `obra-${concept.id}` : undefined}
+              src={concept.illustration.src}
+              alt={concept.illustration.alt}
+              loading="lazy"
+            />
+          </div>
+          <span className="mo-frame-shine" aria-hidden="true" />
+          <span className="mo-frame-glow" aria-hidden="true" />
+        </figure>
+        <div className="mo-obra-meta">
+          <span className="mo-plate">N.º {String(plate).padStart(2, '0')}</span>
+          <h3>{concept.title}</h3>
+          <p>
+            {concept.category} · {scaleLabels[concept.scale]} ·{' '}
+            {plausibilityLabels[concept.plausibility]}
+          </p>
+          <span className="mo-obra-cta">Entrar a la sala de estudio →</span>
+        </div>
+      </button>
+    </motion.article>
+  );
+};
+
+/* ---------------- Sala ---------------- */
 
 const Sala = ({
   chapter,
   offset,
+  enableFlight,
   onSelect,
 }: {
   chapter: AstroChapter;
   offset: number;
+  enableFlight: boolean;
   onSelect: (concept: AstroConcept) => void;
 }) => {
-  const headRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: headRef,
+  const sectionRef = useRef<HTMLElement>(null);
+  const figureRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress: fillProgress } = useScroll({
+    target: sectionRef,
+    offset: ['start 90%', 'start 32%'],
+  });
+  const { scrollYProgress: figureProgress } = useScroll({
+    target: figureRef,
     offset: ['start end', 'end start'],
   });
-  const imageY = useTransform(scrollYProgress, [0, 1], ['-8%', '8%']);
+  const imageY = useTransform(figureProgress, [0, 1], ['-9%', '9%']);
+  const reduced = useReducedMotion();
 
   return (
     <section
       id={`sala-${chapter.id}`}
       className="mo-sala"
+      ref={sectionRef}
       style={{ '--accent': chapter.color } as CSSProperties}
     >
-      <header className="mo-sala-head" ref={headRef}>
-        <span className="mo-sala-no" aria-hidden="true">
-          {chapter.number}
-        </span>
+      <header className="mo-sala-head">
+        <SalaNo
+          value={chapter.number}
+          progress={fillProgress}
+          reduced={Boolean(reduced)}
+        />
         <div className="mo-sala-copy">
           <p className="mo-kicker">
             Sala {chapter.number} — {chapter.concepts.length} piezas
@@ -216,24 +313,27 @@ const Sala = ({
             </details>
           ))}
         </div>
-        <motion.figure className="mo-sala-figure">
-          <motion.img
-            src={chapter.visual?.heroImage}
-            alt={chapter.visual?.visualFocus ?? chapter.title}
-            loading="lazy"
-            style={{ y: imageY }}
-          />
+        <figure className="mo-sala-figure">
+          <div ref={figureRef} className="mo-sala-figure-inner">
+            <motion.img
+              src={chapter.visual?.heroImage}
+              alt={chapter.visual?.visualFocus ?? chapter.title}
+              loading="lazy"
+              style={reduced ? undefined : { y: imageY }}
+            />
+          </div>
           <figcaption>{chapter.visual?.visualFocus}</figcaption>
-        </motion.figure>
+        </figure>
       </header>
 
       <div className="mo-wall">
-        {chapter.concepts.map((concept, index) => (
+        {chapter.concepts.map((concept, conceptIndex) => (
           <Obra
             key={concept.id}
             concept={concept}
-            plate={offset + index + 1}
-            featured={index % 5 === 0}
+            plate={offset + conceptIndex + 1}
+            featured={conceptIndex % 5 === 0}
+            enableFlight={enableFlight}
             onSelect={onSelect}
           />
         ))}
@@ -242,232 +342,37 @@ const Sala = ({
   );
 };
 
-const Ficha = ({
-  state,
-  onClose,
-  onSelect,
-}: {
-  state: FichaState;
-  onClose: () => void;
-  onSelect: (concept: AstroConcept) => void;
-}) => {
-  const { concept, chapter } = state;
-  const variants = useMemo(() => getConceptImageVariants(concept), [concept]);
-  const [variantIndex, setVariantIndex] = useState(0);
-  const [visibleLayers, setVisibleLayers] = useState<Set<string>>(
-    () => new Set(concept.layers.map((layer) => layer.id)),
-  );
-
-  useEffect(() => {
-    setVariantIndex(0);
-    setVisibleLayers(new Set(concept.layers.map((layer) => layer.id)));
-  }, [concept]);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-      if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
-        const siblings = chapter.concepts;
-        const index = siblings.findIndex((item) => item.id === concept.id);
-        const next =
-          event.key === 'ArrowRight'
-            ? siblings[(index + 1) % siblings.length]
-            : siblings[(index - 1 + siblings.length) % siblings.length];
-        if (next) {
-          onSelect(next);
-        }
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [concept, chapter, onClose, onSelect]);
-
-  const variant = variants[Math.min(variantIndex, variants.length - 1)];
-  const hotspots = concept.hotspots.filter((hotspot) => visibleLayers.has(hotspot.layer));
-  const related = concept.related
-    .map((id) => conceptById.get(id))
-    .filter((item): item is AstroConcept => Boolean(item));
-
-  const toggleLayer = (layerId: string) => {
-    setVisibleLayers((current) => {
-      const next = new Set(current);
-      if (next.has(layerId)) {
-        next.delete(layerId);
-      } else {
-        next.add(layerId);
-      }
-      return next;
-    });
-  };
-
-  return (
-    <motion.div
-      className="mo-ficha"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Ficha de obra: ${concept.title}`}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.35 }}
-    >
-      <motion.div
-        className="mo-ficha-panel"
-        initial={{ y: 60, scale: 0.985 }}
-        animate={{ y: 0, scale: 1 }}
-        exit={{ y: 40, opacity: 0 }}
-        transition={{ duration: 0.55, ease: EASE_OUT }}
-        style={{ '--accent': chapter.color } as CSSProperties}
-      >
-        <button type="button" className="mo-ficha-close" onClick={onClose} aria-label="Cerrar ficha">
-          ✕
-        </button>
-
-        <div className="mo-ficha-view">
-          <AnimatePresence mode="wait">
-            <motion.img
-              key={variant.src}
-              src={variant.src}
-              alt={concept.illustration.alt}
-              initial={{ opacity: 0, scale: 1.02 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.45, ease: EASE_OUT }}
-            />
-          </AnimatePresence>
-
-          {hotspots.map((hotspot) => (
-            <button
-              key={hotspot.id}
-              type="button"
-              className="mo-hotspot"
-              style={{ left: `${hotspot.x}%`, top: `${hotspot.y}%` }}
-            >
-              <i />
-              <span>
-                <b>{hotspot.title}</b>
-                {hotspot.description}
-              </span>
-            </button>
-          ))}
-
-          <figcaption className="mo-ficha-caption">{variant.caption}</figcaption>
-        </div>
-
-        <div className="mo-ficha-dossier">
-          <p className="mo-kicker">
-            Ficha de obra — Sala {chapter.number}, {chapter.title}
-          </p>
-          <h2>{concept.title}</h2>
-          <p className="mo-ficha-lead">{concept.summary}</p>
-
-          <div className="mo-ficha-block">
-            <h4>Mecanismo</h4>
-            <p>{concept.mechanism}</p>
-          </div>
-
-          <div className="mo-ficha-metrics">
-            <MetricPlaque label="Energía" value={concept.metrics.energia} />
-            <MetricPlaque label="Materiales" value={concept.metrics.materiales} />
-            <MetricPlaque label="Madurez" value={concept.metrics.madurez} />
-            <MetricPlaque label="Maravilla" value={concept.metrics.maravilla} />
-          </div>
-
-          {variants.length > 1 && (
-            <div className="mo-ficha-variants">
-              <h4>Capas visuales</h4>
-              <div className="mo-variant-row">
-                {variants.map((item, index) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={index === variantIndex ? 'is-active' : ''}
-                    onClick={() => setVariantIndex(index)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="mo-ficha-layers">
-            <h4>Detalles sobre la obra</h4>
-            <div className="mo-layer-row">
-              {concept.layers.map((layer) => (
-                <button
-                  key={layer.id}
-                  type="button"
-                  title={layer.description}
-                  className={visibleLayers.has(layer.id) ? 'is-active' : ''}
-                  onClick={() => toggleLayer(layer.id)}
-                >
-                  {layer.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mo-ficha-lists">
-            <div>
-              <h4>A favor</h4>
-              <ul>
-                {concept.advantages.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h4>Limitaciones</h4>
-              <ul>
-                {concept.difficulties.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {related.length > 0 && (
-            <div className="mo-ficha-related">
-              <h4>Obras relacionadas</h4>
-              <div className="mo-related-row">
-                {related.slice(0, 4).map((item) => (
-                  <button key={item.id} type="button" onClick={() => onSelect(item)}>
-                    {item.title}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {concept.sources && concept.sources.length > 0 && (
-            <div className="mo-ficha-sources">
-              <h4>Referencias</h4>
-              {concept.sources.map((source) => (
-                <a key={source.url} href={source.url} target="_blank" rel="noreferrer">
-                  {source.publisher} — {source.title} ↗
-                </a>
-              ))}
-            </div>
-          )}
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-};
+/* ---------------- Principal ---------------- */
 
 export default function MuseoOrbital() {
-  const [active, setActive] = useState<FichaState | null>(null);
+  const reduced = useReducedMotion();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState<AstroConcept | null>(() => conceptFromHash());
   const [activeHallId, setActiveHallId] = useState<string | null>(null);
   useScrollLock(Boolean(active));
+
+  const { scrollYProgress } = useScroll({ container: rootRef });
+  const railScale = useSpring(scrollYProgress, { stiffness: 90, damping: 24, mass: 0.4 });
+
+  useEffect(() => {
+    const hash = active ? `#obra-${active.id}` : '';
+    const desired = hash || `${window.location.pathname}${window.location.search}`;
+    if (window.location.hash !== hash) {
+      window.history.replaceState(null, '', desired);
+    }
+  }, [active]);
+
+  useEffect(() => {
+    const onHash = () => setActive(conceptFromHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveHallId(entry.target.id.replace('sala-', ''));
-          }
+          if (entry.isIntersecting) setActiveHallId(entry.target.id.replace('sala-', ''));
         });
       },
       { rootMargin: '-42% 0px -42% 0px' },
@@ -479,14 +384,15 @@ export default function MuseoOrbital() {
     return () => observer.disconnect();
   }, []);
 
-  const openConcept = (concept: AstroConcept) =>
-    setActive({ concept, chapter: resolveChapter(concept) });
+  const openConcept = (concept: AstroConcept) => setActive(concept);
 
   let plateOffset = 0;
+  const activeHall = chapters.find((chapter) => chapter.id === activeHallId);
 
   return (
-    <div className="mo-root">
+    <div className="mo-root" ref={rootRef}>
       <Grain opacity={0.06} blend="screen" zIndex={40} />
+      <MuseumCursor />
 
       <Hero />
       <Marquee />
@@ -500,6 +406,7 @@ export default function MuseoOrbital() {
             key={chapter.id}
             chapter={chapter}
             offset={offset}
+            enableFlight={!reduced}
             onSelect={openConcept}
           />
         );
@@ -513,6 +420,9 @@ export default function MuseoOrbital() {
       </footer>
 
       <aside className="mo-rail" aria-label="Progreso del recorrido">
+        <div className="mo-rail-track">
+          <motion.div className="mo-rail-fill" style={{ scaleY: railScale }} />
+        </div>
         {chapters.map((chapter) => (
           <button
             key={chapter.id}
@@ -527,11 +437,22 @@ export default function MuseoOrbital() {
             }
           />
         ))}
+        <span className="mo-rail-label">
+          {activeHall ? `Sala ${activeHall.number} — ${activeHall.title}` : ''}
+        </span>
       </aside>
 
       <AnimatePresence>
         {active && (
-          <Ficha state={active} onClose={() => setActive(null)} onSelect={openConcept} />
+          <StudioRoom
+            key="studio"
+            concept={active}
+            chapter={resolveChapter(active)}
+            siblings={resolveChapter(active).concepts}
+            enableFlight={!reduced}
+            onClose={() => setActive(null)}
+            onSelect={openConcept}
+          />
         )}
       </AnimatePresence>
     </div>
