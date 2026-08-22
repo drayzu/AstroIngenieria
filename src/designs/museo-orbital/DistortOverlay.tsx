@@ -40,7 +40,9 @@ export const DistortOverlay = ({ imageRef, active }: DistortOverlayProps) => {
         const onMove = (event: MouseEvent) => handle?.move(event.clientX, event.clientY);
         wrap.addEventListener('mousemove', onMove, { passive: true });
         detachMove = () => wrap.removeEventListener('mousemove', onMove);
-        setReady(true);
+        requestAnimationFrame(() => {
+          if (!disposed) setReady(true);
+        });
       });
     };
 

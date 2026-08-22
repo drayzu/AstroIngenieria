@@ -1,4 +1,4 @@
-/* El museo necesita ser EL contenedor de scroll para que el índice sticky
+﻿/* El museo necesita ser EL contenedor de scroll para que el índice sticky
    y el rail de progreso funcionen: sin altura fija en html/body/#root,
    el body scrollea y position:sticky queda anclado a un contenedor quieto. */
 html:has(.mo-root),
@@ -1992,7 +1992,7 @@ body:has(.mo-root) {
   position: fixed;
   left: 0;
   right: 0;
-  height: 11vh;
+  height: 6vh;
   background: #000;
   z-index: 130;
   pointer-events: none;
@@ -2052,4 +2052,56 @@ body:has(.mo-root) {
 
 .mo-distort canvas.is-live {
   opacity: 1;
+}
+
+/* Ken-burns del studio */
+
+.mo-kb {
+  position: absolute;
+  inset: 0;
+  animation: mo-kenburns 26s ease-in-out infinite alternate;
+}
+
+.mo-kb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@keyframes mo-kenburns {
+  from { transform: scale(1) translate(0, 0); }
+  to { transform: scale(1.07) translate(-1.2%, 1%); }
+}
+
+/* Progreso de lectura */
+
+.mo-read-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 12;
+  background: linear-gradient(90deg, var(--accent), #f5f1e8);
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+/* Pulso del rail activo */
+
+@keyframes mo-rail-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 241, 232, 0.35); }
+  50% { box-shadow: 0 0 14px 3px rgba(245, 241, 232, 0.25); }
+}
+
+.mo-rail button.is-active {
+  animation: mo-rail-pulse 2.4s ease-in-out infinite;
+}
+
+/* Marquee dinamico */
+
+.mo-marquee.mo-layer {
+  transform: skewX(var(--marquee-skew, 0deg));
+  transition: transform 0.18s ease-out;
+  will-change: transform;
 }
