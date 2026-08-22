@@ -89,7 +89,9 @@ const Hero = () => {
 
     const mouse = { x: -9999, y: -9999 };
     const states = letters.map(() => ({ x: 0, y: 0, w: 520 }));
+    const glint = { index: -1, t0: 0 };
     let raf = 0;
+    let clock = 0;
 
     const onMove = (event: MouseEvent) => {
       mouse.x = event.clientX;
@@ -97,6 +99,13 @@ const Hero = () => {
     };
 
     const loop = () => {
+      clock += 0.016;
+      if (clock - glint.t0 > 4.4) {
+        glint.index = Math.floor(Math.random() * letters.length);
+        glint.t0 = clock;
+      }
+      const glintP = (clock - glint.t0) / 0.85;
+
       letterRefs.current.forEach((el, index) => {
         if (!el) return;
         const rect = el.getBoundingClientRect();
@@ -111,11 +120,17 @@ const Hero = () => {
 
         const targetX = (dx / (dist || 1)) * eased * 13;
         const targetY = (dy / (dist || 1)) * eased * 10;
-        const targetW = 520 + eased * 240;
+        let targetW = 520 + eased * 240;
+        let lift = 0;
+        if (index === glint.index && glintP < 1) {
+          const spark = Math.sin(Math.PI * glintP);
+          targetW += spark * 190;
+          lift = -spark * 7;
+        }
 
         const state = states[index];
         state.x += (targetX - state.x) * 0.14;
-        state.y += (targetY - state.y) * 0.14;
+        state.y += (targetY + lift - state.y) * 0.14;
         state.w += (targetW - state.w) * 0.16;
 
         el.style.transform = `translate(${state.x.toFixed(2)}px, ${state.y.toFixed(2)}px)`;
@@ -215,6 +230,15 @@ const Hero = () => {
           Descender a la Sala 00
           <span aria-hidden="true">↓</span>
         </motion.button>
+
+        <motion.span
+          className="mo-sky-hint"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: reduced ? 0 : 2.8, duration: 1 }}
+        >
+          ESPACIO · estrella fugaz&ensp;—&ensp;CLIC · chispas y constelación
+        </motion.span>
       </div>
     </section>
   );
