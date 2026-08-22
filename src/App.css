@@ -133,6 +133,24 @@ h3,
   color: var(--muted);
 }
 
+.sx-beta-link {
+  border: 1px solid rgba(249, 214, 110, 0.5);
+  color: #f9d66e !important;
+  padding: 0 12px;
+  letter-spacing: 0.1em;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+.sx-beta-link b {
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.sx-beta-link:hover {
+  background: #f9d66e;
+  color: #000 !important;
+}
+
 .sx-nav svg {
   width: 18px;
   height: 18px;
