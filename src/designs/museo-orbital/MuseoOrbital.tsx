@@ -124,15 +124,8 @@ const Hero = () => {
       { el: hintRef.current, x: 0, y: 0, r: 0, vx: 0, vy: 0, vr: 0 },
     ];
     const glint = { index: -1, t0: 0 };
-    let waveT0 = -10;
     let raf = 0;
     let clock = 0;
-
-    // Ola de peso que recorre el título con cada lluvia de meteoros
-    const onShowerWave = () => {
-      waveT0 = clock;
-    };
-    window.addEventListener('mo-shower', onShowerWave);
 
     // Impacto de proyectiles de la resortera sobre las letras del título:
     // impulso proporcional a la velocidad del meteoro, con caída por distancia
@@ -237,16 +230,6 @@ const Hero = () => {
           targetW += spark * 190;
           lift = -spark * 7;
         }
-        const waveT = (clock - waveT0) / 1.15;
-        if (waveT >= 0 && waveT < 1) {
-          const front = waveT * (letters.length + 8) - 4;
-          const distL = Math.abs(index - front);
-          if (distL < 3.2) {
-            const s = Math.cos((distL / 3.2) * Math.PI * 0.5);
-            targetW += s * 240;
-            lift += -s * 9;
-          }
-        }
 
         const state = states[index];
         state.x += (targetX - state.x) * 0.09;
@@ -317,7 +300,6 @@ const Hero = () => {
     raf = requestAnimationFrame(loop);
     return () => {
       window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mo-shower', onShowerWave);
       window.removeEventListener('mo-title-hit', onTitleHit);
       cancelAnimationFrame(raf);
     };
@@ -431,6 +413,9 @@ const Hero = () => {
           animate={{ opacity: 1 }}
           transition={{ delay: reduced ? 0 : 2.8, duration: 1 }}
         >
+          <kbd className="mo-sky-key">wasd</kbd>
+          lluvia estelar
+          <i className="mo-sky-sep" aria-hidden="true" />
           <kbd className="mo-sky-key">clic</kbd>
           mantén: supernova
           <i className="mo-sky-sep" aria-hidden="true" />
@@ -974,7 +959,6 @@ export default function MuseoOrbital() {
   const [vitrineIds, setVitrineIds] = useState<string[]>(loadVitrine);
   const [flight, setFlight] = useState(false);
   const flightTimer = useRef(0);
-  const prevHall = useRef<string | null>(null);
 
   useScrollLock(Boolean(active));
 
@@ -1161,14 +1145,6 @@ export default function MuseoOrbital() {
     });
     return () => observer.disconnect();
   }, []);
-
-  useEffect(() => {
-    if (!activeHallId) return;
-    if (prevHall.current && prevHall.current !== activeHallId) {
-      window.dispatchEvent(new CustomEvent('mo-comet'));
-    }
-    prevHall.current = activeHallId;
-  }, [activeHallId]);
 
   const openConcept = (concept: AstroConcept) => {
     triggerFlight();

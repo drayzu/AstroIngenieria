@@ -63,6 +63,7 @@ interface ShockBubble {
   alpha: number;
   age: number;
   tintT: number;
+  grow?: number;
 }
 
 interface Flash {
@@ -174,9 +175,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
     let lastScroll = scrollRef.current?.scrollTop ?? 0;
     let dimLevel = 0;
     let running = true;
-    let disposed = false;
     let nextComet = time + 4 + Math.random() * 5;
-    let nextTease = time + 7;
     let warpBoost = 0;
     let charge: { x: number; y: number; t0: number; dx: number; dy: number } | null = null;
     let sketch: SketchState | null = null;
@@ -193,6 +192,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
     let letterRects: ImgRect[] = [];
     let rectsDirty = true;
     let nextRectCheck = 0;
+    let nextDirShot = 0;
 
     // Historial del puntero para la estela continua tipo cometa del hero
     const trail: { x: number; y: number; t: number }[] = [];
@@ -405,87 +405,54 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
       if (sparkles.length > 160) sparkles.splice(0, sparkles.length - 160);
     };
 
-    /* Lluvia caótica: cada pulsación elige un escenario distinto */
-    const showerSide = () => {
-      const side = Math.random() < 0.5;
-      spawnComet({ fromLeft: side, big: true, angle: 14 + Math.random() * 14 });
-      const count = 4 + Math.floor(Math.random() * 3);
-      for (let i = 0; i < count; i += 1) {
-        window.setTimeout(() => {
-          if (disposed || document.visibilityState !== 'visible') return;
-          spawnComet({
-            fromLeft: Math.random() < 0.8 ? side : !side,
-            speed: 4 + Math.random() * 6,
-            // Dispersión amplia: toda la altura y ángulos variados
-            angle: 8 + Math.random() * 30,
-            y: height * (0.02 + Math.random() * 0.85),
-          });
-        }, 130 + i * (140 + Math.random() * 240));
-      }
-    };
+    /* ---- Lluvia dirigida por WASD ---- */
 
-    const showerCross = () => {
-      spawnComet({ fromLeft: true, big: true, angle: 16 + Math.random() * 10 });
-      window.setTimeout(() => {
-        if (disposed || document.visibilityState !== 'visible') return;
-        spawnComet({ fromLeft: false, big: true, angle: 18 + Math.random() * 10 });
-      }, 260 + Math.random() * 200);
-      for (let i = 0; i < 4; i += 1) {
-        window.setTimeout(() => {
-          if (disposed || document.visibilityState !== 'visible') return;
-          const side = i % 2 === 0;
-          spawnComet({
-            fromLeft: side,
-            speed: 4.5 + Math.random() * 5.5,
-            angle: 8 + Math.random() * 28,
-            y: height * (0.05 + Math.random() * 0.85),
-          });
-        }, 150 + i * (180 + Math.random() * 220));
-      }
-    };
+    const heldDirs = new Set<'up' | 'down' | 'left' | 'right'>();
 
-    const showerRadial = () => {
-      const cx = width * (0.2 + Math.random() * 0.6);
-      const cy = height * (0.1 + Math.random() * 0.4);
-      flashes.push({ x: cx, y: cy, r: 3, alpha: 0.45 });
-      spawnSparkleBurst(cx, cy, 18 + Math.floor(Math.random() * 8), 0.7);
-      const shots = 1 + Math.floor(Math.random() * 2);
-      for (let i = 0; i <= shots; i += 1) {
-        const ang = Math.random() * Math.PI * 2;
-        spawnComet({
-          x: cx,
-          y: cy,
-          vx: Math.cos(ang) * 7.5,
-          vy: Math.abs(Math.sin(ang)) * 4.5 + 1.5,
-          big: true,
-        });
+    const spawnDirectionalComet = (dir: 'up' | 'down' | 'left' | 'right') => {
+      const big = Math.random() < 0.22;
+      const vivid = VIVID_TINTS[Math.floor(Math.random() * VIVID_TINTS.length)];
+      const speed = ((big ? 8.5 : 5.5) + Math.random() * 4.5) * vscale;
+      const jitter = (Math.random() - 0.5) * 3;
+      const opts: CometOptions = {
+        big,
+        sizeMul: 0.8 + Math.random() * 0.45,
+        tintRGB: vivid,
+      };
+      if (dir === 'left') {
+        opts.x = width + 40;
+        opts.y = height * (0.06 + Math.random() * 0.82);
+        opts.vx = -speed;
+        opts.vy = jitter;
+      } else if (dir === 'right') {
+        opts.x = -40;
+        opts.y = height * (0.06 + Math.random() * 0.82);
+        opts.vx = speed;
+        opts.vy = jitter;
+      } else if (dir === 'up') {
+        opts.x = width * (0.08 + Math.random() * 0.84);
+        opts.y = height + 40;
+        opts.vx = jitter;
+        opts.vy = -speed;
+      } else {
+        opts.x = width * (0.08 + Math.random() * 0.84);
+        opts.y = -40;
+        opts.vx = jitter;
+        opts.vy = speed;
       }
-    };
-
-    const showerBurst = () => {
-      const side = Math.random() < 0.5;
-      const baseAngle = 15 + Math.random() * 8;
-      const count = 8 + Math.floor(Math.random() * 5);
-      for (let i = 0; i < count; i += 1) {
-        window.setTimeout(() => {
-          if (disposed || document.visibilityState !== 'visible') return;
-          spawnComet({
-            fromLeft: side,
-            speed: 8 + Math.random() * 5,
-            angle: baseAngle + (Math.random() - 0.5) * 18,
-            y: height * (0.02 + Math.random() * 0.85),
-          });
-        }, i * (70 + Math.random() * 90));
+      spawnComet(opts);
+      // Gemela ocasional desfasada, con color propio
+      if (Math.random() < 0.18) {
+        const twinOpts: CometOptions = { ...opts };
+        if (dir === 'left' || dir === 'right') {
+          twinOpts.y = (opts.y ?? 0) + (Math.random() - 0.5) * 70;
+        } else {
+          twinOpts.x = (opts.x ?? 0) + (Math.random() - 0.5) * 70;
+        }
+        twinOpts.sizeMul = (opts.sizeMul ?? 1) * 0.75;
+        twinOpts.tintRGB = VIVID_TINTS[Math.floor(Math.random() * VIVID_TINTS.length)];
+        spawnComet(twinOpts);
       }
-    };
-
-    const launchShower = () => {
-      window.dispatchEvent(new CustomEvent('mo-shower'));
-      const pick = Math.floor(Math.random() * 4);
-      if (pick === 0) showerSide();
-      else if (pick === 1) showerCross();
-      else if (pick === 2) showerRadial();
-      else showerBurst();
     };
 
     /* ---- Constelación dibujable ---- */
@@ -549,35 +516,24 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
       charge = null;
       if (power < 0.06) return;
 
-      // Explosión residual en el punto de origen: la misma burbuja de choque
-      // aurora del impacto lateral, con color aleatorio y escalada por carga
+      // Explosión residual en el punto de origen: destello y chispas; la
+      // burbuja de choque queda reservada para el release sin apuntar y para
+      // los impactos del proyectil
       flashes.push({ x, y, r: 4, alpha: 0.2 + 0.3 * power });
-      bubbles.push({
-        x,
-        y,
-        r: 12,
-        alpha: 0.4 + 0.18 * power,
-        age: 0,
-        tintT: Math.random() * 0.65,
-      });
       spawnSparkleBurst(x, y, Math.round(8 + 14 * power), power * 0.7);
 
       if (pull < 24) {
-        // Sin arrastre: supernova clásica proporcional a la carga
+        // Sin arrastre: supernova sin proyectiles, solo onda de choque y chispas
+        bubbles.push({
+          x,
+          y,
+          r: 12,
+          alpha: 0.26 + 0.34 * power,
+          age: 0,
+          tintT: Math.random() * 0.65,
+          grow: 4.5 + 6 * power,
+        });
         spawnSparkleBurst(x, y, Math.round(10 + 20 * power), power);
-        const launched = power > 0.8 ? 2 : 1;
-        for (let i = 0; i < launched; i += 1) {
-          spawnComet({
-            x,
-            y,
-            fromLeft: Math.random() < 0.5,
-            speed: 3.5 + 9 * power + Math.random() * 2,
-            angle: -(6 + Math.random() * 20),
-            big: power > 0.6,
-            sizeMul: 0.6 + 0.4 * power,
-          });
-        }
-        if (power > 0.85) launchShower();
         return;
       }
 
@@ -605,19 +561,65 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
       warpBoost = Math.min(34, warpBoost + 22);
     };
 
+    /* Meteoros ambientales: eventos organicos de tiempo con patrones variados.
+       Nacen por cualquier borde y viajan en cualquier direccion; el intervalo
+       se sortea en cada emision para que nunca se sientan ligados al scroll */
     const spawnAmbientComet = () => {
-      const fromLeft = Math.random() < 0.5;
-      const speed = (7 + Math.random() * 5) * vscale;
-      const angle = (Math.PI / 180) * (18 + Math.random() * 16);
+      const roll = Math.random();
+      const speed = (6 + Math.random() * 5) * vscale;
+      const size = (1.5 + Math.random() * 1.3) * (0.75 + 0.25 * vscale);
+      const tint = Math.random() < 0.7 ? 0 : Math.random() < 0.55 ? 1 : 2;
+      const curve = (Math.random() - 0.4) * 0.05;
+      // Descendente clasico o cruce profundo: entran por un lateral
+      if (roll < 0.47 || roll >= 0.82) {
+        const fromLeft = Math.random() < 0.5;
+        const bigSlow = roll >= 0.92;
+        const deepCross = roll >= 0.82 && roll < 0.92;
+        const angleDeg = deepCross
+          ? (Math.random() - 0.5) * 12
+          : (18 + Math.random() * 16) * (Math.random() < 0.35 ? -1 : 1);
+        const angle = (Math.PI / 180) * angleDeg;
+        comets.push({
+          x: fromLeft ? -40 : width + 40,
+          y:
+            deepCross || bigSlow
+              ? height * (0.3 + Math.random() * 0.5)
+              : height * (0.06 + Math.random() * 0.45),
+          vx: (fromLeft ? 1 : -1) * Math.cos(angle) * speed * (bigSlow ? 0.75 : 1),
+          vy: Math.sin(angle) * speed,
+          life: 1,
+          size: bigSlow ? size * 1.8 : size,
+          tint,
+          curve: bigSlow ? curve * 2.2 : curve,
+        });
+        return;
+      }
+      // Ascendente lateral: mitad inferior, diagonal hacia arriba
+      if (roll < 0.77) {
+        const fromLeft = Math.random() < 0.5;
+        comets.push({
+          x: fromLeft ? -40 : width + 40,
+          y: height * (0.55 + Math.random() * 0.4),
+          vx: (fromLeft ? 1 : -1) * Math.cos(0.42) * speed,
+          vy: -Math.sin(0.42) * speed,
+          life: 1,
+          size,
+          tint,
+          curve,
+        });
+        return;
+      }
+      // Vertical ascendente desde el borde inferior cerca de los laterales
+      const nearLeft = Math.random() < 0.5;
       comets.push({
-        x: fromLeft ? -40 : width + 40,
-        y: Math.random() * height * 0.45,
-        vx: (fromLeft ? 1 : -1) * Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
+        x: nearLeft ? width * (0.04 + Math.random() * 0.14) : width * (0.82 + Math.random() * 0.14),
+        y: height + 40,
+        vx: (nearLeft ? 1 : -1) * Math.random() * 1.6,
+        vy: -speed * 1.05,
         life: 1,
-        size: (1.7 + Math.random()) * (0.75 + 0.25 * vscale),
-        tint: Math.random() < 0.82 ? 0 : 1,
-        curve: (Math.random() - 0.35) * 0.05,
+        size,
+        tint,
+        curve,
       });
     };
 
@@ -652,13 +654,17 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
         nextRectCheck = time + 0.5;
       }
 
-      // Modo atracción: el cielo lanza un meteoro de cortesía cerca del hero
-      if (
-        time > nextTease &&
-        (scrollRef.current?.scrollTop ?? 0) < window.innerHeight * 0.9
-      ) {
+      // Meteoros organicos: un unico programador con intervalo variable en
+      // toda la pagina, sin ninguna dependencia del scroll
+      if (time > nextComet) {
         spawnAmbientComet();
-        nextTease = time + 9 + Math.random() * 7;
+        nextComet = time + 5 + Math.random() * 8;
+      }
+
+      // Lluvia WASD: un proyectil por direccion activa en cada tick
+      if (heldDirs.size > 0 && time > nextDirShot) {
+        for (const dir of heldDirs) spawnDirectionalComet(dir);
+        nextDirShot = time + 0.12 + Math.random() * 0.06;
       }
 
       ctx.clearRect(0, 0, width, height);
@@ -1039,7 +1045,9 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
             comet.life = 0;
           }
 
-          if (comet.x < -140 || comet.x > width + 140 || comet.y > height + 90) comet.life = 0;
+          if (comet.x < -140 || comet.x > width + 140 || comet.y < -140 || comet.y > height + 90) {
+            comet.life = 0;
+          }
           const tailLen = 9 + comet.size * 4.5;
           const tailX = comet.x - comet.vx * tailLen;
           const tailY = comet.y - comet.vy * tailLen;
@@ -1073,7 +1081,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
         bubbles = bubbles.filter((b) => b.alpha > 0.02);
         for (const b of bubbles) {
           b.age += 0.016;
-          b.r += 8.5;
+          b.r += b.grow ?? 8.5;
           b.alpha *= 0.954;
           const drift = Math.min(0.97, b.tintT + b.age * 0.15);
           const col = sampleStops(AURORA, drift);
@@ -1229,38 +1237,56 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
 
     resize();
     window.addEventListener('resize', resize);
+    const DIR_KEYS: Record<string, 'up' | 'down' | 'left' | 'right'> = {
+      KeyW: 'up',
+      KeyS: 'down',
+      KeyA: 'left',
+      KeyD: 'right',
+    };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         charge = null;
         sketch = null;
+        return;
       }
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea')) return;
+      const dir = DIR_KEYS[event.code];
+      if (dir && !event.repeat) heldDirs.add(dir);
     };
-    const onComet = () => spawnAmbientComet();
-    window.addEventListener('mo-comet', onComet);
+    const onKeyUp = (event: KeyboardEvent) => {
+      const dir = DIR_KEYS[event.code];
+      if (dir) heldDirs.delete(dir);
+    };
+    const onWinBlur = () => {
+      onUp();
+      heldDirs.clear();
+    };
 
     window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
     window.addEventListener('mo-warp', onWarp);
 
     window.addEventListener('mousemove', onMove, { passive: true });
     window.addEventListener('pointerdown', onDown);
     window.addEventListener('pointerup', onUp);
-    window.addEventListener('blur', onUp);
+    window.addEventListener('blur', onWinBlur);
     const scrollEl = scrollRef.current;
     scrollEl?.addEventListener('scroll', onScroll, { passive: true });
     document.addEventListener('visibilitychange', onVisibility);
     raf = requestAnimationFrame(frame);
 
     return () => {
-      disposed = true;
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
-      window.removeEventListener('mo-comet', onComet);
       window.removeEventListener('mo-warp', onWarp);
       window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('pointerdown', onDown);
       window.removeEventListener('pointerup', onUp);
-      window.removeEventListener('blur', onUp);
+      window.removeEventListener('blur', onWinBlur);
       scrollEl?.removeEventListener('scroll', onScroll);
       document.removeEventListener('visibilitychange', onVisibility);
     };
