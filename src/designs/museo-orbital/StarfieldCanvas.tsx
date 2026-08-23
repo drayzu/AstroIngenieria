@@ -26,6 +26,7 @@ interface Comet {
   curve: number;
   power?: number;
   hitTitle?: boolean;
+  tintRGB?: RGB;
 }
 
 interface CometOptions {
@@ -39,6 +40,7 @@ interface CometOptions {
   vy?: number;
   sizeMul?: number;
   power?: number;
+  tintRGB?: RGB;
 }
 
 interface Wave {
@@ -85,6 +87,40 @@ const TINTS = [
   [143, 208, 255],
 ];
 
+type RGB = [number, number, number];
+
+/* Paleta aurora de la estela del hero: violeta -> cian -> dorado -> blanco */
+const AURORA: RGB[] = [
+  [167, 139, 250],
+  [96, 214, 255],
+  [201, 168, 106],
+  [255, 246, 228],
+];
+
+/* Tintes vivos para los proyectiles de la resortera */
+const VIVID_TINTS: RGB[] = [
+  [255, 92, 164],
+  [96, 214, 255],
+  [64, 224, 158],
+  [255, 176, 84],
+  [167, 139, 250],
+  [142, 240, 255],
+];
+
+const sampleStops = (stops: RGB[], t: number): RGB => {
+  const clamped = Math.min(0.999, Math.max(0, t));
+  const scaled = clamped * (stops.length - 1);
+  const i = Math.floor(scaled);
+  const f = scaled - i;
+  const a = stops[i];
+  const b = stops[Math.min(stops.length - 1, i + 1)];
+  return [
+    Math.round(a[0] + (b[0] - a[0]) * f),
+    Math.round(a[1] + (b[1] - a[1]) * f),
+    Math.round(a[2] + (b[2] - a[2]) * f),
+  ];
+};
+
 export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fxRef = useRef<HTMLCanvasElement>(null);
@@ -108,7 +144,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
     let comets: Comet[] = [];
     let waves: Wave[] = [];
     let flashes: Flash[] = [];
-    let sparkles: { x: number; y: number; vx: number; vy: number; life: number; tint: number; size: number; grav: number }[] = [];
+    let sparkles: { x: number; y: number; vx: number; vy: number; life: number; tint: number; size: number; grav: number; rgb?: RGB }[] = [];
     let raf = 0;
     let time = 0;
     let scrollVel = 0;
@@ -310,6 +346,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
         tint: big ? 1 : Math.random() < 0.55 ? 0 : Math.random() < 0.55 ? 1 : 2,
         curve: big ? 0.02 + Math.random() * 0.03 : (Math.random() - 0.35) * 0.05,
         power: options?.power,
+        tintRGB: options?.tintRGB,
       });
     };
 
@@ -518,6 +555,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
         big: true,
         sizeMul: 0.6 + 0.4 * power,
         power,
+        tintRGB: VIVID_TINTS[Math.floor(Math.random() * VIVID_TINTS.length)],
       });
     };
 
@@ -763,9 +801,9 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
           }
         }
 
-        // Estela del cursor sobre el hero: cinta rellena como polígono continuo
-        // (sin cuentas en las uniones de segmentos), cabeza brillante y polvo
-        // dorado naciendo a media cola para no ensuciar el halo.
+        // Estela del cursor sobre el hero: cinta continua por segmentos con la
+        // paleta aurora fluyendo a lo largo de la cola, cabeza brillante y
+        // polvo de acento naciendo a media cola para no ensuciar el halo.
         if (mouse.x > -999) {
           if (overHero) {
             const lastPt = trail[trail.length - 1];
@@ -790,6 +828,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
                 tint: Math.random() < 0.6 ? 1 : 0,
                 size: 1 + Math.random() * 1.4,
                 grav: 0.008,
+                rgb: sampleStops(AURORA, Math.random()),
               });
             }
           }
@@ -798,43 +837,41 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
             fxCtx.save();
             fxCtx.globalCompositeOperation = 'lighter';
             const n = trail.length;
-            const buildRibbon = (widthScale: number) => {
-              fxCtx.beginPath();
-              for (let i = 0; i < n; i += 1) {
-                const prevPt = trail[Math.max(0, i - 1)];
-                const nextPt = trail[Math.min(n - 1, i + 1)];
-                const dx = nextPt.x - prevPt.x;
-                const dy = nextPt.y - prevPt.y;
-                const len = Math.hypot(dx, dy) || 1;
+            const drift = (time * 0.12) % 1;
+            // Normales y semianchos por punto: comparten ambas pasadas de color
+            const normals: { nx: number; ny: number; half: number }[] = [];
+            for (let i = 0; i < n; i += 1) {
+              const prevPt = trail[Math.max(0, i - 1)];
+              const nextPt = trail[Math.min(n - 1, i + 1)];
+              const dx = nextPt.x - prevPt.x;
+              const dy = nextPt.y - prevPt.y;
+              const len = Math.hypot(dx, dy) || 1;
+              const k = i / (n - 1);
+              normals.push({
+                nx: -dy / len,
+                ny: dx / len,
+                half: Math.max(0.3, 12 * Math.pow(k, 1.5) * vscale),
+              });
+            }
+            const drawQuadPass = (widthScale: number, alphaBase: number) => {
+              for (let i = 1; i < n; i += 1) {
                 const k = i / (n - 1);
-                const half = Math.max(0.3, 12 * Math.pow(k, 1.5) * vscale * widthScale);
-                const nx = (-dy / len) * half;
-                const ny = (dx / len) * half;
-                if (i === 0) {
-                  fxCtx.moveTo(trail[i].x + nx, trail[i].y + ny);
-                } else {
-                  fxCtx.lineTo(trail[i].x + nx, trail[i].y + ny);
-                }
+                const [r, g, b] = sampleStops(AURORA, (k + drift) % 1);
+                const alpha = alphaBase * dimLevel * (0.35 + 0.65 * k);
+                const a0 = normals[i - 1].half * widthScale;
+                const a1 = normals[i].half * widthScale;
+                fxCtx.fillStyle = `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
+                fxCtx.beginPath();
+                fxCtx.moveTo(trail[i - 1].x + normals[i - 1].nx * a0, trail[i - 1].y + normals[i - 1].ny * a0);
+                fxCtx.lineTo(trail[i].x + normals[i].nx * a1, trail[i].y + normals[i].ny * a1);
+                fxCtx.lineTo(trail[i].x - normals[i].nx * a1, trail[i].y - normals[i].ny * a1);
+                fxCtx.lineTo(trail[i - 1].x - normals[i - 1].nx * a0, trail[i - 1].y - normals[i - 1].ny * a0);
+                fxCtx.closePath();
+                fxCtx.fill();
               }
-              for (let i = n - 1; i >= 0; i -= 1) {
-                const prevPt = trail[Math.max(0, i - 1)];
-                const nextPt = trail[Math.min(n - 1, i + 1)];
-                const dx = nextPt.x - prevPt.x;
-                const dy = nextPt.y - prevPt.y;
-                const len = Math.hypot(dx, dy) || 1;
-                const k = i / (n - 1);
-                const half = Math.max(0.3, 12 * Math.pow(k, 1.5) * vscale * widthScale);
-                const nx = (-dy / len) * half;
-                const ny = (dx / len) * half;
-                fxCtx.lineTo(trail[i].x - nx, trail[i].y - ny);
-              }
-              fxCtx.closePath();
-              fxCtx.fill();
             };
-            fxCtx.fillStyle = `rgba(201,168,106,${(0.24 * dimLevel).toFixed(3)})`;
-            buildRibbon(1);
-            fxCtx.fillStyle = `rgba(250,242,222,${(0.5 * dimLevel).toFixed(3)})`;
-            buildRibbon(0.42);
+            drawQuadPass(1, 0.2);
+            drawQuadPass(0.42, 0.5);
             const head = trail[n - 1];
             const haloR = 15 * vscale;
             const headHalo = fxCtx.createRadialGradient(head.x, head.y, 0, head.x, head.y, haloR);
@@ -856,7 +893,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
           sp.vx *= 0.965;
           sp.vy = sp.vy * 0.965 + sp.grav;
           sp.life -= sp.size > 2.6 ? 0.018 : 0.024;
-          const [sr, sg, sb] = TINTS[sp.tint];
+          const [sr, sg, sb] = sp.rgb ?? TINTS[sp.tint];
           fxCtx.fillStyle = `rgba(${sr},${sg},${sb},${Math.min(1, sp.life * 1.15 * dimLevel).toFixed(3)})`;
           fxCtx.beginPath();
           fxCtx.arc(sp.x, sp.y, sp.size * sp.life + 0.5, 0, Math.PI * 2);
@@ -933,6 +970,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
                 tint: Math.random() < 0.5 ? 1 : 0,
                 size: 1.2 + Math.random() * 1.8,
                 grav: 0.03,
+                rgb: comet.tintRGB,
               });
             }
             if (sparkles.length > 160) sparkles.splice(0, sparkles.length - 160);
@@ -943,7 +981,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
           const tailLen = 9 + comet.size * 4.5;
           const tailX = comet.x - comet.vx * tailLen;
           const tailY = comet.y - comet.vy * tailLen;
-          const [tr, tg, tb] = TINTS[comet.tint];
+          const [tr, tg, tb] = comet.tintRGB ?? TINTS[comet.tint];
           const gradient = fxCtx.createLinearGradient(comet.x, comet.y, tailX, tailY);
           gradient.addColorStop(0, `rgba(${tr},${tg},${tb},${0.95 * comet.life * dimLevel})`);
           gradient.addColorStop(1, 'rgba(245,241,232,0)');
@@ -958,9 +996,10 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
           fxCtx.beginPath();
           fxCtx.arc(comet.x, comet.y, comet.size, 0, Math.PI * 2);
           fxCtx.fill();
+          const [hr, hg, hb] = comet.tintRGB ?? [230, 204, 150];
           const halo = fxCtx.createRadialGradient(comet.x, comet.y, 0, comet.x, comet.y, comet.size * 7);
-          halo.addColorStop(0, `rgba(230,204,150,${(comet.size > 2.4 ? 0.5 : 0.22) * comet.life * dimLevel})`);
-          halo.addColorStop(1, 'rgba(230,204,150,0)');
+          halo.addColorStop(0, `rgba(${hr},${hg},${hb},${(comet.size > 2.4 ? 0.5 : 0.22) * comet.life * dimLevel})`);
+          halo.addColorStop(1, `rgba(${hr},${hg},${hb},0)`);
           fxCtx.fillStyle = halo;
           fxCtx.beginPath();
           fxCtx.arc(comet.x, comet.y, comet.size * 7, 0, Math.PI * 2);
