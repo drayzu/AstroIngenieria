@@ -86,13 +86,24 @@ const Hero = () => {
   const reduced = useReducedMotion();
   const letters = useMemo(() => 'ASTROINGENIERÍA'.split(''), []);
   const letterRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const boxRefs = useRef<(HTMLSpanElement | null)[]>([]);
 
   useEffect(() => {
     if (reduced || !window.matchMedia('(pointer: fine)').matches) return;
 
     const mouse = { x: -9999, y: -9999 };
     const motion2d = { x: -9999, y: -9999, t: 0, speed: 0 };
-    const states = letters.map(() => ({ x: 0, y: 0, w: 520 }));
+    const states = letters.map(() => ({
+      x: 0,
+      y: 0,
+      w: 520,
+      ix: 0,
+      iy: 0,
+      ir: 0,
+      ivx: 0,
+      ivy: 0,
+      ivr: 0,
+    }));
     const glint = { index: -1, t0: 0 };
     let waveT0 = -10;
     let raf = 0;
@@ -103,6 +114,36 @@ const Hero = () => {
       waveT0 = clock;
     };
     window.addEventListener('mo-shower', onShowerWave);
+
+    // Impacto de proyectiles de la resortera sobre las letras del título:
+    // impulso proporcional a la velocidad del meteoro, con caída por distancia
+    const onTitleHit = (event: Event) => {
+      const detail = (event as CustomEvent<{ x: number; y: number; vx: number; vy: number }>)
+        .detail;
+      if (!detail) return;
+      const speed = Math.hypot(detail.vx, detail.vy);
+      if (speed < 0.5) return;
+      const radius = 120;
+      boxRefs.current.forEach((el, index) => {
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const d = Math.hypot(detail.x - cx, detail.y - cy);
+        if (d > radius) return;
+        const state = states[index];
+        if (!state) return;
+        const f = Math.pow(1 - d / radius, 2);
+        const kick = (200 + speed * 8) * f;
+        state.ivx += (detail.vx / speed) * kick;
+        state.ivy += (detail.vy / speed) * kick;
+        const cross =
+          (detail.vx / speed) * ((cy - detail.y) / (d || 1)) -
+          (detail.vy / speed) * ((cx - detail.x) / (d || 1));
+        state.ivr += cross * 2.6 * f;
+      });
+    };
+    window.addEventListener('mo-title-hit', onTitleHit);
 
     const onMove = (event: MouseEvent) => {
       const now = performance.now();
@@ -166,6 +207,32 @@ const Hero = () => {
 
         el.style.transform = `translate(${state.x.toFixed(2)}px, ${state.y.toFixed(2)}px)`;
         el.style.fontVariationSettings = `'opsz' 144, 'wght' ${Math.round(state.w)}`;
+
+        // Muelle subamortiguado: la caja de la letra recibe el golpe y vuelve
+        const box = boxRefs.current[index];
+        if (box) {
+          state.ivx += (-140 * state.ix - 7 * state.ivx) * 0.016;
+          state.ivy += (-140 * state.iy - 7 * state.ivy) * 0.016;
+          state.ivr += (-140 * state.ir - 7 * state.ivr) * 0.016;
+          state.ix += state.ivx * 0.016;
+          state.iy += state.ivy * 0.016;
+          state.ir += state.ivr * 0.016;
+          if (
+            Math.abs(state.ix) > 0.05 ||
+            Math.abs(state.iy) > 0.05 ||
+            Math.abs(state.ir) > 0.003
+          ) {
+            box.style.transform = `translate(${state.ix.toFixed(2)}px, ${state.iy.toFixed(2)}px) rotate(${state.ir.toFixed(3)}rad)`;
+          } else if (box.style.transform) {
+            box.style.transform = '';
+            state.ix = 0;
+            state.iy = 0;
+            state.ir = 0;
+            state.ivx = 0;
+            state.ivy = 0;
+            state.ivr = 0;
+          }
+        }
       });
       raf = requestAnimationFrame(loop);
     };
@@ -174,6 +241,7 @@ const Hero = () => {
     return () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mo-shower', onShowerWave);
+      window.removeEventListener('mo-title-hit', onTitleHit);
       cancelAnimationFrame(raf);
     };
   }, [reduced, letters]);
@@ -215,7 +283,14 @@ const Hero = () => {
 
         <h1 className="mo-hero-title" aria-label="Astroingeniería">
           {letters.map((letter, index) => (
-            <span className="mo-hero-letterbox" key={`${letter}-${index}`} aria-hidden="true">
+            <span
+              className="mo-hero-letterbox"
+              key={`${letter}-${index}`}
+              aria-hidden="true"
+              ref={(el) => {
+                boxRefs.current[index] = el;
+              }}
+            >
               <span className="mo-hero-hover">
                 <motion.span
                   className="mo-hero-letter"
@@ -276,9 +351,6 @@ const Hero = () => {
           animate={{ opacity: 1 }}
           transition={{ delay: reduced ? 0 : 2.8, duration: 1 }}
         >
-          <kbd className="mo-sky-key is-pulse">espacio</kbd>
-          lluvia estelar
-          <i className="mo-sky-sep" aria-hidden="true" />
           <kbd className="mo-sky-key">clic</kbd>
           mantén: supernova
           <i className="mo-sky-sep" aria-hidden="true" />
