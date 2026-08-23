@@ -525,7 +525,8 @@ body:has(.mo-root) {
 .mo-wall {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  gap: 34px 28px;
+  /* Bandas de cielo entre filas: las constelaciones respiran */
+  gap: 140px 52px;
   width: min(1280px, 100%);
   margin: 0 auto;
 }
@@ -534,8 +535,10 @@ body:has(.mo-root) {
   grid-column: span 6;
 }
 
-.mo-obra:nth-child(even):not(.is-featured) {
-  transform: translateY(36px);
+/* Ritmo vertical suave, sin rotaciones: las piezas pares bajan un respiro.
+   Va en .mo-obra-hit porque motion.article deja transform inline en .mo-obra */
+.mo-obra:not(.is-featured):nth-child(even) .mo-obra-hit {
+  transform: translateY(48px);
 }
 
 .mo-obra.is-featured {
@@ -1913,6 +1916,19 @@ body:has(.mo-root) {
     grid-column: span 12;
   }
 
+  /* Apila limpio: sin canal central ni scatter flotante en pantallas estrechas */
+  .mo-wall {
+    gap: 48px 28px;
+  }
+
+  .mo-obra:not(.is-featured):nth-child(n) {
+    grid-column: span 12;
+  }
+
+  .mo-obra:not(.is-featured):nth-child(n) .mo-obra-hit {
+    transform: none;
+  }
+
   .mo-rail {
     display: none;
   }
@@ -1926,10 +1942,6 @@ body:has(.mo-root) {
   .mo-obra,
   .mo-obra.is-featured {
     grid-column: 1 / -1;
-  }
-
-  .mo-obra:nth-child(even):not(.is-featured) {
-    transform: none;
   }
 
   .mo-metrics-v2,
