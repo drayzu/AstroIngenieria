@@ -87,6 +87,9 @@ const Hero = () => {
   const letters = useMemo(() => 'ASTROINGENIERÍA'.split(''), []);
   const letterRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const boxRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const kickerRef = useRef<HTMLParagraphElement>(null);
+  const subRef = useRef<HTMLParagraphElement>(null);
+  const hintRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     if (reduced || !window.matchMedia('(pointer: fine)').matches) return;
@@ -103,7 +106,23 @@ const Hero = () => {
       ivx: 0,
       ivy: 0,
       ivr: 0,
+      is: 0,
+      ivs: 0,
     }));
+    // Textos del hero que tambien reciben impactos (bloques completos)
+    const extras: {
+      el: HTMLElement | null;
+      x: number;
+      y: number;
+      r: number;
+      vx: number;
+      vy: number;
+      vr: number;
+    }[] = [
+      { el: kickerRef.current, x: 0, y: 0, r: 0, vx: 0, vy: 0, vr: 0 },
+      { el: subRef.current, x: 0, y: 0, r: 0, vx: 0, vy: 0, vr: 0 },
+      { el: hintRef.current, x: 0, y: 0, r: 0, vx: 0, vy: 0, vr: 0 },
+    ];
     const glint = { index: -1, t0: 0 };
     let waveT0 = -10;
     let raf = 0;
@@ -123,25 +142,54 @@ const Hero = () => {
       if (!detail) return;
       const speed = Math.hypot(detail.vx, detail.vy);
       if (speed < 0.5) return;
-      const radius = 120;
+      const radius = 150;
+      const dirX = detail.vx / speed;
+      const dirY = detail.vy / speed;
       boxRefs.current.forEach((el, index) => {
         if (!el) return;
         const rect = el.getBoundingClientRect();
         const cx = rect.left + rect.width / 2;
         const cy = rect.top + rect.height / 2;
-        const d = Math.hypot(detail.x - cx, detail.y - cy);
+        // Distancia al RECTANGULO de la letra: un cruce por dentro de la caja
+        // es golpe pleno aunque caiga lejos del centro (cajas de ~200px alto)
+        const dxr = Math.max(rect.left - detail.x, 0, detail.x - rect.right);
+        const dyr = Math.max(rect.top - detail.y, 0, detail.y - rect.bottom);
+        const d = Math.hypot(dxr, dyr);
         if (d > radius) return;
         const state = states[index];
         if (!state) return;
-        const f = Math.pow(1 - d / radius, 2);
-        const kick = (200 + speed * 8) * f;
-        state.ivx += (detail.vx / speed) * kick;
-        state.ivy += (detail.vy / speed) * kick;
-        const cross =
-          (detail.vx / speed) * ((cy - detail.y) / (d || 1)) -
-          (detail.vy / speed) * ((cx - detail.x) / (d || 1));
-        state.ivr += cross * 2.6 * f;
+        const f = Math.pow(1 - d / radius, 1.5);
+        const kick = Math.min(420, (300 + speed * 10) * f);
+        // Jitter explosivo: cada letra recibe el golpe desviado al azar y con
+        // magnitud propia, para que la hilera estalle en direcciones distintas
+        const jitterAng = (Math.random() - 0.5) * 0.7;
+        const magMul = 0.75 + Math.random() * 0.6;
+        state.ivx += (dirX * Math.cos(jitterAng) - dirY * Math.sin(jitterAng)) * kick * magMul;
+        state.ivy += (dirX * Math.sin(jitterAng) + dirY * Math.cos(jitterAng)) * kick * magMul;
+        // Golpe de escala: pulso de tamano que respira y se asienta
+        state.ivs += 2.4 * f;
+        const cross = dirX * ((cy - detail.y) / (d || 1)) - dirY * ((cx - detail.x) / (d || 1));
+        state.ivr += cross * 3.5 * f;
       });
+      // Bloques de texto (kicker, subtitulo, hints): empujon contenido
+      for (const ex of extras) {
+        const el = ex.el;
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        const dxr = Math.max(rect.left - detail.x, 0, detail.x - rect.right);
+        const dyr = Math.max(rect.top - detail.y, 0, detail.y - rect.bottom);
+        const d = Math.hypot(dxr, dyr);
+        const radiusX = 240;
+        if (d > radiusX) continue;
+        const cxr = rect.left + rect.width / 2;
+        const cyr = rect.top + rect.height / 2;
+        const f = Math.pow(1 - d / radiusX, 1.5);
+        const kick = Math.min(120, (300 + speed * 10) * 0.45 * f);
+        ex.vx += dirX * kick;
+        ex.vy += dirY * kick;
+        const cross = dirX * ((cyr - detail.y) / (d || 1)) - dirY * ((cxr - detail.x) / (d || 1));
+        ex.vr += Math.max(-0.05, Math.min(0.05, cross * 0.9 * f));
+      }
     };
     window.addEventListener('mo-title-hit', onTitleHit);
 
@@ -214,15 +262,19 @@ const Hero = () => {
           state.ivx += (-140 * state.ix - 7 * state.ivx) * 0.016;
           state.ivy += (-140 * state.iy - 7 * state.ivy) * 0.016;
           state.ivr += (-140 * state.ir - 7 * state.ivr) * 0.016;
+          state.ivs += (-170 * state.is - 8.5 * state.ivs) * 0.016;
           state.ix += state.ivx * 0.016;
           state.iy += state.ivy * 0.016;
           state.ir += state.ivr * 0.016;
+          state.is += state.ivs * 0.016;
+          const scl = Math.max(0.55, Math.min(1.45, 1 + state.is));
           if (
             Math.abs(state.ix) > 0.05 ||
             Math.abs(state.iy) > 0.05 ||
-            Math.abs(state.ir) > 0.003
+            Math.abs(state.ir) > 0.003 ||
+            Math.abs(state.is) > 0.002
           ) {
-            box.style.transform = `translate(${state.ix.toFixed(2)}px, ${state.iy.toFixed(2)}px) rotate(${state.ir.toFixed(3)}rad)`;
+            box.style.transform = `translate(${state.ix.toFixed(2)}px, ${state.iy.toFixed(2)}px) rotate(${state.ir.toFixed(3)}rad) scale(${scl.toFixed(3)})`;
           } else if (box.style.transform) {
             box.style.transform = '';
             state.ix = 0;
@@ -231,9 +283,34 @@ const Hero = () => {
             state.ivx = 0;
             state.ivy = 0;
             state.ivr = 0;
+            state.is = 0;
+            state.ivs = 0;
           }
         }
       });
+
+      // Muelles propios para los bloques de texto golpeados
+      for (const ex of extras) {
+        const el = ex.el;
+        if (!el) continue;
+        ex.vx += (-110 * ex.x - 7 * ex.vx) * 0.016;
+        ex.vy += (-110 * ex.y - 7 * ex.vy) * 0.016;
+        ex.vr += (-110 * ex.r - 7 * ex.vr) * 0.016;
+        ex.x += ex.vx * 0.016;
+        ex.y += ex.vy * 0.016;
+        ex.r += ex.vr * 0.016;
+        if (Math.abs(ex.x) > 0.08 || Math.abs(ex.y) > 0.08 || Math.abs(ex.r) > 0.004) {
+          el.style.transform = `translate(${ex.x.toFixed(2)}px, ${ex.y.toFixed(2)}px) rotate(${ex.r.toFixed(4)}rad)`;
+        } else if (el.style.transform) {
+          el.style.transform = '';
+          ex.x = 0;
+          ex.y = 0;
+          ex.r = 0;
+          ex.vx = 0;
+          ex.vy = 0;
+          ex.vr = 0;
+        }
+      }
       raf = requestAnimationFrame(loop);
     };
 
@@ -273,6 +350,7 @@ const Hero = () => {
 
       <div className="mo-hero-copy">
         <motion.p
+          ref={kickerRef}
           className="mo-kicker"
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
@@ -320,6 +398,7 @@ const Hero = () => {
         />
 
         <motion.p
+          ref={subRef}
           className="mo-hero-sub"
           initial={{ opacity: 0, y: 22 }}
           animate={{ opacity: 1, y: 0 }}
@@ -346,6 +425,7 @@ const Hero = () => {
         </motion.button>
 
         <motion.span
+          ref={hintRef}
           className="mo-sky-hint"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
