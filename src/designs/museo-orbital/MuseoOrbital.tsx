@@ -1173,8 +1173,10 @@ export default function MuseoOrbital() {
 
       <footer className="mo-footer mo-layer">
         <blockquote>
-          Quizá el universo fabricó conciencia para que, algún día, alguien le
-          encendiera sus propias estrellas. Este museo es el ensayo general.
+          La naturaleza necesitó miles de millones de años para engendrar una
+          mente capaz de comprenderla. Bastó una fracción de ese tiempo para que
+          aquella mente aprendiera a crear otras. Y así, de un universo que
+          nunca supo hacia dónde iba, nació algo capaz de elegir hacia dónde irá.
         </blockquote>
         <p className="mo-footer-line">
           ASTROINGENIERÍA — EXPOSICIÓN PERMANENTE · MUSEO ORBITAL · MMXXVI

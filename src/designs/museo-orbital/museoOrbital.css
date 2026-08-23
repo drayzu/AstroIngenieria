@@ -409,8 +409,9 @@ body:has(.mo-root) {
 }
 
 .mo-sala-no-outline {
-  color: transparent;
-  -webkit-text-stroke: 1px color-mix(in srgb, var(--accent, #c9a86a) 55%, transparent);
+  color: color-mix(in srgb, var(--accent, #c9a86a) 12%, transparent);
+  -webkit-text-stroke: 1.7px color-mix(in srgb, var(--accent, #c9a86a) 85%, #f5f1e8);
+  filter: drop-shadow(0 0 18px color-mix(in srgb, var(--accent, #c9a86a) 32%, transparent));
 }
 
 .mo-sala-no-fill {
@@ -419,8 +420,8 @@ body:has(.mo-root) {
   color: transparent;
   background: linear-gradient(
     180deg,
-    var(--accent, #c9a86a),
-    color-mix(in srgb, var(--accent, #c9a86a) 45%, #f5f1e8)
+    color-mix(in srgb, var(--accent, #c9a86a) 78%, #ffffff),
+    color-mix(in srgb, var(--accent, #c9a86a) 42%, #f5f1e8)
   );
   -webkit-background-clip: text;
   background-clip: text;
@@ -1859,13 +1860,13 @@ body:has(.mo-root) {
 }
 
 .mo-footer blockquote {
-  max-width: 34ch;
+  max-width: 46ch;
   margin: 0 auto 34px;
   font-family: var(--mo-serif);
   font-style: italic;
   font-weight: 450;
-  font-size: clamp(20px, 3vw, 30px);
-  line-height: 1.4;
+  font-size: clamp(19px, 2.6vw, 27px);
+  line-height: 1.45;
   color: rgba(245, 241, 232, 0.85);
 }
 

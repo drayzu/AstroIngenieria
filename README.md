@@ -1,48 +1,95 @@
 # AstroIngeniería — Museo Orbital
 
-> ✦ **[ENTRAR AL MUSEO](https://drayzu.github.io/AstroIngenieria/)** — exposición permanente interactiva, en vivo
+> ✦ **[ENTRAR AL MUSEO](https://drayzu.github.io/AstroIngenieria/)** — exposición interactiva permanente
 
-Un museo nocturno dedicado a la ingeniería a escala cósmica. Nueve salas que ascienden desde una estación orbital hasta civilizaciones capaces de mover estrellas: hábitats giratorios, enjambres de Dyson, velas de fusión, terraformación de mundos, ingeniería solar y más. Cada obra se presenta con el rigor de un catálogo técnico y la inquietud de quien dibuja planos del futuro.
+Durante casi toda la historia del cosmos, las estrellas nacieron y murieron sin que nada pudiera preguntarse si podían ser distintas. De ese mismo universo surgió una inteligencia capaz de comprender sus leyes y, ahora, de crear nuevas inteligencias.
 
-Y sobre las salas, el cielo está vivo: constelaciones que se forman al paso del cursor —o que puedes trazar tú con Mayús+clic—, meteoros que cruzan la noche y una resortera celestial lista para disparar.
+**AstroIngeniería nace de lo que viene después:** de la posibilidad de que comprender el universo sea solo el comienzo.
 
-## Qué Incluye
+Este proyecto es un museo digital dedicado a la ingeniería a escala cósmica: un recorrido desde las primeras estructuras orbitales hasta civilizaciones capaces de transformar planetas, capturar la energía de estrellas o modificar sistemas enteros. Hábitats giratorios, enjambres de Dyson, propulsión interestelar, terraformación, ingeniería estelar y otras ideas se presentan no como una predicción del futuro, sino como una exploración de lo que las leyes conocidas de la naturaleza podrían permitirnos construir.
 
-- 9 salas temáticas en un recorrido continuo, de la introducción mínima a las civilizaciones cósmicas.
-- 106 conceptos estructurados con escala, plausibilidad, mecanismo, riesgos, métricas y fuentes.
-- Sala de estudio por obra: narrativa visual, lectura larga guiada, dossier técnico y fuentes enlazadas desde NASA, SETI y otros materiales técnicos.
-- Un cielo interactivo sobre todo el recorrido: estrellas con gravedad de cursor, constelaciones ambientales, constelaciones dibujables y una resortera de meteoros — mantén clic, tensa y suelta; a plena potencia, el proyectil chisporrotea contra los bordes del cielo.
-- Rutas directas a salas y conceptos para compartir cualquier pieza de la exposición.
-- Galería de ilustraciones WebP generadas para acompañar cada concepto.
+La intención es habitar esa frontera extraña entre **ciencia, ingeniería y futuro**: conservar el rigor suficiente para distinguir lo plausible de lo especulativo, sin perder de vista la pregunta que hace interesantes a todas estas ideas:
+
+> **¿Qué ocurre cuando una inteligencia que aprendió a comprender el universo empieza también a preguntarse qué puede hacer con él?**
+
+---
+
+## El museo
+
+El recorrido está dividido en **9 salas temáticas** y reúne **106 conceptos**, avanzando progresivamente desde tecnologías orbitales relativamente cercanas hasta ingeniería planetaria, estelar y civilizaciones de escala cósmica.
+
+Cada concepto incluye, según corresponda:
+
+* mecanismo físico o principio de funcionamiento;
+* escala y nivel de plausibilidad;
+* métricas y órdenes de magnitud;
+* riesgos y limitaciones;
+* contexto narrativo y visual;
+* fuentes y material técnico para profundizar.
+
+Las salas de estudio combinan una lectura visual con dossiers técnicos y referencias externas de NASA, SETI y otras fuentes científicas o de ingeniería.
+
+El museo no busca borrar la diferencia entre lo posible y lo fantástico. Parte de ella.
+
+---
+
+## Un cielo vivo
+
+La exposición ocurre bajo un cielo interactivo que acompaña todo el recorrido.
+
+Las estrellas reaccionan al cursor, aparecen constelaciones ambientales y puedes trazar las tuyas propias con **Mayús + clic**. Meteoros atraviesan ocasionalmente el cielo y una pequeña resortera permite lanzarlos manualmente: mantén pulsado, tensa y suelta.
+
+La interfaz está pensada como parte de la experiencia, no únicamente como una forma de navegar entre fichas.
+
+---
+
+## Qué incluye
+
+* 9 salas temáticas en un recorrido continuo.
+* 106 conceptos de astroingeniería estructurados.
+* Fichas con escala, plausibilidad, mecanismos, riesgos, métricas y fuentes.
+* Lecturas extensas y dossiers técnicos.
+* Navegación directa a salas y conceptos individuales.
+* Vitrina para contrastar conceptos.
+* Archivo de fuentes.
+* Cielo estelar interactivo mediante Canvas.
+* Constelaciones ambientales y dibujables.
+* Sistema de meteoros e interacciones físicas.
+* Galería de ilustraciones WebP para los distintos conceptos.
+
+---
 
 ## Stack
 
-- React 19
-- TypeScript
-- Vite
-- Framer Motion
-- Canvas 2D para el cielo estelar interactivo
-- Sharp para generación de assets
+* React 19
+* TypeScript
+* Vite
+* Framer Motion
+* Canvas 2D
+* Sharp
+* GitHub Pages
 
-## Desarrollo
+---
+
+## Desarrollo local
 
 ```bash
 npm install
 npm run dev
 ```
 
-Vite sirve la app en desarrollo y usa la base `/AstroIngenieria/`, igual que la publicación en GitHub Pages.
+Vite sirve la aplicación utilizando la base `/AstroIngenieria/`, consistente con su publicación en GitHub Pages.
 
-## Verificación
+### Verificación
 
 ```bash
 npm run lint
 npm run build
 ```
 
-El build ejecuta TypeScript, genera el bundle de Vite y crea `dist/404.html` como fallback para rutas internas en GitHub Pages.
+El proceso de build ejecuta TypeScript, genera el bundle de Vite y crea `dist/404.html` como fallback para las rutas internas utilizadas en GitHub Pages.
 
-## Publicación
+### Publicación
 
 ```bash
 npm run deploy
@@ -50,19 +97,41 @@ npm run deploy
 
 El deploy publica `dist/` en GitHub Pages mediante `gh-pages`.
 
-## Estructura De Contenido
+---
 
-La base documental original está en `docs/AstroIngenieria.txt`. La aplicación usa datos estructurados derivados y enriquecidos en `src/data/astroData.ts`, manteniendo rutas internas para salas y conceptos individuales.
+## Estructura del contenido
+
+La base documental original se encuentra en:
+
+```text
+docs/AstroIngenieria.txt
+```
+
+La aplicación utiliza datos estructurados derivados y enriquecidos en:
+
+```text
+src/data/astroData.ts
+```
+
+Allí se mantiene la información de salas y conceptos, además de las rutas necesarias para acceder directamente a cada pieza de la exposición.
+
+---
 
 ## Ilustraciones
 
-La galería usa assets WebP en `public/illustrations/`. Se pueden regenerar con:
+Los assets visuales se almacenan en:
+
+```text
+public/illustrations/
+```
+
+Pueden regenerarse mediante:
 
 ```bash
 npm run generate:illustrations
 ```
 
-Los datos de cada concepto, incluyendo prompts, alt text, capas y hotspots, viven en `src/data/astroData.ts`.
+Los datos asociados a cada concepto —incluyendo prompts, textos alternativos, capas y hotspots— se encuentran en `src/data/astroData.ts`.
 
 ![Cilindro de O'Neill interior](public/illustrations/ai/concepts/habitats/interiors/oneill-cylinder.webp)
 
