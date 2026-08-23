@@ -2169,6 +2169,19 @@ body:has(.mo-root) {
   mix-blend-mode: screen;
 }
 
+/* Estela aurora del cursor: por encima de la sala de estudio (90), bajo el
+   letterbox cinematografico (130) y el cursor del museo (340) */
+
+.mo-trailfx {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 128;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
 /* Contadores del hero */
 
 .mo-counter {
