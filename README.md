@@ -1,6 +1,6 @@
 # AstroIngeniería — Museo Orbital
 
-> ✦ **[ENTRAR AL MUSEO](https://drayai.github.io/AstroIngenieria/)** — exposición permanente interactiva, en vivo
+> ✦ **[ENTRAR AL MUSEO](https://drayzu.github.io/AstroIngenieria/)** — exposición permanente interactiva, en vivo
 
 Un museo nocturno dedicado a la ingeniería a escala cósmica. Nueve salas que ascienden desde una estación orbital hasta civilizaciones capaces de mover estrellas: hábitats giratorios, enjambres de Dyson, velas de fusión, terraformación de mundos, ingeniería solar y más. Cada obra se presenta con el rigor de un catálogo técnico y la inquietud de quien dibuja planos del futuro.
 
