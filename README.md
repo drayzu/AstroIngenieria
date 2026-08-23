@@ -1,20 +1,19 @@
 # AstroIngeniería — Museo Orbital
 
-> ✦ **[ENTRAR AL MUSEO](https://drayai.github.io/AstroIngenieria/)** — exposición permanente interactiva, en vivo
+> ✦ **[ENTRAR AL MUSEO](https://drayzu.github.io/AstroIngenieria/)** — exposición permanente interactiva, en vivo
 
-Un museo nocturno de la astroingeniería: nueve salas con hábitats espaciales, megaestructuras orbitales, energía estelar, propulsión avanzada, terraformación, ingeniería estelar y civilizaciones cósmicas. Cada obra se abre en una sala de estudio con narrativa, lectura larga, dossier técnico y —en el caso del cilindro de O'Neill— una maqueta 3D explorable.
+Un museo nocturno dedicado a la ingeniería a escala cósmica. Nueve salas que ascienden desde una estación orbital hasta civilizaciones capaces de mover estrellas: hábitats giratorios, enjambres de Dyson, velas de fusión, terraformación de mundos, ingeniería solar y más. Cada obra se presenta con el rigor de un catálogo técnico y la inquietud de quien dibuja planos del futuro.
 
-La app combina narrativa, visualización, comparación y fuentes técnicas para convertir conceptos enormes en un recorrido navegable.
+Y sobre las salas, el cielo está vivo: constelaciones que se forman al paso del cursor —o que puedes trazar tú con Mayús+clic—, meteoros que cruzan la noche y una resortera celestial lista para disparar.
 
 ## Qué Incluye
 
-- 9 misiones temáticas, desde una introducción mínima hasta civilizaciones cósmicas.
-- 106 conceptos estructurados con escala, plausibilidad, mecanismo, riesgos, notas visuales y fuentes.
-- Páginas de misión con filtros por escala, madurez y búsqueda.
-- Páginas de concepto con lectura guiada, visuales, capas y puntos de interés.
-- Comparador para contrastar tecnologías e ideas por dificultad, madurez, escala y utilidad.
-- Lista de fuentes enlazadas desde NASA, SETI y otros materiales técnicos.
-- Galería de ilustraciones WebP generadas para acompañar el atlas.
+- 9 salas temáticas en un recorrido continuo, de la introducción mínima a las civilizaciones cósmicas.
+- 106 conceptos estructurados con escala, plausibilidad, mecanismo, riesgos, métricas y fuentes.
+- Sala de estudio por obra: narrativa visual, lectura larga guiada, dossier técnico y fuentes enlazadas desde NASA, SETI y otros materiales técnicos.
+- Un cielo interactivo sobre todo el recorrido: estrellas con gravedad de cursor, constelaciones ambientales, constelaciones dibujables y una resortera de meteoros — mantén clic, tensa y suelta; a plena potencia, el proyectil chisporrotea contra los bordes del cielo.
+- Rutas directas a salas y conceptos para compartir cualquier pieza de la exposición.
+- Galería de ilustraciones WebP generadas para acompañar cada concepto.
 
 ## Stack
 
@@ -22,8 +21,7 @@ La app combina narrativa, visualización, comparación y fuentes técnicas para 
 - TypeScript
 - Vite
 - Framer Motion
-- Three.js / React Three Fiber
-- Lucide React
+- Canvas 2D para el cielo estelar interactivo
 - Sharp para generación de assets
 
 ## Desarrollo
@@ -44,16 +42,6 @@ npm run build
 
 El build ejecuta TypeScript, genera el bundle de Vite y crea `dist/404.html` como fallback para rutas internas en GitHub Pages.
 
-## Ilustraciones
-
-La galería usa assets WebP en `public/illustrations/`. Se pueden regenerar con:
-
-```bash
-npm run generate:illustrations
-```
-
-Los datos de cada concepto, incluyendo prompts, alt text, capas y hotspots, viven en `src/data/astroData.ts`.
-
 ## Publicación
 
 ```bash
@@ -64,9 +52,17 @@ El deploy publica `dist/` en GitHub Pages mediante `gh-pages`.
 
 ## Estructura De Contenido
 
-La base documental original está en `docs/AstroIngenieria.txt`. La aplicación usa datos estructurados derivados y enriquecidos en `src/data/astroData.ts`, manteniendo rutas internas para misiones y conceptos individuales.
+La base documental original está en `docs/AstroIngenieria.txt`. La aplicación usa datos estructurados derivados y enriquecidos en `src/data/astroData.ts`, manteniendo rutas internas para salas y conceptos individuales.
 
 ## Ilustraciones
+
+La galería usa assets WebP en `public/illustrations/`. Se pueden regenerar con:
+
+```bash
+npm run generate:illustrations
+```
+
+Los datos de cada concepto, incluyendo prompts, alt text, capas y hotspots, viven en `src/data/astroData.ts`.
 
 ![Cilindro de O'Neill interior](public/illustrations/ai/concepts/habitats/interiors/oneill-cylinder.webp)
 

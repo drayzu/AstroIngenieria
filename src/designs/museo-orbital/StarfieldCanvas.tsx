@@ -24,6 +24,8 @@ interface Comet {
   size: number;
   tint: number;
   curve: number;
+  power?: number;
+  hitTitle?: boolean;
 }
 
 interface CometOptions {
@@ -35,6 +37,8 @@ interface CometOptions {
   y?: number;
   vx?: number;
   vy?: number;
+  sizeMul?: number;
+  power?: number;
 }
 
 interface Wave {
@@ -114,7 +118,6 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
     let disposed = false;
     let nextComet = time + 4 + Math.random() * 5;
     let nextTease = time + 7;
-    let lastSpace = -999;
     let warpBoost = 0;
     let charge: { x: number; y: number; t0: number; dx: number; dy: number } | null = null;
     let sketch: SketchState | null = null;
@@ -122,7 +125,16 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
     // El hero es zona sin constelaciones: puntero sobre él y su banda en viewport
     let overHero = false;
     let heroH = 0;
-    const trailLast = { x: -9999, y: -9999 };
+    // Rects (viewport) de las imágenes: sobre ellas solo se dejan ver las
+    // constelaciones dibujadas con Mayús+clic; el resto se oculta tras la foto.
+    type ImgRect = { x: number; y: number; w: number; h: number };
+    let imgRects: ImgRect[] = [];
+    let letterRects: ImgRect[] = [];
+    let rectsDirty = true;
+    let nextRectCheck = 0;
+
+    // Historial del puntero para la estela continua tipo cometa del hero
+    const trail: { x: number; y: number; t: number }[] = [];
 
     // Capa frontal para meteoros y destellos: viajan por encima del museo
     const fxCtx = fxRef.current?.getContext('2d') ?? null;
@@ -211,6 +223,24 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
       }
     };
 
+    const refreshImgRects = () => {
+      imgRects = Array.from(document.querySelectorAll('.mo-root img'), (img) => {
+        const r = img.getBoundingClientRect();
+        return { x: r.left, y: r.top, w: r.width, h: r.height };
+      }).filter((r) => r.w > 4 && r.h > 4);
+      letterRects = Array.from(document.querySelectorAll('.mo-hero-letterbox'), (el) => {
+        const r = el.getBoundingClientRect();
+        return { x: r.left, y: r.top, w: r.width, h: r.height };
+      }).filter((r) => r.w > 2 && r.h > 2);
+    };
+
+    const pointInImage = (x: number, y: number) => {
+      for (const r of imgRects) {
+        if (x >= r.x - 2 && x <= r.x + r.w + 2 && y >= r.y - 2 && y <= r.y + r.h + 2) return true;
+      }
+      return false;
+    };
+
     const resize = () => {
       width = window.innerWidth;
       height = window.innerHeight;
@@ -225,12 +255,14 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
       sizeCanvas(fxRef.current);
       seed();
       seedAmbient();
+      rectsDirty = true;
     };
 
     const onScroll = () => {
       const top = scrollRef.current?.scrollTop ?? 0;
       scrollVel = scrollVel * 0.82 + (top - lastScroll) * 0.18;
       lastScroll = top;
+      rectsDirty = true;
     };
 
     const onMove = (event: MouseEvent) => {
@@ -271,9 +303,13 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
         vx,
         vy,
         life: 1,
-        size: (big ? 3 + Math.random() : 1.7 + Math.random() * 1.1) * (0.75 + 0.25 * vscale),
+        size:
+          (big ? 3 + Math.random() : 1.7 + Math.random() * 1.1) *
+          (0.75 + 0.25 * vscale) *
+          (options?.sizeMul ?? 1),
         tint: big ? 1 : Math.random() < 0.55 ? 0 : Math.random() < 0.55 ? 1 : 2,
         curve: big ? 0.02 + Math.random() * 0.03 : (Math.random() - 0.35) * 0.05,
+        power: options?.power,
       });
     };
 
@@ -460,9 +496,10 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
             x,
             y,
             fromLeft: Math.random() < 0.5,
-            speed: 7.5 + Math.random() * 4,
+            speed: 3.5 + 9 * power + Math.random() * 2,
             angle: -(6 + Math.random() * 20),
             big: power > 0.6,
+            sizeMul: 0.6 + 0.4 * power,
           });
         }
         if (power > 0.85) launchShower();
@@ -471,13 +508,16 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
 
       // Lanzamiento del meteorito en sentido contrario al arrastre
       const norm = pull || 1;
-      const speed = Math.min(17, 5 + pull * 0.075 + power * 4);
+      const baseSpeed = Math.min(17, 5 + pull * 0.075);
+      const speed = Math.max(2, baseSpeed * (0.4 + 0.6 * power));
       spawnComet({
         x,
         y,
         vx: (px / norm) * speed,
         vy: (py / norm) * speed,
         big: true,
+        sizeMul: 0.6 + 0.4 * power,
+        power,
       });
     };
 
@@ -528,10 +568,17 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
       const parX = mouse.sx > -999 ? (mouse.sx / width - 0.5) * 2 : 0;
       const parY = mouse.sy > -999 ? (mouse.sy / height - 0.5) * 2 : 0;
 
-      // Modo atracción: si nadie pulsa espacio, el cielo lanza un meteoro de cortesía
+      // Refresco de rects de imágenes: al hacer scroll/resize y de forma
+      // periódica (las imágenes con parallax se desplazan unos píxeles)
+      if (rectsDirty || time > nextRectCheck) {
+        refreshImgRects();
+        rectsDirty = false;
+        nextRectCheck = time + 0.5;
+      }
+
+      // Modo atracción: el cielo lanza un meteoro de cortesía cerca del hero
       if (
         time > nextTease &&
-        time - lastSpace > 20 &&
         (scrollRef.current?.scrollTop ?? 0) < window.innerHeight * 0.9
       ) {
         spawnAmbientComet();
@@ -619,9 +666,12 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
               const dy = drawn[i].y - drawn[j].y;
               const d = Math.hypot(dx, dy);
               if (d < 126) {
+                const midX = (drawn[i].x + drawn[j].x) / 2;
+                const midY = (drawn[i].y + drawn[j].y) / 2;
+                if (pointInImage(midX, midY)) continue;
                 degree.set(i, (degree.get(i) ?? 0) + 1);
                 degree.set(j, (degree.get(j) ?? 0) + 1);
-                const near = 1 - Math.min(1, Math.hypot((drawn[i].x + drawn[j].x) / 2 - mouse.x, (drawn[i].y + drawn[j].y) / 2 - mouse.y) / 230);
+                const near = 1 - Math.min(1, Math.hypot(midX - mouse.x, midY - mouse.y) / 230);
                 const lineAlpha = Math.min(1, 0.95 * (1 - d / 126) * near * dimLevel);
                 fxCtx.lineCap = 'round';
                 fxCtx.strokeStyle = `rgba(226,204,158,${(lineAlpha * 0.42).toFixed(3)})`;
@@ -643,6 +693,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
 
         if (!overHero) {
           for (const node of drawn) {
+            if (pointInImage(node.x, node.y)) continue;
             const pulse = 0.75 + 0.25 * Math.sin(time * 2.2 + node.x);
             fxCtx.fillStyle = `rgba(232,208,160,${(0.42 * pulse * dimLevel).toFixed(3)})`;
             fxCtx.beginPath();
@@ -679,6 +730,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
             const ay = c.y + c.nodes[a].oy;
             const bx = c.x + c.nodes[b].ox;
             const by = c.y + c.nodes[b].oy;
+            if (pointInImage((ax + bx) / 2, (ay + by) / 2)) continue;
             fxCtx.strokeStyle = `rgba(226,204,158,${(alpha * 0.45).toFixed(3)})`;
             fxCtx.lineWidth = 3;
             fxCtx.beginPath();
@@ -695,6 +747,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
           for (const node of c.nodes) {
             const nx = c.x + node.ox;
             const ny = c.y + node.oy;
+            if (pointInImage(nx, ny)) continue;
             const twinkle = 0.7 + 0.3 * Math.sin(time * 1.6 + node.phase);
             const halo = fxCtx.createRadialGradient(nx, ny, 0, nx, ny, 9);
             halo.addColorStop(0, `rgba(232,208,160,${(alpha * twinkle * 0.55).toFixed(3)})`);
@@ -710,37 +763,89 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
           }
         }
 
-        // Destello de estrella fugaz del cursor: solo sobre el hero, donde no
-        // hay constelaciones. El polvo dorado se queda atrás del movimiento.
+        // Estela del cursor sobre el hero: cinta rellena como polígono continuo
+        // (sin cuentas en las uniones de segmentos), cabeza brillante y polvo
+        // dorado naciendo a media cola para no ensuciar el halo.
         if (mouse.x > -999) {
-          if (trailLast.x < -999) {
-            trailLast.x = mouse.x;
-            trailLast.y = mouse.y;
+          if (overHero) {
+            const lastPt = trail[trail.length - 1];
+            if (!lastPt || Math.hypot(mouse.x - lastPt.x, mouse.y - lastPt.y) > 1.2) {
+              trail.push({ x: mouse.x, y: mouse.y, t: time });
+            }
           }
-          const tdx = mouse.x - trailLast.x;
-          const tdy = mouse.y - trailLast.y;
-          const moved = Math.hypot(tdx, tdy);
-          if (overHero && moved > 15) {
-            trailLast.x = mouse.x;
-            trailLast.y = mouse.y;
-            const burst = moved > 90 ? 2 : 1;
-            for (let s = 0; s < burst; s += 1) {
+          while (trail.length > 0 && time - trail[0].t > 0.38) trail.shift();
+          if (trail.length > 40) trail.splice(0, trail.length - 40);
+
+          if (overHero && trail.length >= 6 && sparkles.length < 150) {
+            const di = Math.floor(trail.length * 0.55);
+            const da = trail[di - 1];
+            const db = trail[di];
+            if (Math.hypot(db.x - da.x, db.y - da.y) > 26) {
               sparkles.push({
-                x: mouse.x + (Math.random() - 0.5) * 7,
-                y: mouse.y + (Math.random() - 0.5) * 7,
-                vx: -tdx * 0.018 + (Math.random() - 0.5) * 0.5,
-                vy: -tdy * 0.018 + (Math.random() - 0.5) * 0.5,
-                life: 0.9,
+                x: db.x + (Math.random() - 0.5) * 10,
+                y: db.y + (Math.random() - 0.5) * 10,
+                vx: -(db.x - da.x) * 0.02 + (Math.random() - 0.5) * 0.4,
+                vy: -(db.y - da.y) * 0.02 + (Math.random() - 0.5) * 0.4,
+                life: 0.85,
                 tint: Math.random() < 0.6 ? 1 : 0,
-                size: 1.1 + Math.random() * 1.6,
-                grav: 0.01,
+                size: 1 + Math.random() * 1.4,
+                grav: 0.008,
               });
             }
-            if (sparkles.length > 160) sparkles.splice(0, sparkles.length - 160);
-          } else if (!overHero) {
-            // Fuera del hero se mantiene sincronizado: sin ráfaga al reentrar
-            trailLast.x = mouse.x;
-            trailLast.y = mouse.y;
+          }
+
+          if (trail.length > 3) {
+            fxCtx.save();
+            fxCtx.globalCompositeOperation = 'lighter';
+            const n = trail.length;
+            const buildRibbon = (widthScale: number) => {
+              fxCtx.beginPath();
+              for (let i = 0; i < n; i += 1) {
+                const prevPt = trail[Math.max(0, i - 1)];
+                const nextPt = trail[Math.min(n - 1, i + 1)];
+                const dx = nextPt.x - prevPt.x;
+                const dy = nextPt.y - prevPt.y;
+                const len = Math.hypot(dx, dy) || 1;
+                const k = i / (n - 1);
+                const half = Math.max(0.3, 12 * Math.pow(k, 1.5) * vscale * widthScale);
+                const nx = (-dy / len) * half;
+                const ny = (dx / len) * half;
+                if (i === 0) {
+                  fxCtx.moveTo(trail[i].x + nx, trail[i].y + ny);
+                } else {
+                  fxCtx.lineTo(trail[i].x + nx, trail[i].y + ny);
+                }
+              }
+              for (let i = n - 1; i >= 0; i -= 1) {
+                const prevPt = trail[Math.max(0, i - 1)];
+                const nextPt = trail[Math.min(n - 1, i + 1)];
+                const dx = nextPt.x - prevPt.x;
+                const dy = nextPt.y - prevPt.y;
+                const len = Math.hypot(dx, dy) || 1;
+                const k = i / (n - 1);
+                const half = Math.max(0.3, 12 * Math.pow(k, 1.5) * vscale * widthScale);
+                const nx = (-dy / len) * half;
+                const ny = (dx / len) * half;
+                fxCtx.lineTo(trail[i].x - nx, trail[i].y - ny);
+              }
+              fxCtx.closePath();
+              fxCtx.fill();
+            };
+            fxCtx.fillStyle = `rgba(201,168,106,${(0.24 * dimLevel).toFixed(3)})`;
+            buildRibbon(1);
+            fxCtx.fillStyle = `rgba(250,242,222,${(0.5 * dimLevel).toFixed(3)})`;
+            buildRibbon(0.42);
+            const head = trail[n - 1];
+            const haloR = 15 * vscale;
+            const headHalo = fxCtx.createRadialGradient(head.x, head.y, 0, head.x, head.y, haloR);
+            headHalo.addColorStop(0, `rgba(255,250,238,${(0.8 * dimLevel).toFixed(3)})`);
+            headHalo.addColorStop(0.35, `rgba(232,208,160,${(0.35 * dimLevel).toFixed(3)})`);
+            headHalo.addColorStop(1, 'rgba(232,208,160,0)');
+            fxCtx.fillStyle = headHalo;
+            fxCtx.beginPath();
+            fxCtx.arc(head.x, head.y, haloR, 0, Math.PI * 2);
+            fxCtx.fill();
+            fxCtx.restore();
           }
         }
 
@@ -778,10 +883,62 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
         }
         comets = comets.filter((comet) => comet.life > 0);
         for (const comet of comets) {
+          const prevX = comet.x;
           comet.x += comet.vx;
           comet.y += comet.vy;
           comet.vy += comet.curve;
           comet.life -= comet.size > 2.4 ? 0.009 : 0.012;
+
+          // Proyectil de resortera sobre el título del hero: un impacto por proyectil
+          if (comet.power !== undefined && !comet.hitTitle && letterRects.length > 0) {
+            for (const r of letterRects) {
+              if (
+                comet.x >= r.x - 8 &&
+                comet.x <= r.x + r.w + 8 &&
+                comet.y >= r.y - 8 &&
+                comet.y <= r.y + r.h + 8
+              ) {
+                comet.hitTitle = true;
+                window.dispatchEvent(
+                  new CustomEvent('mo-title-hit', {
+                    detail: { x: comet.x, y: comet.y, vx: comet.vx, vy: comet.vy },
+                  }),
+                );
+                break;
+              }
+            }
+          }
+
+          // Impacto lateral del proyectil a máxima potencia: chispas contra el muro
+          if (
+            comet.power !== undefined &&
+            comet.power >= 0.95 &&
+            ((comet.vx < 0 && prevX > 0 && comet.x <= 0) ||
+              (comet.vx > 0 && prevX < width && comet.x >= width))
+          ) {
+            const wallX = comet.vx < 0 ? 3 : width - 3;
+            comet.x = wallX;
+            flashes.push({ x: wallX, y: comet.y, r: 5, alpha: 0.45 });
+            waves.push({ x: wallX, y: comet.y, r: 4, alpha: 0.6, delay: 0 });
+            const inward = comet.vx < 0 ? 1 : -1;
+            const burstN = Math.round(14 + comet.size * 4);
+            for (let s = 0; s < burstN; s += 1) {
+              const spd = (1.6 + Math.random() * 4.2) * vscale;
+              sparkles.push({
+                x: wallX,
+                y: comet.y + (Math.random() - 0.5) * 14,
+                vx: inward * (1.2 + Math.random() * 3.6) * vscale,
+                vy: (Math.random() - 0.65) * spd,
+                life: 1,
+                tint: Math.random() < 0.5 ? 1 : 0,
+                size: 1.2 + Math.random() * 1.8,
+                grav: 0.03,
+              });
+            }
+            if (sparkles.length > 160) sparkles.splice(0, sparkles.length - 160);
+            comet.life = 0;
+          }
+
           if (comet.x < -140 || comet.x > width + 140 || comet.y > height + 90) comet.life = 0;
           const tailLen = 9 + comet.size * 4.5;
           const tailX = comet.x - comet.vx * tailLen;
@@ -859,7 +1016,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
 
             // Trayectoria proyectada del lanzamiento (sentido contrario)
             const normP = pullDist || 1;
-            const projLen = Math.min(260, 60 + pullDist * 1.5);
+            const projLen = Math.min(260, (60 + pullDist * 1.5) * (0.45 + 0.55 * p));
             fxCtx.setLineDash([]);
             const grad = fxCtx.createLinearGradient(charge.x, charge.y, charge.x + (pullX / normP) * projLen, charge.y + (pullY / normP) * projLen);
             grad.addColorStop(0, `rgba(230,204,158,${(0.55 * dimLevel).toFixed(3)})`);
@@ -940,18 +1097,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
       if (event.key === 'Escape') {
         charge = null;
         sketch = null;
-        return;
       }
-      if (event.code !== 'Space') return;
-      // Ignorar auto-repetición y ráfagas encadenadas: una lluvia por pulsación
-      if (event.repeat) return;
-      if (time - lastSpace < 0.65) return;
-      const target = event.target as HTMLElement | null;
-      if (target?.closest('button, a, input, textarea')) return;
-      if ((scrollRef.current?.scrollTop ?? 0) > window.innerHeight * 0.9) return;
-      event.preventDefault();
-      lastSpace = time;
-      launchShower();
     };
     const onComet = () => spawnAmbientComet();
     window.addEventListener('mo-comet', onComet);
