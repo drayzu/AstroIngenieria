@@ -49,6 +49,20 @@ interface Wave {
   r: number;
   alpha: number;
   delay: number;
+  grow?: number;
+  decay?: number;
+  width?: number;
+}
+
+/* Burbuja de choque: disco aurora semitransparente cuyo color nace aleatorio
+   y se suaviza hacia el extremo claro de la paleta al expandirse */
+interface ShockBubble {
+  x: number;
+  y: number;
+  r: number;
+  alpha: number;
+  age: number;
+  tintT: number;
 }
 
 interface Flash {
@@ -151,6 +165,7 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
     let stars: Star[] = [];
     let comets: Comet[] = [];
     let waves: Wave[] = [];
+    let bubbles: ShockBubble[] = [];
     let flashes: Flash[] = [];
     let sparkles: { x: number; y: number; vx: number; vy: number; life: number; tint: number; size: number; grav: number; rgb?: RGB }[] = [];
     let raf = 0;
@@ -534,14 +549,21 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
       charge = null;
       if (power < 0.06) return;
 
-      // Explosión residual en el punto de origen
+      // Explosión residual en el punto de origen: la misma burbuja de choque
+      // aurora del impacto lateral, con color aleatorio y escalada por carga
       flashes.push({ x, y, r: 4, alpha: 0.2 + 0.3 * power });
-      waves.push({ x, y, r: 6, alpha: 0.35 + 0.5 * power, delay: 0 });
+      bubbles.push({
+        x,
+        y,
+        r: 12,
+        alpha: 0.4 + 0.18 * power,
+        age: 0,
+        tintT: Math.random() * 0.65,
+      });
       spawnSparkleBurst(x, y, Math.round(8 + 14 * power), power * 0.7);
 
       if (pull < 24) {
         // Sin arrastre: supernova clásica proporcional a la carga
-        if (power > 0.25) waves.push({ x, y, r: 0, alpha: 0.25 + 0.6 * power, delay: 0.14 });
         spawnSparkleBurst(x, y, Math.round(10 + 20 * power), power);
         const launched = power > 0.8 ? 2 : 1;
         for (let i = 0; i < launched; i += 1) {
@@ -987,16 +1009,24 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
           ) {
             const wallX = comet.vx < 0 ? 3 : width - 3;
             comet.x = wallX;
-            flashes.push({ x: wallX, y: comet.y, r: 5, alpha: 0.45 });
-            waves.push({ x: wallX, y: comet.y, r: 4, alpha: 0.6, delay: 0 });
+            flashes.push({ x: wallX, y: comet.y, r: 8, alpha: 0.75 });
+            // Burbuja de choque con color aleatorio de la paleta
+            bubbles.push({
+              x: wallX,
+              y: comet.y,
+              r: 14,
+              alpha: 0.55,
+              age: 0,
+              tintT: Math.random() * 0.65,
+            });
             const inward = comet.vx < 0 ? 1 : -1;
-            const burstN = Math.round(14 + comet.size * 4);
+            const burstN = Math.round(26 + comet.size * 6);
             for (let s = 0; s < burstN; s += 1) {
-              const spd = (1.6 + Math.random() * 4.2) * vscale;
+              const spd = (2 + Math.random() * 5.25) * vscale;
               sparkles.push({
                 x: wallX,
                 y: comet.y + (Math.random() - 0.5) * 14,
-                vx: inward * (1.2 + Math.random() * 3.6) * vscale,
+                vx: inward * (1.5 + Math.random() * 4.5) * vscale,
                 vy: (Math.random() - 0.65) * spd,
                 life: 1,
                 tint: Math.random() < 0.5 ? 1 : 0,
@@ -1038,17 +1068,50 @@ export const StarfieldCanvas = ({ scrollRef, dim = false }: StarfieldProps) => {
           fxCtx.fill();
         }
 
+        // Burbujas de choque: disco semitransparente que nace de un color
+        // aleatorio de la paleta y deriva suavizado hacia el extremo claro
+        bubbles = bubbles.filter((b) => b.alpha > 0.02);
+        for (const b of bubbles) {
+          b.age += 0.016;
+          b.r += 8.5;
+          b.alpha *= 0.954;
+          const drift = Math.min(0.97, b.tintT + b.age * 0.15);
+          const col = sampleStops(AURORA, drift);
+          const lite = mixRGB(col, [250, 244, 224], 0.35);
+          const grad = fxCtx.createRadialGradient(b.x, b.y, b.r * 0.12, b.x, b.y, b.r);
+          grad.addColorStop(0, `rgba(${col[0]},${col[1]},${col[2]},${(b.alpha * 0.14).toFixed(3)})`);
+          grad.addColorStop(0.6, `rgba(${col[0]},${col[1]},${col[2]},${Math.min(1, b.alpha * 0.78).toFixed(3)})`);
+          grad.addColorStop(0.86, `rgba(${lite[0]},${lite[1]},${lite[2]},${Math.min(1, b.alpha).toFixed(3)})`);
+          grad.addColorStop(1, `rgba(${lite[0]},${lite[1]},${lite[2]},0)`);
+          fxCtx.fillStyle = grad;
+          fxCtx.beginPath();
+          fxCtx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+          fxCtx.fill();
+          fxCtx.strokeStyle = `rgba(${lite[0]},${lite[1]},${lite[2]},${(b.alpha * 0.75).toFixed(3)})`;
+          fxCtx.lineWidth = 1.6;
+          fxCtx.beginPath();
+          fxCtx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+          fxCtx.stroke();
+        }
+
         waves = waves.filter((wave) => wave.alpha > 0.02);
         for (const wave of waves) {
           if (wave.delay > 0) {
             wave.delay -= 0.016;
             continue;
           }
-          wave.r += 7;
-          wave.alpha *= 0.94;
+          wave.r += wave.grow ?? 7;
+          wave.alpha *= wave.decay ?? 0.94;
           if (wave.r <= 0) continue;
-          fxCtx.strokeStyle = `rgba(201,168,106,${(wave.alpha * 0.5 * dimLevel).toFixed(3)})`;
-          fxCtx.lineWidth = 1.2;
+          const wBase = wave.width ?? 1.2;
+          // Doble trazo: halo dorado ancho + nucleo crema brillante
+          fxCtx.strokeStyle = `rgba(201,168,106,${(wave.alpha * 0.35 * dimLevel).toFixed(3)})`;
+          fxCtx.lineWidth = wBase * 2.6;
+          fxCtx.beginPath();
+          fxCtx.arc(wave.x, wave.y, wave.r, 0, Math.PI * 2);
+          fxCtx.stroke();
+          fxCtx.strokeStyle = `rgba(245,235,205,${Math.min(1, wave.alpha * 0.85 * dimLevel).toFixed(3)})`;
+          fxCtx.lineWidth = wBase;
           fxCtx.beginPath();
           fxCtx.arc(wave.x, wave.y, wave.r, 0, Math.PI * 2);
           fxCtx.stroke();
