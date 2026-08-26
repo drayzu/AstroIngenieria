@@ -2,19 +2,9 @@
 
 <p align="center">
   <a href="https://drayzu.github.io/AstroIngenieria/">
-    <img alt="✦ ENTRAR AL MUSEO — Museo Orbital en línea" src="public/readme/entrar-al-museo-v2.svg">
+    <img alt="AstroIngeniería — Museo Orbital" src="public/readme/entrar-al-museo-v3.svg" width="780"/>
   </a>
 </p>
-
-Durante casi toda la historia del cosmos, las estrellas nacieron y murieron sin que nada pudiera preguntarse si podían ser distintas. De ese mismo universo surgió una inteligencia capaz de comprender sus leyes y, ahora, de crear nuevas inteligencias.
-
-**AstroIngeniería nace de lo que viene después:** de la posibilidad de que comprender el universo sea solo el comienzo.
-
-Este proyecto es un museo digital dedicado a la ingeniería a escala cósmica: un recorrido desde las primeras estructuras orbitales hasta civilizaciones capaces de transformar planetas, capturar la energía de estrellas o modificar sistemas enteros. Hábitats giratorios, enjambres de Dyson, propulsión interestelar, terraformación, ingeniería estelar y otras ideas se presentan no como una predicción del futuro, sino como una exploración de lo que las leyes conocidas de la naturaleza podrían permitirnos construir.
-
-La intención es habitar esa frontera extraña entre **ciencia, ingeniería y futuro**: conservar el rigor suficiente para distinguir lo plausible de lo especulativo, sin perder de vista la pregunta que hace interesantes a todas estas ideas:
-
-> **¿Qué ocurre cuando una inteligencia que aprendió a comprender el universo empieza también a preguntarse qué puede hacer con él?**
 
 ---
 
