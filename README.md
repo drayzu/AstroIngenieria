@@ -103,6 +103,8 @@ El deploy publica `dist/` en GitHub Pages mediante `gh-pages`.
 
 ---
 
+## Ilustraciones
+
 ![Portada del museo — AstroIngeniería](public/readme/1.png)
 
 ![Cilindro de O'Neill interior](public/illustrations/ai/concepts/habitats/interiors/oneill-cylinder.webp)
