@@ -2,12 +2,6 @@
   <img alt="Placeholder" src="public/readme/respaldos/google-ver.svg" width="780"/>
 </p>
 
-<p align="center">
-  <a href="https://drayzu.github.io/AstroIngenieria/">
-    <img alt="Entrar al Museo" src="public/readme/entrar-al-museo-v2.svg" width="780"/>
-  </a>
-</p>
-
 ![Portada del museo — AstroIngeniería](public/readme/1.png)
 
 ![Cilindro de O'Neill interior](public/illustrations/ai/concepts/habitats/interiors/oneill-cylinder.webp)
