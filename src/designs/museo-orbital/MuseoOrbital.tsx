@@ -2,30 +2,42 @@
 import '@fontsource-variable/space-grotesk';
 import '@fontsource-variable/jetbrains-mono';
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
+  type RefObject,
 } from 'react';
 import {
   AnimatePresence,
   motion,
   useInView,
+  useMotionValueEvent,
   useReducedMotion,
   useScroll,
   useSpring,
   useTransform,
   type MotionValue,
 } from 'framer-motion';
+import { Volume2, VolumeX } from 'lucide-react';
 import { chapters, conceptById, plausibilityLabels, scaleLabels } from '../../data/astroData';
 import type { AstroChapter, AstroConcept, SourceRef } from '../../types';
 import { Grain } from '../shared/Grain';
 import { useScrollLock } from '../shared/useScrollLock';
 import { MuseumCursor } from './MuseumCursor';
+import {
+  PLAYGROUND_ARRIVAL_END_MS,
+  PLAYGROUND_ARRIVAL_START_MS,
+  PLAYGROUND_ENTER_MS,
+  PLAYGROUND_ENTER_TRAVEL_SPEED,
+  PLAYGROUND_LEAVE_MS,
+  PLAYGROUND_MUSEUM_RETURN_START_MS,
+} from './playgroundTiming';
 import { StudioRoom } from './StudioRoom';
-import { StarfieldCanvas } from './StarfieldCanvas';
+import { StarfieldCanvas, type PlaygroundProgress } from './StarfieldCanvas';
 import { DistortOverlay } from './DistortOverlay';
 import './museoOrbital.css';
 
@@ -33,6 +45,33 @@ const totalWorks = chapters.reduce((sum, chapter) => sum + chapter.concepts.leng
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 const VITRINE_CAP = 5;
 const VITRINE_KEY = 'mo-vitrine';
+const PLAYGROUND_WORD = 'ASTROINGENIERÍA';
+const PLAYGROUND_TIMES_KEY = 'mo-playground-best-times-v1';
+const PLAYGROUND_TIMES_CAP = 10;
+const PLAYGROUND_HOLD_MS = 2_000;
+const PLAYGROUND_MUSIC_MUTED_KEY = 'mo-playground-music-muted-v1';
+const PLAYGROUND_MUSIC_VOLUME = 0.35;
+const PLAYGROUND_MUSIC_ENTER_FADE_MS = 2_000;
+const PLAYGROUND_MUSIC_LEAVE_FADE_MS = 1_500;
+const PLAYGROUND_MUSIC_TOGGLE_FADE_MS = 180;
+const INITIAL_PLAYGROUND_PROGRESS: PlaygroundProgress = {
+  destroyed: 0,
+  total: PLAYGROUND_WORD.length,
+  phase: 'active',
+};
+
+interface PlaygroundBestTime {
+  id: string;
+  durationMs: number;
+  completedAt: string;
+}
+
+interface PlaygroundResult {
+  id: string;
+  durationMs: number;
+}
+
+type PlaygroundEntryState = 'idle' | 'charging' | 'entering' | 'leaving';
 
 const resolveChapter = (concept: AstroConcept): AstroChapter =>
   chapters.find((chapter) => chapter.id === concept.chapterId) ?? chapters[0];
@@ -55,6 +94,212 @@ const loadVitrine = (): string[] => {
 const scrollToId = (id: string) => {
   window.dispatchEvent(new CustomEvent('mo-warp'));
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+const loadPlaygroundBestTimes = (): PlaygroundBestTime[] => {
+  try {
+    const raw = window.localStorage.getItem(PLAYGROUND_TIMES_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((entry): entry is PlaygroundBestTime => {
+        if (!entry || typeof entry !== 'object') return false;
+        const candidate = entry as Partial<PlaygroundBestTime>;
+        return (
+          typeof candidate.id === 'string' &&
+          typeof candidate.durationMs === 'number' &&
+          Number.isFinite(candidate.durationMs) &&
+          candidate.durationMs > 0 &&
+          typeof candidate.completedAt === 'string'
+        );
+      })
+      .sort((a, b) => a.durationMs - b.durationMs)
+      .slice(0, PLAYGROUND_TIMES_CAP);
+  } catch {
+    return [];
+  }
+};
+
+const loadPlaygroundMusicMuted = () => {
+  try {
+    return window.localStorage.getItem(PLAYGROUND_MUSIC_MUTED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+};
+
+const formatPlaygroundElapsed = (durationMs: number) => {
+  const totalSeconds = Math.floor(Math.max(0, durationMs) / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+};
+
+const formatPlaygroundTime = (durationMs: number) => {
+  const totalTenths = Math.floor(Math.max(0, durationMs) / 100);
+  const minutes = Math.floor(totalTenths / 600);
+  const seconds = Math.floor((totalTenths % 600) / 10);
+  const tenths = totalTenths % 10;
+  return `${minutes}:${String(seconds).padStart(2, '0')}.${tenths}`;
+};
+
+interface PageTextHitDetail {
+  element: HTMLElement;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  power: number;
+}
+
+interface TextPhysicsState {
+  element: HTMLElement;
+  x: number;
+  y: number;
+  rotation: number;
+  scale: number;
+  vx: number;
+  vy: number;
+  vr: number;
+  vs: number;
+  originalTranslate: string;
+  originalRotate: string;
+  originalScale: string;
+  originalWillChange: string;
+}
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, value));
+
+const usePageTextPhysics = (disabled: boolean) => {
+  useEffect(() => {
+    if (disabled) return;
+
+    const states = new Map<HTMLElement, TextPhysicsState>();
+    let raf = 0;
+    let previousTime = 0;
+
+    const restoreInlineStyles = (state: TextPhysicsState) => {
+      const { style } = state.element;
+      const restore = (property: string, value: string) => {
+        if (value) style.setProperty(property, value);
+        else style.removeProperty(property);
+      };
+      restore('translate', state.originalTranslate);
+      restore('rotate', state.originalRotate);
+      restore('scale', state.originalScale);
+      restore('will-change', state.originalWillChange);
+    };
+
+    const loop = (now: number) => {
+      const dt = previousTime > 0 ? Math.min(0.032, Math.max(0.008, (now - previousTime) / 1000)) : 0.016;
+      previousTime = now;
+
+      states.forEach((state, element) => {
+        if (!element.isConnected) {
+          restoreInlineStyles(state);
+          states.delete(element);
+          return;
+        }
+
+        state.vx += (-105 * state.x - 11 * state.vx) * dt;
+        state.vy += (-105 * state.y - 11 * state.vy) * dt;
+        state.vr += (-115 * state.rotation - 11.5 * state.vr) * dt;
+        state.vs += (-145 * state.scale - 14 * state.vs) * dt;
+        state.x = clamp(state.x + state.vx * dt, -90, 90);
+        state.y = clamp(state.y + state.vy * dt, -90, 90);
+        state.rotation = clamp(state.rotation + state.vr * dt, -0.122, 0.122);
+        state.scale = clamp(state.scale + state.vs * dt, -0.15, 0.18);
+
+        const settled =
+          Math.abs(state.x) < 0.04 &&
+          Math.abs(state.y) < 0.04 &&
+          Math.abs(state.rotation) < 0.0005 &&
+          Math.abs(state.scale) < 0.0005 &&
+          Math.abs(state.vx) < 0.08 &&
+          Math.abs(state.vy) < 0.08 &&
+          Math.abs(state.vr) < 0.002 &&
+          Math.abs(state.vs) < 0.002;
+
+        if (settled) {
+          restoreInlineStyles(state);
+          states.delete(element);
+          return;
+        }
+
+        element.style.setProperty('translate', `${state.x.toFixed(2)}px ${state.y.toFixed(2)}px`);
+        element.style.setProperty('rotate', `${state.rotation.toFixed(4)}rad`);
+        element.style.setProperty('scale', (1 + state.scale).toFixed(3));
+      });
+
+      if (states.size > 0) {
+        raf = requestAnimationFrame(loop);
+      } else {
+        raf = 0;
+        previousTime = 0;
+      }
+    };
+
+    const onPageTextHit = (event: Event) => {
+      const detail = (event as CustomEvent<PageTextHitDetail>).detail;
+      const element = detail?.element;
+      if (!element?.isConnected || element.closest('.mo-hero, .mo-marquee, .mo-halls, .mo-menu, .mo-rail')) {
+        return;
+      }
+      const speed = Math.hypot(detail.vx, detail.vy);
+      if (speed < 0.5) return;
+
+      let state = states.get(element);
+      if (!state) {
+        state = {
+          element,
+          x: 0,
+          y: 0,
+          rotation: 0,
+          scale: 0,
+          vx: 0,
+          vy: 0,
+          vr: 0,
+          vs: 0,
+          originalTranslate: element.style.getPropertyValue('translate'),
+          originalRotate: element.style.getPropertyValue('rotate'),
+          originalScale: element.style.getPropertyValue('scale'),
+          originalWillChange: element.style.getPropertyValue('will-change'),
+        };
+        states.set(element, state);
+        element.style.setProperty('will-change', 'transform');
+      }
+
+      const dirX = detail.vx / speed;
+      const dirY = detail.vy / speed;
+      const jitter = (Math.random() - 0.5) * 0.36;
+      const impulseX = dirX * Math.cos(jitter) - dirY * Math.sin(jitter);
+      const impulseY = dirX * Math.sin(jitter) + dirY * Math.cos(jitter);
+      const strength =
+        Math.min(230, (300 + speed * 10) * 0.55) *
+        (0.75 + clamp(detail.power, 0, 1) * 0.25) *
+        (0.85 + Math.random() * 0.3);
+      state.vx += impulseX * strength;
+      state.vy += impulseY * strength;
+
+      const rect = element.getBoundingClientRect();
+      const rx = (detail.x - (rect.left + rect.width / 2)) / Math.max(1, rect.width / 2);
+      const ry = (detail.y - (rect.top + rect.height / 2)) / Math.max(1, rect.height / 2);
+      const torque = clamp(rx * dirY - ry * dirX, -1, 1);
+      state.vr += torque * (1.8 + detail.power * 1.4) + (Math.random() - 0.5) * 0.25;
+      state.vs -= 0.75 + detail.power * 0.55;
+
+      if (!raf) raf = requestAnimationFrame(loop);
+    };
+
+    window.addEventListener('mo-page-text-hit', onPageTextHit);
+    return () => {
+      window.removeEventListener('mo-page-text-hit', onPageTextHit);
+      if (raf) cancelAnimationFrame(raf);
+      states.forEach(restoreInlineStyles);
+      states.clear();
+    };
+  }, [disabled]);
 };
 
 /* ---------------- Contador animado ---------------- */
@@ -82,11 +327,26 @@ const Counter = ({ to }: { to: number }) => {
 
 /* ---------------- Hero con título magnético ---------------- */
 
-const Hero = () => {
+interface HeroProps {
+  heroRef: RefObject<HTMLElement | null>;
+  onOpenIndex: () => void;
+  onOpenPlayground: () => void;
+  playgroundHoldProgress: number;
+  playgroundEntryState: PlaygroundEntryState;
+}
+
+const Hero = ({
+  heroRef,
+  onOpenIndex,
+  onOpenPlayground,
+  playgroundHoldProgress,
+  playgroundEntryState,
+}: HeroProps) => {
   const reduced = useReducedMotion();
   const letters = useMemo(() => 'ASTROINGENIERÍA'.split(''), []);
   const letterRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const boxRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const pgRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const kickerRef = useRef<HTMLParagraphElement>(null);
   const subRef = useRef<HTMLParagraphElement>(null);
   const hintRef = useRef<HTMLSpanElement>(null);
@@ -127,32 +387,46 @@ const Hero = () => {
     let raf = 0;
     let clock = 0;
 
+    // Física propia de la palabra PLAYGROUND: muelles por letra que reaccionan
+    // a impactos de cometas y ondas de choque (eventos mo-pg-hit del canvas).
+    const pgStates = 'PLAYGROUND'.split('').map(() => ({
+      x: 0,
+      y: 0,
+      r: 0,
+      s: 0,
+      vx: 0,
+      vy: 0,
+      vr: 0,
+      vs: 0,
+    }));
+
     // Impacto de proyectiles de la resortera sobre las letras del título:
-    // impulso proporcional a la velocidad del meteoro, con caída por distancia
+    // cada caja atravesada recibe su propio impulso una sola vez por proyectil.
     const onTitleHit = (event: Event) => {
-      const detail = (event as CustomEvent<{ x: number; y: number; vx: number; vy: number }>)
-        .detail;
-      if (!detail) return;
+      const detail = (
+        event as CustomEvent<{
+          hits: { index: number; x: number; y: number }[];
+          vx: number;
+          vy: number;
+          power: number;
+          extras?: boolean;
+        }>
+      ).detail;
+      if (!detail?.hits.length) return;
       const speed = Math.hypot(detail.vx, detail.vy);
       if (speed < 0.5) return;
-      const radius = 150;
       const dirX = detail.vx / speed;
       const dirY = detail.vy / speed;
-      boxRefs.current.forEach((el, index) => {
+      detail.hits.forEach((hit) => {
+        const index = hit.index;
+        const el = boxRefs.current[index];
         if (!el) return;
         const rect = el.getBoundingClientRect();
         const cx = rect.left + rect.width / 2;
         const cy = rect.top + rect.height / 2;
-        // Distancia al RECTANGULO de la letra: un cruce por dentro de la caja
-        // es golpe pleno aunque caiga lejos del centro (cajas de ~200px alto)
-        const dxr = Math.max(rect.left - detail.x, 0, detail.x - rect.right);
-        const dyr = Math.max(rect.top - detail.y, 0, detail.y - rect.bottom);
-        const d = Math.hypot(dxr, dyr);
-        if (d > radius) return;
         const state = states[index];
         if (!state) return;
-        const f = Math.pow(1 - d / radius, 1.5);
-        const kick = Math.min(420, (300 + speed * 10) * f);
+        const kick = Math.min(420, (300 + speed * 10) * (0.75 + detail.power * 0.25));
         // Jitter explosivo: cada letra recibe el golpe desviado al azar y con
         // magnitud propia, para que la hilera estalle en direcciones distintas
         const jitterAng = (Math.random() - 0.5) * 0.7;
@@ -160,18 +434,28 @@ const Hero = () => {
         state.ivx += (dirX * Math.cos(jitterAng) - dirY * Math.sin(jitterAng)) * kick * magMul;
         state.ivy += (dirX * Math.sin(jitterAng) + dirY * Math.cos(jitterAng)) * kick * magMul;
         // Golpe de escala: pulso de tamano que respira y se asienta
-        state.ivs += 2.4 * f;
-        const cross = dirX * ((cy - detail.y) / (d || 1)) - dirY * ((cx - detail.x) / (d || 1));
-        state.ivr += cross * 3.5 * f;
+        state.ivs += 2.4;
+        const d = Math.hypot(cx - hit.x, cy - hit.y) || 1;
+        const cross = dirX * ((cy - hit.y) / d) - dirY * ((cx - hit.x) / d);
+        state.ivr += cross * 3.5;
       });
-      // Bloques de texto (kicker, subtitulo, hints): empujon contenido
+      // Bloques de texto (kicker, subtitulo, hints): empujon contenido. Los
+      // eventos por letra de la onda de choque marcan extras: false salvo el
+      // mas cercano, para no multiplicar el golpe.
+      if (detail.extras === false) return;
       for (const ex of extras) {
         const el = ex.el;
         if (!el) continue;
         const rect = el.getBoundingClientRect();
-        const dxr = Math.max(rect.left - detail.x, 0, detail.x - rect.right);
-        const dyr = Math.max(rect.top - detail.y, 0, detail.y - rect.bottom);
-        const d = Math.hypot(dxr, dyr);
+        const nearest = detail.hits
+          .map((hit) => {
+            const dxr = Math.max(rect.left - hit.x, 0, hit.x - rect.right);
+            const dyr = Math.max(rect.top - hit.y, 0, hit.y - rect.bottom);
+            return { hit, d: Math.hypot(dxr, dyr) };
+          })
+          .sort((a, b) => a.d - b.d)[0];
+        if (!nearest) continue;
+        const { hit, d } = nearest;
         const radiusX = 240;
         if (d > radiusX) continue;
         const cxr = rect.left + rect.width / 2;
@@ -180,11 +464,47 @@ const Hero = () => {
         const kick = Math.min(120, (300 + speed * 10) * 0.45 * f);
         ex.vx += dirX * kick;
         ex.vy += dirY * kick;
-        const cross = dirX * ((cyr - detail.y) / (d || 1)) - dirY * ((cxr - detail.x) / (d || 1));
+        const cross = dirX * ((cyr - hit.y) / (d || 1)) - dirY * ((cxr - hit.x) / (d || 1));
         ex.vr += Math.max(-0.05, Math.min(0.05, cross * 0.9 * f));
       }
     };
     window.addEventListener('mo-title-hit', onTitleHit);
+
+    const onPgHit = (event: Event) => {
+      const detail = (
+        event as CustomEvent<{
+          hits: { index: number; x: number; y: number }[];
+          vx: number;
+          vy: number;
+          power: number;
+        }>
+      ).detail;
+      if (!detail?.hits.length) return;
+      const speed = Math.hypot(detail.vx, detail.vy);
+      if (speed < 0.5) return;
+      const dirX = detail.vx / speed;
+      const dirY = detail.vy / speed;
+      detail.hits.forEach((hit) => {
+        const el = pgRefs.current[hit.index];
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const state = pgStates[hit.index];
+        if (!state) return;
+        // Un poco más contenido que el título: letras pequeñas, golpe seco
+        const kick = Math.min(260, (300 + speed * 10) * (0.7 + detail.power * 0.3)) * 0.72;
+        const jitterAng = (Math.random() - 0.5) * 0.7;
+        const magMul = 0.75 + Math.random() * 0.6;
+        state.vx += (dirX * Math.cos(jitterAng) - dirY * Math.sin(jitterAng)) * kick * magMul;
+        state.vy += (dirY * Math.sin(jitterAng) + dirX * Math.cos(jitterAng)) * kick * magMul;
+        state.vs += 1.5;
+        const d = Math.hypot(cx - hit.x, cy - hit.y) || 1;
+        const cross = dirX * ((cy - hit.y) / d) - dirY * ((cx - hit.x) / d);
+        state.vr += cross * 2.4;
+      });
+    };
+    window.addEventListener('mo-pg-hit', onPgHit);
 
     const onMove = (event: MouseEvent) => {
       const now = performance.now();
@@ -294,6 +614,31 @@ const Hero = () => {
           ex.vr = 0;
         }
       }
+
+      // Letras de PLAYGROUND: subamortiguado como las cajas del título
+      pgStates.forEach((state, index) => {
+        const el = pgRefs.current[index];
+        if (!el) return;
+        state.vx += (-150 * state.x - 7.5 * state.vx) * 0.016;
+        state.vy += (-150 * state.y - 7.5 * state.vy) * 0.016;
+        state.vr += (-150 * state.r - 7.5 * state.vr) * 0.016;
+        state.vs += (-180 * state.s - 8.5 * state.vs) * 0.016;
+        state.x += state.vx * 0.016;
+        state.y += state.vy * 0.016;
+        state.r += state.vr * 0.016;
+        state.s += state.vs * 0.016;
+        const scl = Math.max(0.6, Math.min(1.4, 1 + state.s));
+        if (
+          Math.abs(state.x) > 0.06 ||
+          Math.abs(state.y) > 0.06 ||
+          Math.abs(state.r) > 0.003 ||
+          Math.abs(state.s) > 0.002
+        ) {
+          el.style.transform = `translate(${state.x.toFixed(2)}px, ${state.y.toFixed(2)}px) rotate(${state.r.toFixed(3)}rad) scale(${scl.toFixed(3)})`;
+        } else if (el.style.transform) {
+          el.style.transform = '';
+        }
+      });
       raf = requestAnimationFrame(loop);
     };
 
@@ -301,6 +646,10 @@ const Hero = () => {
     return () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mo-title-hit', onTitleHit);
+      window.removeEventListener('mo-pg-hit', onPgHit);
+      pgRefs.current.forEach((el) => {
+        if (el) el.style.transform = '';
+      });
       cancelAnimationFrame(raf);
     };
   }, [reduced, letters]);
@@ -319,7 +668,15 @@ const Hero = () => {
   };
 
   return (
-    <section className="mo-hero mo-layer" onMouseMove={trackSpotlight}>
+    <section ref={heroRef} className="mo-hero mo-layer" onMouseMove={trackSpotlight}>
+      <button
+        type="button"
+        className="mo-index-button mo-hero-index"
+        onClick={onOpenIndex}
+        data-cursor-label="Índice"
+      >
+        Índice
+      </button>
       <motion.div
         className="mo-hero-bg"
         style={{ backgroundImage: `url(${chapters[1].visual?.heroImage})` }}
@@ -329,6 +686,43 @@ const Hero = () => {
       />
       <div className="mo-hero-scrim" />
       <div className="mo-hero-spot" aria-hidden="true" />
+
+      <motion.button
+        type="button"
+        className={`mo-hero-playground is-${playgroundEntryState}`}
+        onClick={onOpenPlayground}
+        data-cursor-label="Entrar"
+        aria-label="Entrar al Playground"
+        disabled={playgroundEntryState === 'entering' || playgroundEntryState === 'leaving'}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: reduced ? 0 : 1.05, duration: reduced ? 0 : 0.9, ease: EASE_OUT }}
+      >
+          <span className="mo-hero-playground-word" aria-hidden="true">
+            {'PLAYGROUND'.split('').map((letter, index) => (
+              <span
+                key={`${letter}-${index}`}
+                className="mo-pg-letter"
+                style={{ '--i': index } as CSSProperties}
+                ref={(el) => {
+                  pgRefs.current[index] = el;
+                }}
+              >
+                {letter}
+              </span>
+            ))}
+          </span>
+        <span className="mo-hero-playground-help" aria-live="polite">
+          {playgroundEntryState === 'charging'
+            ? 'Mantén W para entrar'
+            : playgroundEntryState === 'entering'
+              ? 'Iniciando Playground'
+              : 'Clic para entrar'}
+        </span>
+        <span className="mo-hero-playground-charge" aria-hidden="true">
+          <i style={{ transform: `scaleX(${playgroundHoldProgress})` }} />
+        </span>
+      </motion.button>
 
       <div className="mo-hero-copy">
         <motion.p
@@ -413,14 +807,20 @@ const Hero = () => {
           animate={{ opacity: 1 }}
           transition={{ delay: reduced ? 0 : 2.8, duration: 1 }}
         >
-          <kbd className="mo-sky-key">wasd</kbd>
-          lluvia estelar
+          <span className="mo-sky-action">
+            <kbd className="mo-sky-key is-pulse">clic mantenido</kbd>
+            <span>supernova</span>
+          </span>
           <i className="mo-sky-sep" aria-hidden="true" />
-          <kbd className="mo-sky-key">clic</kbd>
-          mantén: supernova
+          <span className="mo-sky-action">
+            <kbd className="mo-sky-key is-pulse is-delayed">clic + arrastre</kbd>
+            <span>cometa</span>
+          </span>
           <i className="mo-sky-sep" aria-hidden="true" />
-          <kbd className="mo-sky-key">mayús+clic</kbd>
-          constelación
+          <span className="mo-sky-action">
+            <kbd className="mo-sky-key is-pulse">shift + clic</kbd>
+            <span>constelación</span>
+          </span>
         </motion.span>
       </div>
     </section>
@@ -881,16 +1281,18 @@ const MenuOverlay = ({
       transition={{ duration: 0.3 }}
     >
       <div className="mo-menu-panel">
-        <button
-          ref={closeRef}
-          type="button"
-          className="mo-menu-close"
-          onClick={onClose}
-          data-cursor-label="Cerrar"
-        >
-          ✕ Cerrar índice
-        </button>
-        <p className="mo-kicker">Museo Orbital</p>
+        <header className="mo-menu-head">
+          <p className="mo-kicker">Museo Orbital</p>
+          <button
+            ref={closeRef}
+            type="button"
+            className="mo-menu-close"
+            onClick={onClose}
+            data-cursor-label="Cerrar"
+          >
+            ✕ Cerrar índice
+          </button>
+        </header>
         <h2>Índice del recorrido</h2>
         <ol className="mo-menu-list">
           {chapters.map((chapter, index) => (
@@ -952,19 +1354,101 @@ const MenuOverlay = ({
 
 export default function MuseoOrbital() {
   const reduced = useReducedMotion();
+  usePageTextPhysics(Boolean(reduced));
   const rootRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
   const [active, setActive] = useState<AstroConcept | null>(() => conceptFromHash());
   const [activeHallId, setActiveHallId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [vitrineIds, setVitrineIds] = useState<string[]>(loadVitrine);
   const [flight, setFlight] = useState(false);
+  const [eclipsedChapterId, setEclipsedChapterId] = useState<string | null>(null);
+  const [playground, setPlayground] = useState(false);
+  const [playgroundEntryState, setPlaygroundEntryState] = useState<PlaygroundEntryState>('idle');
+  const [playgroundMusicMuted, setPlaygroundMusicMuted] = useState(loadPlaygroundMusicMuted);
+  const [playgroundMusicBlocked, setPlaygroundMusicBlocked] = useState(false);
+  const [playgroundHoldProgress, setPlaygroundHoldProgress] = useState(0);
+  const [playgroundRunId, setPlaygroundRunId] = useState(0);
+  const [playgroundProgress, setPlaygroundProgress] = useState<PlaygroundProgress>(
+    INITIAL_PLAYGROUND_PROGRESS,
+  );
+  const [playgroundElapsedMs, setPlaygroundElapsedMs] = useState(0);
+  const [playgroundBestTimes, setPlaygroundBestTimes] = useState<PlaygroundBestTime[]>(
+    loadPlaygroundBestTimes,
+  );
+  const [playgroundResult, setPlaygroundResult] = useState<PlaygroundResult | null>(null);
+  const playgroundStartedAt = useRef<number | null>(null);
+  const playgroundPhase = useRef<PlaygroundProgress['phase']>('active');
+  const reducedPlaygroundRun = useRef(false);
   const flightTimer = useRef(0);
+  const playgroundTransitionTimer = useRef(0);
+  const playgroundEntryStateRef = useRef<PlaygroundEntryState>('idle');
+  const playgroundActiveRef = useRef(false);
+  const playgroundScrollTop = useRef(0);
+  const playgroundAudioRef = useRef<HTMLAudioElement>(null);
+  const playgroundAudioFadeFrame = useRef(0);
+  const playgroundAudioRequestId = useRef(0);
+  const railRef = useRef<HTMLElement>(null);
+  const railStarRef = useRef<HTMLElement>(null);
+  const railNodeRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const museumKeyboardVelocityRef = useRef(0);
 
   useScrollLock(Boolean(active));
+  useScrollLock(playground);
 
   const { scrollYProgress } = useScroll({ container: rootRef });
   const railScale = useSpring(scrollYProgress, { stiffness: 90, damping: 24, mass: 0.4 });
   const railStarTop = useTransform(railScale, [0, 1], ['2%', '98%']);
+
+  const syncRailEclipse = useCallback((progress: number) => {
+    const rail = railRef.current;
+    const star = railStarRef.current;
+    if (!rail || !star || rail.offsetHeight === 0) {
+      setEclipsedChapterId(null);
+      return;
+    }
+
+    const starCenter = rail.offsetHeight * (0.02 + clamp(progress, 0, 1) * 0.96);
+    const starDiameter = star.offsetHeight || 15;
+    let nextChapterId: string | null = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    railNodeRefs.current.forEach((node, index) => {
+      if (!node) return;
+      const nodeCenter = node.offsetTop + node.offsetHeight / 2;
+      const distance = Math.abs(starCenter - nodeCenter);
+      // El eclipse comienza cuando el centro del disco menor entra en el mayor:
+      // evita encender la corona con una sala activa pero todavía distante.
+      const collisionRadius = Math.min(starDiameter, node.offsetHeight) / 2;
+      if (distance <= collisionRadius && distance < nearestDistance) {
+        nearestDistance = distance;
+        nextChapterId = chapters[index]?.id ?? null;
+      }
+    });
+
+    setEclipsedChapterId((current) => (current === nextChapterId ? current : nextChapterId));
+  }, []);
+
+  useMotionValueEvent(railScale, 'change', syncRailEclipse);
+
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail) return;
+
+    const sync = () => syncRailEclipse(railScale.get());
+    const resizeObserver = new ResizeObserver(sync);
+    resizeObserver.observe(rail);
+    railNodeRefs.current.forEach((node) => {
+      if (node) resizeObserver.observe(node);
+    });
+    const frame = requestAnimationFrame(sync);
+    window.addEventListener('resize', sync);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('resize', sync);
+      resizeObserver.disconnect();
+    };
+  }, [railScale, syncRailEclipse]);
 
   const archiveSources = useMemo(buildArchive, []);
 
@@ -975,7 +1459,471 @@ export default function MuseoOrbital() {
     flightTimer.current = window.setTimeout(() => setFlight(false), 460);
   };
 
-  useEffect(() => () => window.clearTimeout(flightTimer.current), []);
+  const fadePlaygroundMusic = useCallback(
+    (targetVolume: number, durationMs: number, pauseAfter = false) => {
+      const audio = playgroundAudioRef.current;
+      if (!audio) return;
+
+      cancelAnimationFrame(playgroundAudioFadeFrame.current);
+      const initialVolume = audio.volume;
+      const startedAt = performance.now();
+      const target = clamp(targetVolume, 0, 1);
+
+      const step = (now: number) => {
+        const progress = durationMs <= 0 ? 1 : clamp((now - startedAt) / durationMs, 0, 1);
+        const eased = progress * progress * (3 - 2 * progress);
+        audio.volume = initialVolume + (target - initialVolume) * eased;
+
+        if (progress < 1) {
+          playgroundAudioFadeFrame.current = requestAnimationFrame(step);
+          return;
+        }
+
+        playgroundAudioFadeFrame.current = 0;
+        if (pauseAfter) audio.pause();
+      };
+
+      playgroundAudioFadeFrame.current = requestAnimationFrame(step);
+    },
+    [],
+  );
+
+  const requestPlaygroundMusic = useCallback(
+    (targetVolume: number, fadeDurationMs: number) => {
+      const audio = playgroundAudioRef.current;
+      if (!audio) return;
+
+      const requestId = playgroundAudioRequestId.current + 1;
+      playgroundAudioRequestId.current = requestId;
+      setPlaygroundMusicBlocked(false);
+
+      const onStarted = () => {
+        if (playgroundAudioRequestId.current !== requestId) {
+          audio.pause();
+          return;
+        }
+        setPlaygroundMusicBlocked(false);
+        fadePlaygroundMusic(targetVolume, fadeDurationMs);
+      };
+      const onBlocked = () => {
+        if (playgroundAudioRequestId.current !== requestId) return;
+        audio.pause();
+        audio.volume = 0;
+        setPlaygroundMusicBlocked(true);
+      };
+
+      const playback = audio.play();
+      if (playback) playback.then(onStarted).catch(onBlocked);
+      else onStarted();
+    },
+    [fadePlaygroundMusic],
+  );
+
+  const startPlaygroundMusic = useCallback(() => {
+    const audio = playgroundAudioRef.current;
+    if (!audio) return;
+    const wasPaused = audio.paused;
+    cancelAnimationFrame(playgroundAudioFadeFrame.current);
+    if (wasPaused) audio.volume = 0;
+    requestPlaygroundMusic(
+      playgroundMusicMuted ? 0 : PLAYGROUND_MUSIC_VOLUME,
+      PLAYGROUND_MUSIC_ENTER_FADE_MS,
+    );
+  }, [playgroundMusicMuted, requestPlaygroundMusic]);
+
+  const stopPlaygroundMusic = useCallback(() => {
+    playgroundAudioRequestId.current += 1;
+    fadePlaygroundMusic(0, PLAYGROUND_MUSIC_LEAVE_FADE_MS, true);
+  }, [fadePlaygroundMusic]);
+
+  const togglePlaygroundMusic = useCallback(() => {
+    const audio = playgroundAudioRef.current;
+    if (!audio) return;
+
+    if (!playgroundMusicMuted && !playgroundMusicBlocked) {
+      playgroundAudioRequestId.current += 1;
+      setPlaygroundMusicMuted(true);
+      fadePlaygroundMusic(0, PLAYGROUND_MUSIC_TOGGLE_FADE_MS);
+      return;
+    }
+
+    setPlaygroundMusicMuted(false);
+    if (audio.paused || playgroundMusicBlocked) {
+      audio.volume = 0;
+      requestPlaygroundMusic(PLAYGROUND_MUSIC_VOLUME, PLAYGROUND_MUSIC_TOGGLE_FADE_MS);
+    } else {
+      fadePlaygroundMusic(PLAYGROUND_MUSIC_VOLUME, PLAYGROUND_MUSIC_TOGGLE_FADE_MS);
+    }
+  }, [
+    fadePlaygroundMusic,
+    playgroundMusicBlocked,
+    playgroundMusicMuted,
+    requestPlaygroundMusic,
+  ]);
+
+  const preparePlaygroundScene = useCallback(() => {
+    const isReducedRun = Boolean(reduced);
+    reducedPlaygroundRun.current = isReducedRun;
+    playgroundStartedAt.current = null;
+    playgroundPhase.current = isReducedRun ? 'complete' : 'active';
+    setPlaygroundElapsedMs(0);
+    setPlaygroundResult(null);
+    setPlaygroundRunId((current) => current + 1);
+    setPlaygroundProgress(
+      isReducedRun
+        ? { destroyed: PLAYGROUND_WORD.length, total: PLAYGROUND_WORD.length, phase: 'complete' }
+        : INITIAL_PLAYGROUND_PROGRESS,
+    );
+  }, [reduced]);
+
+  const startPlaygroundRun = useCallback(() => {
+    playgroundStartedAt.current = reducedPlaygroundRun.current ? null : performance.now();
+  }, []);
+
+  const activatePlayground = useCallback(() => {
+    playgroundActiveRef.current = true;
+    startPlaygroundRun();
+    setPlayground(true);
+  }, [startPlaygroundRun]);
+
+  const resetPlayground = useCallback(() => {
+    playgroundActiveRef.current = false;
+    playgroundStartedAt.current = null;
+    playgroundPhase.current = 'active';
+    setPlayground(false);
+    setPlaygroundProgress(INITIAL_PLAYGROUND_PROGRESS);
+    setPlaygroundElapsedMs(0);
+    setPlaygroundResult(null);
+  }, []);
+
+  const beginPlaygroundTransition = useCallback(() => {
+    if (
+      playgroundActiveRef.current ||
+      playground ||
+      !['idle', 'charging'].includes(playgroundEntryStateRef.current)
+    ) {
+      return;
+    }
+
+    const root = rootRef.current;
+    if (root) playgroundScrollTop.current = root.scrollTop;
+    window.clearTimeout(playgroundTransitionTimer.current);
+    playgroundEntryStateRef.current = 'entering';
+    setPlaygroundEntryState('entering');
+    setPlaygroundHoldProgress(0);
+    preparePlaygroundScene();
+    window.dispatchEvent(new CustomEvent('mo-cursor-reset'));
+    startPlaygroundMusic();
+
+    if (reduced) {
+      activatePlayground();
+      playgroundEntryStateRef.current = 'idle';
+      setPlaygroundEntryState('idle');
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('mo-warp', {
+        detail: {
+          strength: 0,
+          direction: -1,
+          durationMs: PLAYGROUND_ENTER_MS,
+          travelSpeed: PLAYGROUND_ENTER_TRAVEL_SPEED,
+        },
+      }),
+    );
+    playgroundTransitionTimer.current = window.setTimeout(() => {
+      activatePlayground();
+      playgroundEntryStateRef.current = 'idle';
+      setPlaygroundEntryState('idle');
+    }, PLAYGROUND_ENTER_MS);
+  }, [activatePlayground, playground, preparePlaygroundScene, reduced, startPlaygroundMusic]);
+
+  const leavePlayground = useCallback(() => {
+    if (!playground || playgroundEntryStateRef.current !== 'idle') return;
+
+    window.clearTimeout(playgroundTransitionTimer.current);
+    playgroundEntryStateRef.current = 'leaving';
+    setPlaygroundEntryState('leaving');
+    setPlaygroundHoldProgress(0);
+    playgroundStartedAt.current = null;
+    stopPlaygroundMusic();
+
+    const finishLeaving = () => {
+      resetPlayground();
+      const root = rootRef.current;
+      if (root) root.scrollTop = playgroundScrollTop.current;
+    };
+
+    if (reduced) {
+      finishLeaving();
+      playgroundEntryStateRef.current = 'idle';
+      setPlaygroundEntryState('idle');
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('mo-warp', {
+        detail: {
+          strength: 0,
+          direction: 1,
+          durationMs: PLAYGROUND_LEAVE_MS,
+          travelSpeed: PLAYGROUND_ENTER_TRAVEL_SPEED,
+        },
+      }),
+    );
+    playgroundTransitionTimer.current = window.setTimeout(() => {
+      finishLeaving();
+      playgroundEntryStateRef.current = 'idle';
+      setPlaygroundEntryState('idle');
+    }, PLAYGROUND_LEAVE_MS);
+  }, [playground, reduced, resetPlayground, stopPlaygroundMusic]);
+
+  const replayPlayground = useCallback(() => {
+    preparePlaygroundScene();
+    startPlaygroundRun();
+  }, [preparePlaygroundScene, startPlaygroundRun]);
+
+  const handlePlaygroundProgress = useCallback((nextProgress: PlaygroundProgress) => {
+    if (nextProgress.phase !== 'complete') {
+      if (playgroundPhase.current === 'active') {
+        setPlaygroundProgress({ ...nextProgress, phase: 'active' });
+      }
+      return;
+    }
+
+    if (playgroundPhase.current !== 'active') return;
+    const now = performance.now();
+    const startedAt = playgroundStartedAt.current;
+    if (startedAt === null || reducedPlaygroundRun.current) return;
+    const durationMs = Math.max(1, now - startedAt);
+
+    playgroundPhase.current = 'complete';
+    playgroundStartedAt.current = null;
+    setPlaygroundProgress(nextProgress);
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const entry: PlaygroundBestTime = {
+      id,
+      durationMs,
+      completedAt: new Date().toISOString(),
+    };
+    setPlaygroundElapsedMs(durationMs);
+    setPlaygroundResult({ id, durationMs });
+    setPlaygroundBestTimes((current) =>
+      [...current, entry]
+        .sort((a, b) => a.durationMs - b.durationMs)
+        .slice(0, PLAYGROUND_TIMES_CAP),
+    );
+  }, []);
+
+  // W/S recorren el museo con inercia. Al llegar arriba, W sostenida confirma
+  // la entrada al Playground sin interferir con el pilotaje WASD del minijuego.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    let raf = 0;
+    let previous = performance.now();
+    let velocity = 0;
+    let holdStartedAt: number | null = null;
+    let lastPublishedProgress = -1;
+    const held = { w: false, s: false };
+    const modifiers = { alt: false, ctrl: false, meta: false, shift: false };
+
+    const isEditable = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false;
+      return (
+        target.isContentEditable ||
+        target.matches('input, textarea, select, [role="textbox"], [contenteditable="true"]')
+      );
+    };
+
+    const publishIdle = () => {
+      holdStartedAt = null;
+      lastPublishedProgress = -1;
+      setPlaygroundHoldProgress(0);
+      if (playgroundEntryStateRef.current === 'charging') {
+        playgroundEntryStateRef.current = 'idle';
+        setPlaygroundEntryState('idle');
+      }
+    };
+
+    const clearInput = () => {
+      held.w = false;
+      held.s = false;
+      velocity = 0;
+      museumKeyboardVelocityRef.current = 0;
+      publishIdle();
+    };
+
+    const updateModifiers = (event: KeyboardEvent) => {
+      modifiers.alt = event.altKey;
+      modifiers.ctrl = event.ctrlKey;
+      modifiers.meta = event.metaKey;
+      modifiers.shift = event.shiftKey;
+    };
+
+    const blocked = () =>
+      playground ||
+      Boolean(active) ||
+      menuOpen ||
+      !['idle', 'charging'].includes(playgroundEntryStateRef.current) ||
+      isEditable(document.activeElement);
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      updateModifiers(event);
+      if (event.key === 'Escape') {
+        clearInput();
+        return;
+      }
+      if (isEditable(event.target) || blocked()) return;
+
+      if (event.code.startsWith('Arrow')) {
+        velocity = 0;
+        museumKeyboardVelocityRef.current = 0;
+        publishIdle();
+        return;
+      }
+
+      if (event.code === 'KeyW' && !event.repeat) held.w = true;
+      if (event.code === 'KeyS' && !event.repeat) {
+        held.s = true;
+        publishIdle();
+      }
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) publishIdle();
+    };
+
+    const onKeyUp = (event: KeyboardEvent) => {
+      updateModifiers(event);
+      if (event.code === 'KeyW') {
+        held.w = false;
+        publishIdle();
+      }
+      if (event.code === 'KeyS') held.s = false;
+      if (event.code.startsWith('Shift') || event.code.startsWith('Control') || event.code.startsWith('Alt') || event.code.startsWith('Meta')) {
+        publishIdle();
+      }
+    };
+
+    const onManualScroll = () => {
+      velocity = 0;
+      publishIdle();
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) clearInput();
+    };
+
+    const loop = (now: number) => {
+      const dt = Math.min(0.032, Math.max(0, (now - previous) / 1000));
+      previous = now;
+
+      if (blocked()) {
+        velocity = 0;
+        museumKeyboardVelocityRef.current = 0;
+        if (playgroundEntryStateRef.current === 'charging') publishIdle();
+      } else {
+        const direction = Number(held.s) - Number(held.w);
+        if (reduced) {
+          velocity = direction * 1_920;
+        } else if (direction !== 0) {
+          velocity += direction * 4_800 * dt;
+          velocity = Math.max(-2_400, Math.min(2_400, velocity));
+        } else {
+          velocity *= Math.exp(-7.5 * dt);
+          if (Math.abs(velocity) < 1) velocity = 0;
+        }
+
+        if (velocity !== 0) root.scrollTop += velocity * dt;
+
+        const noModifiers = !modifiers.alt && !modifiers.ctrl && !modifiers.meta && !modifiers.shift;
+        if (held.w && !held.s && noModifiers && root.scrollTop <= 2) {
+          root.scrollTop = 0;
+          velocity = 0;
+          if (holdStartedAt === null) {
+            holdStartedAt = now;
+            playgroundEntryStateRef.current = 'charging';
+            setPlaygroundEntryState('charging');
+          }
+          const progress = Math.min(1, (now - holdStartedAt) / PLAYGROUND_HOLD_MS);
+          if (progress === 1 || Math.abs(progress - lastPublishedProgress) >= 0.01) {
+            lastPublishedProgress = progress;
+            setPlaygroundHoldProgress(progress);
+          }
+          if (progress >= 1) beginPlaygroundTransition();
+        } else if (holdStartedAt !== null || playgroundEntryStateRef.current === 'charging') {
+          publishIdle();
+        }
+
+        const maxScroll = Math.max(0, root.scrollHeight - root.clientHeight);
+        if ((root.scrollTop <= 0 && velocity < 0) || (root.scrollTop >= maxScroll && velocity > 0)) {
+          velocity = 0;
+        }
+        museumKeyboardVelocityRef.current = velocity;
+      }
+
+      raf = requestAnimationFrame(loop);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', clearInput);
+    document.addEventListener('visibilitychange', onVisibility);
+    root.addEventListener('wheel', onManualScroll, { passive: true });
+    root.addEventListener('touchstart', onManualScroll, { passive: true });
+    raf = requestAnimationFrame(loop);
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', clearInput);
+      document.removeEventListener('visibilitychange', onVisibility);
+      root.removeEventListener('wheel', onManualScroll);
+      root.removeEventListener('touchstart', onManualScroll);
+      cancelAnimationFrame(raf);
+      clearInput();
+    };
+  }, [active, beginPlaygroundTransition, menuOpen, playground, reduced]);
+
+  // Escape sale del playground y descarta cualquier intento en curso.
+  useEffect(() => {
+    if (!playground) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') leavePlayground();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [leavePlayground, playground]);
+
+  // El reloj monotónico sigue contabilizando el intervalo aunque la pestaña se
+  // oculte y se congela únicamente al completar todos los objetivos.
+  useEffect(() => {
+    if (!playground || playgroundProgress.phase !== 'active' || reduced) return;
+    const tick = () => {
+      const startedAt = playgroundStartedAt.current;
+      if (startedAt === null || playgroundPhase.current !== 'active') return;
+      const elapsedMs = Math.max(0, performance.now() - startedAt);
+      setPlaygroundElapsedMs(elapsedMs);
+    };
+    tick();
+    const timer = window.setInterval(tick, 100);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [playground, playgroundProgress.phase, playgroundRunId, reduced]);
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(flightTimer.current);
+      window.clearTimeout(playgroundTransitionTimer.current);
+      cancelAnimationFrame(playgroundAudioFadeFrame.current);
+      playgroundAudioRequestId.current += 1;
+      playgroundAudioRef.current?.pause();
+    },
+    [],
+  );
 
   useEffect(() => {
     try {
@@ -984,6 +1932,22 @@ export default function MuseoOrbital() {
       /* almacenamiento no disponible */
     }
   }, [vitrineIds]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(PLAYGROUND_TIMES_KEY, JSON.stringify(playgroundBestTimes));
+    } catch {
+      /* almacenamiento no disponible */
+    }
+  }, [playgroundBestTimes]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(PLAYGROUND_MUSIC_MUTED_KEY, String(playgroundMusicMuted));
+    } catch {
+      /* almacenamiento no disponible */
+    }
+  }, [playgroundMusicMuted]);
 
   useEffect(() => {
     const hash = active ? `#obra-${active.id}` : '';
@@ -1175,33 +2139,263 @@ export default function MuseoOrbital() {
 
   let plateOffset = 0;
   const activeHall = chapters.find((chapter) => chapter.id === activeHallId);
+  const playgroundArriving = playgroundEntryState === 'entering';
+  const playgroundDeparting = playgroundEntryState === 'leaving';
+  const playgroundTransitioning = playgroundArriving || playgroundDeparting;
+  const playgroundScene = playgroundArriving
+    ? 'arriving'
+    : playgroundDeparting
+      ? 'departing'
+      : playground
+        ? 'active'
+        : 'museum';
 
   return (
     <div
-      className="mo-root"
+      className={`mo-root${playground ? ' is-playground' : ''}${
+        playgroundEntryState === 'entering' ? ' is-entering-playground' : ''
+      }${playgroundEntryState === 'leaving' ? ' is-leaving-playground' : ''}`}
       ref={rootRef}
+      style={
+        {
+          '--mo-playground-arrival-delay': `${PLAYGROUND_ARRIVAL_START_MS}ms`,
+          '--mo-playground-arrival-duration': `${PLAYGROUND_ARRIVAL_END_MS - PLAYGROUND_ARRIVAL_START_MS}ms`,
+          '--mo-museum-return-delay': `${PLAYGROUND_MUSEUM_RETURN_START_MS}ms`,
+          '--mo-museum-return-duration': `${PLAYGROUND_LEAVE_MS - PLAYGROUND_MUSEUM_RETURN_START_MS}ms`,
+        } as CSSProperties
+      }
       onClickCapture={(event) => {
         // Con Mayús presionado se dibujan constelaciones: ningún clic navega
         if (event.shiftKey) {
+          const target = event.target as HTMLElement;
+          if (target.classList.contains('mo-studio')) return;
           event.preventDefault();
           event.stopPropagation();
         }
       }}
     >
-      <StarfieldCanvas scrollRef={rootRef} dim={Boolean(active) || menuOpen} />
+      <StarfieldCanvas
+        scrollRef={rootRef}
+        museumKeyboardVelocityRef={museumKeyboardVelocityRef}
+        dim={(Boolean(active) || menuOpen) && !playground}
+        playground={playground}
+        playgroundScene={playgroundScene}
+        playgroundRunId={playgroundRunId}
+        playgroundPhase={playgroundProgress.phase}
+        onPlaygroundProgress={handlePlaygroundProgress}
+      />
       <Grain opacity={0.06} blend="screen" zIndex={40} />
       <MuseumCursor />
+      <audio
+        ref={playgroundAudioRef}
+        src={`${import.meta.env.BASE_URL}music/in-the-pool.mp3`}
+        preload="auto"
+        loop
+        aria-hidden="true"
+      />
 
-      <button
-        type="button"
-        className="mo-index-button"
-        onClick={() => setMenuOpen(true)}
-        data-cursor-label="Índice"
-      >
-        Índice
-      </button>
+      <AnimatePresence>
+        {(playgroundEntryState === 'entering' || playgroundEntryState === 'leaving') && (
+          <motion.div
+            key={playgroundEntryState}
+            className={`mo-playground-transition is-${playgroundEntryState}`}
+            aria-hidden="true"
+            initial={{ opacity: playgroundEntryState === 'entering' ? 0 : 1 }}
+            animate={
+              playgroundEntryState === 'entering'
+                ? { opacity: [0, 1, 1] }
+                : { opacity: [1, 1, 0] }
+            }
+            exit={{ opacity: 0, transition: { duration: 0 } }}
+            transition={{
+              duration:
+                playgroundEntryState === 'entering'
+                  ? PLAYGROUND_ENTER_MS / 1000
+                  : PLAYGROUND_LEAVE_MS / 1000,
+              times:
+                playgroundEntryState === 'entering'
+                  ? [0, 0.12, 1]
+                  : [0, PLAYGROUND_MUSEUM_RETURN_START_MS / PLAYGROUND_LEAVE_MS, 1],
+              ease: 'easeInOut',
+            }}
+          />
+        )}
+      </AnimatePresence>
 
-      <Hero />
+      {(playground || playgroundTransitioning) && (
+        <div
+          className={`mo-playground-ui${playgroundArriving ? ' is-arriving' : ''}${
+            playgroundDeparting ? ' is-departing' : ''
+          }${
+            playgroundProgress.phase !== 'active' ? ' is-finished' : ''
+          }`}
+          aria-hidden={playgroundTransitioning || undefined}
+          data-playground-scene={playgroundScene}
+          data-playground-phase={playgroundProgress.phase}
+          data-playground-destroyed={playgroundProgress.destroyed}
+        >
+          <button
+            type="button"
+            className="mo-playground-exit mo-playground-exit-corner"
+            onClick={(event) => {
+              event.currentTarget.blur();
+              leavePlayground();
+            }}
+            disabled={playgroundTransitioning}
+            data-cursor-label="Volver"
+          >
+            ← Volver al museo
+          </button>
+          <button
+            type="button"
+            className={`mo-playground-audio${playgroundMusicBlocked ? ' is-blocked' : ''}`}
+            onClick={(event) => {
+              event.currentTarget.blur();
+              togglePlaygroundMusic();
+            }}
+            disabled={playgroundTransitioning}
+            aria-label={
+              playgroundMusicMuted || playgroundMusicBlocked
+                ? 'Activar música del playground'
+                : 'Silenciar música del playground'
+            }
+            aria-pressed={playgroundMusicMuted}
+            title={playgroundMusicBlocked ? 'Activar música' : undefined}
+            data-cursor-label={
+              playgroundMusicMuted || playgroundMusicBlocked ? 'Activar música' : 'Silenciar música'
+            }
+          >
+            {playgroundMusicMuted || playgroundMusicBlocked ? (
+              <VolumeX aria-hidden="true" />
+            ) : (
+              <Volume2 aria-hidden="true" />
+            )}
+          </button>
+          <div className="mo-playground-status">
+            <div>
+              <span>Tiempo</span>
+              <strong>
+                <time dateTime={`PT${Math.floor(playgroundElapsedMs / 1000)}S`}>
+                  {formatPlaygroundElapsed(playgroundElapsedMs)}
+                </time>
+              </strong>
+            </div>
+          </div>
+
+          <AnimatePresence>
+            {playgroundProgress.phase !== 'active' && (
+              <motion.section
+                className={`mo-playground-complete is-${playgroundProgress.phase}`}
+                initial={reduced ? false : { opacity: 0, scale: 0.88 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.94 }}
+                transition={{ duration: reduced ? 0 : 0.8, ease: EASE_OUT }}
+                aria-labelledby="mo-playground-result-title"
+                role="dialog"
+                aria-modal="true"
+              >
+                <span className="mo-playground-complete-kicker">Misión completada</span>
+                <h2 id="mo-playground-result-title" aria-label={PLAYGROUND_WORD}>
+                  {PLAYGROUND_WORD.split('').map((letter, index) => (
+                    <motion.span
+                      aria-hidden="true"
+                      key={`${letter}-${index}`}
+                      initial={reduced ? false : { opacity: 0, y: 44, rotate: index % 2 ? -8 : 8 }}
+                      animate={{ opacity: 1, y: 0, rotate: 0 }}
+                      transition={{
+                        delay: reduced ? 0 : 0.12 + index * 0.045,
+                        duration: reduced ? 0 : 0.68,
+                        ease: EASE_OUT,
+                      }}
+                    >
+                      {letter}
+                    </motion.span>
+                  ))}
+                </h2>
+                <p>Las piezas dispersas vuelven a ser una sola idea.</p>
+
+                {playgroundResult && (
+                  <div className="mo-playground-current-time">
+                    <span>Tu tiempo</span>
+                    <strong>{formatPlaygroundTime(playgroundResult.durationMs)}</strong>
+                  </div>
+                )}
+
+                <div className="mo-playground-ranking" aria-label="Tus diez mejores tiempos">
+                  <span className="mo-playground-ranking-title">Tus mejores tiempos</span>
+                  {playgroundBestTimes.length > 0 ? (
+                    <ol>
+                      {playgroundBestTimes.map((entry, index) => (
+                        <li
+                          key={entry.id}
+                          className={entry.id === playgroundResult?.id ? 'is-current' : undefined}
+                        >
+                          <span>{String(index + 1).padStart(2, '0')}</span>
+                          <strong>{formatPlaygroundTime(entry.durationMs)}</strong>
+                          {entry.id === playgroundResult?.id && <em>nuevo</em>}
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p>Completa una misión para estrenar el registro.</p>
+                  )}
+                </div>
+
+                <div className="mo-playground-result-actions">
+                  <button
+                    type="button"
+                    className="mo-playground-replay"
+                    onClick={(event) => {
+                      event.currentTarget.blur();
+                      replayPlayground();
+                    }}
+                    data-cursor-label="Repetir"
+                  >
+                    Jugar de nuevo
+                  </button>
+                </div>
+              </motion.section>
+            )}
+          </AnimatePresence>
+
+          <div className="mo-playground-controls">
+            <p className="mo-playground-hint">
+              <span className="mo-playground-hint-desktop">
+                <span className="mo-pg-action">
+                  <kbd className="mo-pg-key">Espacio</kbd>Pulsar
+                </span>
+                <i className="mo-pg-sep" aria-hidden="true" />
+                <span className="mo-pg-action">
+                  <kbd className="mo-pg-key">Clic mantenido</kbd>Supernova
+                </span>
+                <i className="mo-pg-sep" aria-hidden="true" />
+                <span className="mo-pg-action">
+                  <kbd className="mo-pg-key">Clic + Arrastre</kbd>Cometa
+                </span>
+                <i className="mo-pg-sep" aria-hidden="true" />
+                <span className="mo-pg-action">
+                  <kbd className="mo-pg-key">Shift + WASD</kbd>Speed Boost
+                </span>
+                <i className="mo-pg-sep" aria-hidden="true" />
+                <span className="mo-pg-action">
+                  <kbd className="mo-pg-key">Shift + Clic</kbd>Constelación
+                </span>
+              </span>
+              <span className="mo-playground-hint-touch">
+                COMETA: TOCA Y ARRASTRA PARA LANZAR
+              </span>
+            </p>
+          </div>
+        </div>
+      )}
+
+      <Hero
+        heroRef={heroRef}
+        onOpenIndex={() => setMenuOpen(true)}
+        onOpenPlayground={beginPlaygroundTransition}
+        playgroundHoldProgress={playgroundHoldProgress}
+        playgroundEntryState={playgroundEntryState}
+      />
       <Marquee />
       <HallIndex activeId={activeHallId} />
 
@@ -1239,22 +2433,26 @@ export default function MuseoOrbital() {
         </p>
       </footer>
 
-      <aside className="mo-rail" aria-label="Progreso del recorrido">
+      <aside ref={railRef} className="mo-rail" aria-label="Progreso del recorrido">
         <div className="mo-rail-track">
           <motion.div className="mo-rail-fill" style={{ scaleY: railScale }} />
           <motion.i
+            ref={railStarRef}
             className="mo-rail-star"
             style={{ top: railStarTop }}
             aria-hidden="true"
           />
         </div>
-        {chapters.map((chapter) => (
+        {chapters.map((chapter, index) => (
           <button
+            ref={(node) => {
+              railNodeRefs.current[index] = node;
+            }}
             key={chapter.id}
             type="button"
             title={chapter.title}
-            className={activeHallId === chapter.id ? 'is-active' : ''}
-            style={{ '--accent': chapter.color } as CSSProperties}
+            className={eclipsedChapterId === chapter.id ? 'is-eclipsed' : ''}
+            aria-current={activeHallId === chapter.id ? 'step' : undefined}
             onClick={() => scrollToId(`sala-${chapter.id}`)}
           />
         ))}
@@ -1269,30 +2467,6 @@ export default function MuseoOrbital() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {flight && (
-          <motion.div
-            key="bar-top"
-            className="mo-letterbox is-top"
-            initial={{ y: '-100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '-100%' }}
-            transition={{ duration: 0.25, ease: EASE_OUT }}
-          />
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {flight && (
-          <motion.div
-            key="bar-bottom"
-            className="mo-letterbox is-bottom"
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ duration: 0.25, ease: EASE_OUT }}
-          />
-        )}
-      </AnimatePresence>
       <AnimatePresence>
         {flight && (
           <motion.div

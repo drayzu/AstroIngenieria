@@ -57,6 +57,16 @@ export const MuseumCursor = () => {
       lastLabel = label;
     };
 
+    const resetLabel = () => {
+      isActive = false;
+      wasActive = false;
+      lastLabel = '';
+      if (!cursorRef.current) return;
+      cursorRef.current.classList.remove('is-active', 'has-label');
+      const text = cursorRef.current.querySelector('span');
+      if (text) text.textContent = '';
+    };
+
     // Interpolación angular por el arco corto: evita giros bruscos en ±π
     const lerpAngle = (a: number, b: number, t: number) => {
       let d = b - a;
@@ -88,7 +98,7 @@ export const MuseumCursor = () => {
           '--s',
           ((isActive ? 1.28 : 1) + Math.min(0.55, speed / 2200)).toFixed(3),
         );
-        cursorRef.current.style.opacity = (0.6 + Math.min(0.4, speed / 1600)).toFixed(3);
+        cursorRef.current.style.opacity = (0.78 + Math.min(0.22, speed / 1600)).toFixed(3);
         cursorRef.current.style.setProperty('--tail-len', `${tailLen.toFixed(1)}px`);
         cursorRef.current.style.setProperty('--tail-angle', `${tailAngle.toFixed(3)}rad`);
       }
@@ -97,10 +107,12 @@ export const MuseumCursor = () => {
     };
 
     window.addEventListener('mousemove', move, { passive: true });
+    window.addEventListener('mo-cursor-reset', resetLabel);
     raf = requestAnimationFrame(loop);
 
     return () => {
       window.removeEventListener('mousemove', move);
+      window.removeEventListener('mo-cursor-reset', resetLabel);
       cancelAnimationFrame(raf);
     };
   }, [enabled]);

@@ -61,6 +61,7 @@ export const StudioRoom = ({
   onSelect,
 }: StudioProps) => {
   const panelRef = useRef<HTMLDivElement>(null);
+  const backdropPressRef = useRef<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const zoomerRef = useRef<HTMLDivElement>(null);
   const figureRef = useRef<HTMLDivElement>(null);
@@ -191,6 +192,18 @@ export const StudioRoom = ({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
+      onPointerDown={(event) => {
+        backdropPressRef.current =
+          event.target === event.currentTarget ? event.pointerId : null;
+      }}
+      onPointerUp={(event) => {
+        const startedOnBackdrop = backdropPressRef.current === event.pointerId;
+        backdropPressRef.current = null;
+        if (startedOnBackdrop && event.target === event.currentTarget) onClose();
+      }}
+      onPointerCancel={(event) => {
+        if (backdropPressRef.current === event.pointerId) backdropPressRef.current = null;
+      }}
     >
       <div
         className="mo-studio-panel"
