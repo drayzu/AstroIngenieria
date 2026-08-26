@@ -1,7 +1,9 @@
 # AstroIngeniería — Museo Orbital
 
 <p align="center">
-  <a href="https://drayzu.github.io/AstroIngenieria/"><img alt="✦ ENTRAR AL MUSEO" src="https://img.shields.io/badge/%E2%9C%A6%20ENTRAR%20AL%20MUSEO-E8B44A?style=for-the-badge"></a>
+  <a href="https://drayzu.github.io/AstroIngenieria/">
+    <img alt="✦ ENTRAR AL MUSEO — Museo Orbital en línea" src="public/readme/entrar-al-museo.svg">
+  </a>
 </p>
 
 Durante casi toda la historia del cosmos, las estrellas nacieron y murieron sin que nada pudiera preguntarse si podían ser distintas. De ese mismo universo surgió una inteligencia capaz de comprender sus leyes y, ahora, de crear nuevas inteligencias.
