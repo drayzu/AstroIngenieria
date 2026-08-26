@@ -1,6 +1,8 @@
 # AstroIngeniería — Museo Orbital
 
-> ✦ **[ENTRAR AL MUSEO](https://drayzu.github.io/AstroIngenieria/)** — exposición interactiva permanente
+<p align="center">
+  <a href="https://drayzu.github.io/AstroIngenieria/"><img alt="✦ ENTRAR AL MUSEO" src="https://img.shields.io/badge/%E2%9C%A6%20ENTRAR%20AL%20MUSEO-E8B44A?style=for-the-badge"></a>
+</p>
 
 Durante casi toda la historia del cosmos, las estrellas nacieron y murieron sin que nada pudiera preguntarse si podían ser distintas. De ese mismo universo surgió una inteligencia capaz de comprender sus leyes y, ahora, de crear nuevas inteligencias.
 
@@ -133,10 +135,20 @@ npm run generate:illustrations
 
 Los datos asociados a cada concepto —incluyendo prompts, textos alternativos, capas y hotspots— se encuentran en `src/data/astroData.ts`.
 
+![Portada del museo — AstroIngeniería](public/readme/1.png)
+
 ![Cilindro de O'Neill interior](public/illustrations/ai/concepts/habitats/interiors/oneill-cylinder.webp)
+
+![Sala 0 — Introducción](public/readme/3.png)
 
 ![Cilindro de O'Neill conceptual](public/illustrations/ai/concepts/habitats/conceptual/oneill-cylinder.webp)
 
+![Dossier técnico de un concepto](public/readme/5.png)
+
 ![Dyson Shell](public/illustrations/ai/concepts/energy/immersive/dyson-shell.webp)
 
+![Archivo de fuentes y cierre del recorrido](public/readme/7.png)
+
 ![Cilindro de McKendree](public/illustrations/ai/concepts/habitats/immersive/mckendree-cylinder.webp)
+
+![Misión completada — cierre de la exposición](public/readme/final.png)
