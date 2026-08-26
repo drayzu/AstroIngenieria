@@ -1,5 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 110 1200 1030" width="1200" height="1030">
     <defs>
+        <!-- Breathing nebulas (from pruebas.svg reference) -->
+        <radialGradient id="neb-blue" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"  stop-color="#27406e" stop-opacity="0.30">
+                <animate attributeName="stop-color" values="#27406e;#1e3f68;#27406e" dur="24s" repeatCount="indefinite"/>
+            </stop>
+            <stop offset="55%" stop-color="#1b2c4e" stop-opacity="0.13"/>
+            <stop offset="100%" stop-color="#0d1117" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="neb-warm" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"  stop-color="#4a3a20" stop-opacity="0.24">
+                <animate attributeName="stop-color" values="#4a3a20;#58411c;#4a3a20" dur="28s" repeatCount="indefinite"/>
+            </stop>
+            <stop offset="55%" stop-color="#33281a" stop-opacity="0.11"/>
+            <stop offset="100%" stop-color="#0d1117" stop-opacity="0"/>
+        </radialGradient>
+
         <!-- Gradients for the underline under ENTRAR -->
         <linearGradient id="fade-left" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stop-color="#EADCB9" stop-opacity="0"/>
@@ -156,6 +172,8 @@
         .f1 { animation: flare 12s ease-in-out infinite 4s; }
         .f2 { animation: flare 16s ease-in-out infinite 9.5s; }
         .f3 { animation: flare 14s ease-in-out infinite 13s; }
+        .f4 { animation: flare 10s ease-in-out infinite 2s; }
+        .f5 { animation: flare 9.5s ease-in-out infinite 7s; }
 
         @keyframes flare {
             0%, 86%, 100% { opacity: 0; transform: scale(0.3) rotate(0deg); }
@@ -179,31 +197,43 @@
         .shoot-c { animation: shootC 23s linear infinite 11s; }
         .shoot-d { animation: shootD 17s linear infinite 15s; }
         .shoot-e { animation: shootE 26s linear infinite 10s; }
+        .shoot-f { animation: shootF 21s linear infinite 4s; }
+        .shoot-g { animation: shootG 15s linear infinite 18s; }
 
         @keyframes shootA { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 1; } 9% { transform: translateX(-430px); opacity: 0; } 100% { transform: translateX(-430px); opacity: 0; } }
         @keyframes shootB { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 1; } 8% { transform: translateX(-520px); opacity: 0; } 100% { transform: translateX(-520px); opacity: 0; } }
         @keyframes shootC { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 0.9; } 7% { transform: translateX(-380px); opacity: 0; } 100% { transform: translateX(-380px); opacity: 0; } }
         @keyframes shootD { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 1; } 10% { transform: translateX(-460px); opacity: 0; } 100% { transform: translateX(-460px); opacity: 0; } }
         @keyframes shootE { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 0.9; } 9% { transform: translateX(-420px); opacity: 0; } 100% { transform: translateX(-420px); opacity: 0; } }
+        @keyframes shootF { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 1; } 8% { transform: translateX(-480px); opacity: 0; } 100% { transform: translateX(-480px); opacity: 0; } }
+        @keyframes shootG { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 0.9; } 10% { transform: translateX(-360px); opacity: 0; } 100% { transform: translateX(-360px); opacity: 0; } }
 
         /* Rising light motes (bottom zone + mid sky) */
         .motes {
-            animation: rise 30s linear infinite,
+            animation: rise 20s linear infinite,
                        moteGlow 7s ease-in-out infinite alternate;
         }
         .motes-mid {
-            animation: rise 44s linear infinite,
+            animation: rise 30s linear infinite,
                        moteGlowSoft 9s ease-in-out infinite alternate;
         }
         @keyframes rise         { from { transform: translateY(0); } to { transform: translateY(-160px); } }
-        @keyframes moteGlow     { from { opacity: 0.5; } to { opacity: 0.85; } }
-        @keyframes moteGlowSoft { from { opacity: 0.3; } to { opacity: 0.55; } }
+        @keyframes moteGlow     { from { opacity: 0.55; } to { opacity: 0.95; } }
+        @keyframes moteGlowSoft { from { opacity: 0.3; } to { opacity: 0.6; } }
+
+        /* Breathing nebulas (slow, almost imperceptible) */
+        .neb { transform-box: fill-box; transform-origin: center; }
+        .neb-a { animation: nebA 28s ease-in-out infinite alternate; }
+        .neb-b { animation: nebB 34s ease-in-out infinite alternate 4s; }
+
+        @keyframes nebA { from { transform: translate(0,0) scale(1); } to { transform: translate(26px,14px) scale(1.07); } }
+        @keyframes nebB { from { transform: translate(0,0) scale(1); } to { transform: translate(-22px,-12px) scale(1.05); } }
 
         /* Soft light beam sweeping across the sky */
-        .sky-sheen { animation: sheenSweep 32s ease-in-out infinite; }
+        .sky-sheen { animation: sheenSweep 42s ease-in-out infinite; }
         @keyframes sheenSweep {
             0%   { transform: translateX(-450px); }
-            45%  { transform: translateX(1700px); }
+            42%  { transform: translateX(1700px); }
             100% { transform: translateX(1700px); }
         }
 
@@ -313,7 +343,12 @@
     <!-- Flat GitHub dark background -->
     <rect width="100%" height="100%" fill="#0d1117"/>
 
-    <!-- Soft diagonal light beam sweeping across every ~32s -->
+    <!-- Breathing nebulas (atmospheric depth, from reference) -->
+    <ellipse class="neb neb-a" cx="950" cy="230" rx="320" ry="190" fill="url(#neb-blue)"/>
+    <ellipse class="neb neb-b" cx="250" cy="760" rx="290" ry="180" fill="url(#neb-warm)"/>
+    <ellipse class="neb neb-a" cx="980" cy="1030" rx="300" ry="170" fill="url(#neb-blue)" opacity="0.7"/>
+
+    <!-- Soft diagonal light beam sweeping across every ~22s -->
     <g transform="rotate(16 600 515)" opacity="0.85">
         <rect class="sky-sheen" x="0" y="-500" width="300" height="2000" fill="url(#sheen)"/>
     </g>
@@ -410,13 +445,34 @@
         <circle cx="680"  cy="620" r="1"   class="star t9"/>
         </g>
 
-        <!-- Bright hero stars (slow near drift) -->
+        <!-- Bright hero stars (slow near drift) + constant ripple halos -->
         <g class="drift-bright">
         <circle cx="85"   cy="520" r="2"   class="star t4 star-gold" filter="url(#glow)"/>
         <circle cx="1150" cy="650" r="2"   class="star t3 star-blue" filter="url(#glow)"/>
         <circle cx="985"  cy="120" r="1.8" class="star t2"           filter="url(#glow)"/>
         <circle cx="135"  cy="300" r="1.8" class="star t5 star-gold" filter="url(#glow)"/>
         <circle cx="1090" cy="880" r="2"   class="star t6"           filter="url(#glow)"/>
+
+        <circle cx="85" cy="520" r="2" fill="none" stroke="#EADCB9" stroke-width="0.6" opacity="0">
+            <animate attributeName="r" values="2;13" dur="3.6s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.5;0" dur="3.6s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="1150" cy="650" r="2" fill="none" stroke="#a5c8ff" stroke-width="0.6" opacity="0">
+            <animate attributeName="r" values="2;13" dur="3.6s" begin="0.8s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.5;0" dur="3.6s" begin="0.8s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="985" cy="120" r="2" fill="none" stroke="#ffffff" stroke-width="0.6" opacity="0">
+            <animate attributeName="r" values="2;13" dur="3.6s" begin="1.6s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.5;0" dur="3.6s" begin="1.6s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="135" cy="300" r="2" fill="none" stroke="#EADCB9" stroke-width="0.6" opacity="0">
+            <animate attributeName="r" values="2;13" dur="3.6s" begin="2.4s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.5;0" dur="3.6s" begin="2.4s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="1090" cy="880" r="2" fill="none" stroke="#ffffff" stroke-width="0.6" opacity="0">
+            <animate attributeName="r" values="2;13" dur="3.6s" begin="3.2s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.5;0" dur="3.6s" begin="3.2s" repeatCount="indefinite"/>
+        </circle>
         </g>
     </g>
 
@@ -436,6 +492,8 @@
         <g transform="translate(760,120)"><path class="flare f1" d="M0,-9 L1.8,-1.8 L9,0 L1.8,1.8 L0,9 L-1.8,1.8 L-9,0 L-1.8,-1.8 Z"/></g>
         <g transform="translate(150,660)"><path class="flare f2" d="M0,-8 L1.6,-1.6 L8,0 L1.6,1.6 L0,8 L-1.6,1.6 L-8,0 L-1.6,-1.6 Z" fill="#ffe9b8"/></g>
         <g transform="translate(1065,470)"><path class="flare f3" d="M0,-9 L1.8,-1.8 L9,0 L1.8,1.8 L0,9 L-1.8,1.8 L-9,0 L-1.8,-1.8 Z" fill="#cfe1ff"/></g>
+        <g transform="translate(330,880)"><path class="flare f4" d="M0,-7 L1.5,-1.5 L7,0 L1.5,1.5 L0,7 L-1.5,1.5 L-7,0 L-1.5,-1.5 Z" fill="#a5c8ff"/></g>
+        <g transform="translate(900,300)"><path class="flare f5" d="M0,-8 L1.6,-1.6 L8,0 L1.6,1.6 L0,8 L-1.6,1.6 L-8,0 L-1.6,-1.6 Z" fill="#ffffff"/></g>
     </g>
 
     <!-- Shooting stars -->
@@ -458,6 +516,14 @@
     <g transform="translate(980,1030) rotate(-40)">
         <line class="shooting-star shoot-e" x1="0" y1="0" x2="120" y2="0" stroke="url(#shoot-tail-gold)" stroke-width="1.2"/>
         <circle class="shooting-star shoot-e" cx="0" cy="0" r="1.3" fill="#ffe9b8"/>
+    </g>
+    <g transform="translate(700,180) rotate(-165)">
+        <line class="shooting-star shoot-f" x1="0" y1="0" x2="110" y2="0" stroke="url(#shoot-tail)" stroke-width="1.2"/>
+        <circle class="shooting-star shoot-f" cx="0" cy="0" r="1.3" fill="#cfe1ff"/>
+    </g>
+    <g transform="translate(1080,880) rotate(-30)">
+        <line class="shooting-star shoot-g" x1="0" y1="0" x2="100" y2="0" stroke="url(#shoot-tail)" stroke-width="1"/>
+        <circle class="shooting-star shoot-g" cx="0" cy="0" r="1.1" fill="#ffffff"/>
     </g>
 
     <!-- Rising light motes in the lower sky (seamless loop) -->
@@ -492,6 +558,18 @@
         <use href="#motes-row-2" y="160"/>
     </g>
 
+    <!-- Distant satellites constantly drifting across the sky -->
+    <g opacity="0.7">
+        <circle r="1.6" fill="#cfe1ff" filter="url(#glow)">
+            <animateMotion dur="47s" repeatCount="indefinite"
+                path="M -40 480 A 640 190 0 1 1 1240 480 A 640 190 0 1 1 -40 480"/>
+        </circle>
+        <circle r="1.2" fill="#ffe9b8">
+            <animateMotion dur="61s" begin="-25s" repeatCount="indefinite"
+                path="M 1240 760 A 640 210 0 1 0 -40 760 A 640 210 0 1 0 1240 760"/>
+        </circle>
+    </g>
+
     <!-- Mini constellation (bottom right) -->
     <g stroke="#EADCB9" fill="#EADCB9">
         <polyline class="cst2-line" points="940,1000 1015,955 1085,1005 1150,962"
@@ -500,6 +578,14 @@
         <circle class="cst2-dot c2d2" cx="1015" cy="955"  r="2.2" filter="url(#glow)"/>
         <circle class="cst2-dot c2d3" cx="1085" cy="1005" r="1.8" filter="url(#glow)"/>
         <circle class="cst2-dot c2d4" cx="1150" cy="962"  r="2.4" filter="url(#glow)"/>
+    </g>
+
+    <!-- Orbiter circling the header block -->
+    <g opacity="0.6">
+        <circle r="1.4" fill="#fff6df" filter="url(#glow)">
+            <animateMotion dur="34s" repeatCount="indefinite"
+                path="M 930 210 A 330 44 0 1 1 270 210 A 330 44 0 1 1 930 210"/>
+        </circle>
     </g>
 
     <!-- ==================== FOREGROUND CONTENT ==================== -->
@@ -520,25 +606,43 @@
 
     <text x="600" y="675" class="body-text"><tspan class="bold-text">AstroIngeniería</tspan> explora lo que viene después de alcanzar las estrellas.</text>
 
+    <!-- Orbital system circling the ENTRAR button (constant motion) -->
+    <g transform="rotate(-12 600 848)" opacity="0.55">
+        <ellipse cx="600" cy="848" rx="250" ry="72" fill="none" stroke="#EADCB9"
+            stroke-width="0.5" stroke-dasharray="2 7" opacity="0.4"/>
+        <circle r="1.8" fill="#fff6df" filter="url(#glow)">
+            <animateMotion dur="9s" repeatCount="indefinite"
+                path="M 850 848 A 250 72 0 1 1 350 848 A 250 72 0 1 1 850 848"/>
+        </circle>
+        <circle r="1.3" fill="#a5c8ff">
+            <animateMotion dur="15s" begin="-6s" repeatCount="indefinite"
+                path="M 350 848 A 250 72 0 1 0 850 848 A 250 72 0 1 0 350 848"/>
+        </circle>
+        <circle r="1.4" fill="#EADCB9">
+            <animateMotion dur="21s" begin="-13s" repeatCount="indefinite"
+                path="M 600 776 A 250 72 0 1 1 600 920 A 250 72 0 1 1 600 776"/>
+        </circle>
+    </g>
+
     <!-- Bottom call-to-action (subtle button, no box) -->
     <g>
         <!-- Expanding ripples emanating from the button (smooth easing) -->
-        <circle class="ripple rp1" cx="600" cy="828" r="115" fill="none" stroke="#e3ccaa" stroke-width="0.7"/>
-        <circle class="ripple rp2" cx="600" cy="828" r="115" fill="none" stroke="#e3ccaa" stroke-width="0.7"/>
+        <circle class="ripple rp1" cx="600" cy="848" r="115" fill="none" stroke="#e3ccaa" stroke-width="0.7"/>
+        <circle class="ripple rp2" cx="600" cy="848" r="115" fill="none" stroke="#e3ccaa" stroke-width="0.7"/>
 
         <!-- Breathing halo behind the word -->
-        <ellipse class="halo" cx="600" cy="828" rx="210" ry="52" fill="url(#entrar-halo)"/>
+        <ellipse class="halo" cx="600" cy="848" rx="210" ry="52" fill="url(#entrar-halo)"/>
 
         <!-- The word itself (gently breathing, like a live button) -->
-        <text x="607" y="850" class="entrar-title entrar-press">ENTRAR</text>
+        <text x="607" y="870" class="entrar-title entrar-press">ENTRAR</text>
 
         <!-- Underline with fading edges + pulsing core -->
-        <line x1="470" y1="882" x2="590" y2="882" stroke="url(#fade-left)" stroke-width="1"/>
-        <circle cx="600" cy="882" r="2" fill="#e3ccaa" filter="url(#glow)">
+        <line x1="470" y1="902" x2="590" y2="902" stroke="url(#fade-left)" stroke-width="1"/>
+        <circle cx="600" cy="902" r="2" fill="#e3ccaa" filter="url(#glow)">
             <animate attributeName="opacity" values="0.6;1;0.6" dur="4.5s" repeatCount="indefinite"/>
         </circle>
-        <line x1="610" y1="882" x2="730" y2="882" stroke="url(#fade-right)" stroke-width="1"/>
-        <circle class="ul-pulse" cx="470" cy="882" r="1.5" fill="#fff6df"/>
+        <line x1="610" y1="902" x2="730" y2="902" stroke="url(#fade-right)" stroke-width="1"/>
+        <circle class="ul-pulse" cx="470" cy="902" r="1.5" fill="#fff6df"/>
     </g>
 
 </svg>
