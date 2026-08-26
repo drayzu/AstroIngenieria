@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://drayzu.github.io/AstroIngenieria/">
-    <img alt="✦ ENTRAR AL MUSEO — Museo Orbital en línea" src="public/readme/entrar-al-museo.svg">
+    <img alt="✦ ENTRAR AL MUSEO — Museo Orbital en línea" src="public/readme/entrar-al-museo-v2.svg">
   </a>
 </p>
 
@@ -120,22 +120,6 @@ src/data/astroData.ts
 Allí se mantiene la información de salas y conceptos, además de las rutas necesarias para acceder directamente a cada pieza de la exposición.
 
 ---
-
-## Ilustraciones
-
-Los assets visuales se almacenan en:
-
-```text
-public/illustrations/
-```
-
-Pueden regenerarse mediante:
-
-```bash
-npm run generate:illustrations
-```
-
-Los datos asociados a cada concepto —incluyendo prompts, textos alternativos, capas y hotspots— se encuentran en `src/data/astroData.ts`.
 
 ![Portada del museo — AstroIngeniería](public/readme/1.png)
 
