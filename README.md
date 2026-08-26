@@ -103,24 +103,6 @@ El deploy publica `dist/` en GitHub Pages mediante `gh-pages`.
 
 ---
 
-## Estructura del contenido
-
-La base documental original se encuentra en:
-
-```text
-docs/AstroIngenieria.txt
-```
-
-La aplicación utiliza datos estructurados derivados y enriquecidos en:
-
-```text
-src/data/astroData.ts
-```
-
-Allí se mantiene la información de salas y conceptos, además de las rutas necesarias para acceder directamente a cada pieza de la exposición.
-
----
-
 ![Portada del museo — AstroIngeniería](public/readme/1.png)
 
 ![Cilindro de O'Neill interior](public/illustrations/ai/concepts/habitats/interiors/oneill-cylinder.webp)
