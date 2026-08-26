@@ -1,0 +1,648 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 110 1200 1030" width="1200" height="1030">
+    <defs>
+        <!-- Breathing nebulas (from pruebas.svg reference) -->
+        <radialGradient id="neb-blue" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"  stop-color="#27406e" stop-opacity="0.30">
+                <animate attributeName="stop-color" values="#27406e;#1e3f68;#27406e" dur="24s" repeatCount="indefinite"/>
+            </stop>
+            <stop offset="55%" stop-color="#1b2c4e" stop-opacity="0.13"/>
+            <stop offset="100%" stop-color="#0d1117" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="neb-warm" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"  stop-color="#4a3a20" stop-opacity="0.24">
+                <animate attributeName="stop-color" values="#4a3a20;#58411c;#4a3a20" dur="28s" repeatCount="indefinite"/>
+            </stop>
+            <stop offset="55%" stop-color="#33281a" stop-opacity="0.11"/>
+            <stop offset="100%" stop-color="#0d1117" stop-opacity="0"/>
+        </radialGradient>
+
+        <!-- Gradients for the underline under ENTRAR -->
+        <linearGradient id="fade-left" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#EADCB9" stop-opacity="0"/>
+            <stop offset="100%" stop-color="#EADCB9" stop-opacity="0.6"/>
+        </linearGradient>
+        <linearGradient id="fade-right" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#EADCB9" stop-opacity="0.6"/>
+            <stop offset="100%" stop-color="#EADCB9" stop-opacity="0"/>
+        </linearGradient>
+
+        <!-- Soft halo behind ENTRAR (subtle button affordance) -->
+        <radialGradient id="entrar-halo" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#e3ccaa" stop-opacity="0.12"/>
+            <stop offset="60%" stop-color="#e3ccaa" stop-opacity="0.05"/>
+            <stop offset="100%" stop-color="#e3ccaa" stop-opacity="0"/>
+        </radialGradient>
+
+        <!-- Shooting star tail gradient -->
+        <linearGradient id="shoot-tail" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+            <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="shoot-tail-gold" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ffe9b8" stop-opacity="1"/>
+            <stop offset="100%" stop-color="#ffe9b8" stop-opacity="0"/>
+        </linearGradient>
+
+        <!-- Animated shine sweeping across the title -->
+        <linearGradient id="title-shine" gradientUnits="userSpaceOnUse" x1="150" y1="0" x2="1050" y2="0">
+            <stop offset="0" stop-color="#ecd9ae"/>
+            <stop offset="0.5" stop-color="#fff6df"/>
+            <stop offset="1" stop-color="#ecd9ae"/>
+            <animateTransform attributeName="gradientTransform" attributeType="XML"
+                type="translate" values="-920 0; 920 0; 920 0" keyTimes="0; 0.4; 1" dur="11s" repeatCount="indefinite"/>
+        </linearGradient>
+
+        <linearGradient id="title-shine-2" gradientUnits="userSpaceOnUse" x1="420" y1="0" x2="780" y2="0">
+            <stop offset="0" stop-color="#ecd9ae"/>
+            <stop offset="0.5" stop-color="#fff6df"/>
+            <stop offset="1" stop-color="#ecd9ae"/>
+            <animateTransform attributeName="gradientTransform" attributeType="XML"
+                type="translate" values="-380 0; 380 0; 380 0" keyTimes="0; 0.35; 1" dur="13s" begin="2.5s" repeatCount="indefinite"/>
+        </linearGradient>
+
+        <!-- Soft light beam that sweeps across the sky -->
+        <linearGradient id="sheen" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0"/>
+            <stop offset="50%" stop-color="#ffffff" stop-opacity="0.055"/>
+            <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+        </linearGradient>
+
+        <!-- Glow filter for premium stars -->
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </filter>
+    </defs>
+
+    <style>
+        /* Import Google Fonts (falls back gracefully when GitHub blocks external fonts) */
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400&amp;family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&amp;family=Montserrat:wght@400&amp;display=swap');
+
+        /* Typography */
+        .title {
+            font-family: 'Cinzel', 'Times New Roman', serif;
+            font-size: 72px;
+            fill: url(#title-shine);
+            text-anchor: middle;
+            letter-spacing: 10px;
+        }
+        .entrar-title {
+            font-family: 'Cinzel', 'Times New Roman', serif;
+            font-size: 72px;
+            fill: url(#title-shine-2);
+            text-anchor: middle;
+            letter-spacing: 14px;
+        }
+        .halo {
+            transform-box: fill-box;
+            transform-origin: center;
+            animation: haloPulse 4.5s ease-in-out infinite;
+        }
+        .entrar-press {
+            transform-box: fill-box;
+            transform-origin: center;
+            animation: pressPulse 4.5s ease-in-out infinite;
+        }
+        .subtitle {
+            font-family: 'Montserrat', 'Segoe UI', sans-serif;
+            font-size: 16px;
+            fill: #b3b0aa;
+            text-anchor: middle;
+            letter-spacing: 0.9em;
+            animation: breathe 8s ease-in-out infinite;
+        }
+        .body-text {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 26px;
+            fill: #c5bcae;
+            text-anchor: middle;
+        }
+        .bold-text { font-weight: 600; fill: #e3ccaa; }
+
+        /* ===================== SPACE EFFECTS ===================== */
+
+        .star { fill: #ffffff; transform-box: fill-box; transform-origin: center; }
+        .star-gold { fill: #EADCB9; }
+        .star-blue { fill: #a5c8ff; }
+
+        /* Depth-layered twinkling (negative delays = desynchronized start, slow pulses) */
+        .t1 { animation: twinkle 4.5s ease-in-out infinite alternate -1.2s; }
+        .t2 { animation: twinkle 6s   ease-in-out infinite alternate -2.6s; }
+        .t3 { animation: twinkle 5s   ease-in-out infinite alternate -0.8s; }
+        .t4 { animation: twinkle 8s   ease-in-out infinite alternate -3.4s; }
+        .t5 { animation: twinkle 5.5s ease-in-out infinite alternate -1.9s; }
+        .t6 { animation: twinkle 7s   ease-in-out infinite alternate -2.2s; }
+        .t7 { animation: twinkle 6.5s ease-in-out infinite alternate -1.5s; }
+        .t8 { animation: twinkle 9s   ease-in-out infinite alternate -4s; }
+        .t9 { animation: twinkle 11s  ease-in-out infinite alternate -5s; }
+
+        @keyframes twinkle {
+            0%   { opacity: 0.3; transform: scale(0.85); }
+            100% { opacity: 1;   transform: scale(1.15); }
+        }
+
+        /* Four-point sparkle stars (rotate + pulse) */
+        .sparkle {
+            transform-box: fill-box;
+            transform-origin: center;
+            animation: sparklePulse 9s ease-in-out infinite;
+        }
+        .sp1 { animation-duration: 8s;   animation-delay: -2s; }
+        .sp2 { animation-duration: 10s;  animation-delay: -3.5s; }
+        .sp3 { animation-duration: 7.5s; animation-delay: -1s; }
+        .sp4 { animation-duration: 9.5s; animation-delay: -4.2s; }
+        .sp5 { animation-duration: 11s;  animation-delay: -2.8s; }
+        .sp6 { animation-duration: 8.5s; animation-delay: -5s; }
+        .sp7 { animation-duration: 12s;  animation-delay: -1.6s; }
+
+        @keyframes sparklePulse {
+            0%, 100% { opacity: 0.25; transform: scale(0.55) rotate(0deg); }
+            50%      { opacity: 0.95; transform: scale(1) rotate(40deg); }
+        }
+
+        /* Occasional sharp glints on random stars */
+        .flare {
+            transform-box: fill-box;
+            transform-origin: center;
+            opacity: 0;
+        }
+        .f1 { animation: flare 12s ease-in-out infinite 4s; }
+        .f2 { animation: flare 16s ease-in-out infinite 9.5s; }
+        .f3 { animation: flare 14s ease-in-out infinite 13s; }
+        .f4 { animation: flare 10s ease-in-out infinite 2s; }
+        .f5 { animation: flare 9.5s ease-in-out infinite 7s; }
+
+        @keyframes flare {
+            0%, 86%, 100% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+            90%           { opacity: 1; transform: scale(1.15) rotate(25deg); }
+            95%           { opacity: 0; transform: scale(0.5) rotate(40deg); }
+        }
+
+        /* Slow parallax drift per depth layer */
+        .drift-far    { animation: driftFar 90s ease-in-out infinite alternate; }
+        .drift-mid    { animation: driftMid 70s ease-in-out infinite alternate; }
+        .drift-bright { animation: driftBright 55s ease-in-out infinite alternate; }
+
+        @keyframes driftFar    { from { transform: translate(0,0); } to { transform: translate(-46px,-18px); } }
+        @keyframes driftMid    { from { transform: translate(0,0); } to { transform: translate(34px,-14px); } }
+        @keyframes driftBright { from { transform: translate(0,0); } to { transform: translate(-22px,10px); } }
+
+        /* Shooting stars (varied directions and speeds) */
+        .shooting-star { opacity: 0; stroke-linecap: round; }
+        .shoot-a { animation: shootA 13s linear infinite 2s; }
+        .shoot-b { animation: shootB 19s linear infinite 6s; }
+        .shoot-c { animation: shootC 23s linear infinite 11s; }
+        .shoot-d { animation: shootD 17s linear infinite 15s; }
+        .shoot-e { animation: shootE 26s linear infinite 10s; }
+        .shoot-f { animation: shootF 21s linear infinite 4s; }
+        .shoot-g { animation: shootG 15s linear infinite 18s; }
+
+        @keyframes shootA { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 1; } 9% { transform: translateX(-430px); opacity: 0; } 100% { transform: translateX(-430px); opacity: 0; } }
+        @keyframes shootB { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 1; } 8% { transform: translateX(-520px); opacity: 0; } 100% { transform: translateX(-520px); opacity: 0; } }
+        @keyframes shootC { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 0.9; } 7% { transform: translateX(-380px); opacity: 0; } 100% { transform: translateX(-380px); opacity: 0; } }
+        @keyframes shootD { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 1; } 10% { transform: translateX(-460px); opacity: 0; } 100% { transform: translateX(-460px); opacity: 0; } }
+        @keyframes shootE { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 0.9; } 9% { transform: translateX(-420px); opacity: 0; } 100% { transform: translateX(-420px); opacity: 0; } }
+        @keyframes shootF { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 1; } 8% { transform: translateX(-480px); opacity: 0; } 100% { transform: translateX(-480px); opacity: 0; } }
+        @keyframes shootG { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 0.9; } 10% { transform: translateX(-360px); opacity: 0; } 100% { transform: translateX(-360px); opacity: 0; } }
+
+        /* Rising light motes (bottom zone + mid sky) */
+        .motes {
+            animation: rise 20s linear infinite,
+                       moteGlow 7s ease-in-out infinite alternate;
+        }
+        .motes-mid {
+            animation: rise 30s linear infinite,
+                       moteGlowSoft 9s ease-in-out infinite alternate;
+        }
+        @keyframes rise         { from { transform: translateY(0); } to { transform: translateY(-160px); } }
+        @keyframes moteGlow     { from { opacity: 0.55; } to { opacity: 0.95; } }
+        @keyframes moteGlowSoft { from { opacity: 0.3; } to { opacity: 0.6; } }
+
+        /* Breathing nebulas (slow, almost imperceptible) */
+        .neb { transform-box: fill-box; transform-origin: center; }
+        .neb-a { animation: nebA 28s ease-in-out infinite alternate; }
+        .neb-b { animation: nebB 34s ease-in-out infinite alternate 4s; }
+
+        @keyframes nebA { from { transform: translate(0,0) scale(1); } to { transform: translate(26px,14px) scale(1.07); } }
+        @keyframes nebB { from { transform: translate(0,0) scale(1); } to { transform: translate(-22px,-12px) scale(1.05); } }
+
+        /* Soft light beam sweeping across the sky */
+        .sky-sheen { animation: sheenSweep 42s ease-in-out infinite; }
+        @keyframes sheenSweep {
+            0%   { transform: translateX(-450px); }
+            42%  { transform: translateX(1700px); }
+            100% { transform: translateX(1700px); }
+        }
+
+        /* Smooth expanding ripples behind ENTRAR */
+        .ripple {
+            transform-box: fill-box;
+            transform-origin: center;
+            opacity: 0;
+            animation: ripple 7s cubic-bezier(0.25, 0.6, 0.45, 1) infinite;
+        }
+        .rp2 { animation-delay: 3.5s; }
+        @keyframes ripple {
+            0%   { transform: scale(0.55); opacity: 0; }
+            10%  { opacity: 0.22; }
+            60%  { opacity: 0.1; }
+            100% { transform: scale(1.9); opacity: 0; }
+        }
+
+        /* Light pulse traveling along the underline */
+        .ul-pulse { animation: ulTravel 4.5s ease-in-out infinite; }
+        @keyframes ulTravel {
+            0%        { transform: translateX(0);     opacity: 0; }
+            12%       { opacity: 0.9; }
+            50%       { transform: translateX(130px); opacity: 0.9; }
+            70%, 100% { transform: translateX(260px); opacity: 0; }
+        }
+
+        /* Mini constellation (bottom right) */
+        .cst2-line {
+            stroke-dasharray: 240;
+            animation: cst2Draw 26s ease-in-out infinite;
+        }
+        .cst2-dot { opacity: 0; }
+        .c2d1 { animation: cst2Dot 26s ease-out infinite; }
+        .c2d2 { animation: cst2Dot 26s ease-out infinite 0.9s; }
+        .c2d3 { animation: cst2Dot 26s ease-out infinite 1.8s; }
+        .c2d4 { animation: cst2Dot 26s ease-out infinite 2.7s; }
+
+        @keyframes cst2Draw {
+            0%   { stroke-dashoffset: 240; opacity: 0; }
+            8%   { opacity: 0.55; }
+            30%  { stroke-dashoffset: 0; opacity: 0.55; }
+            58%  { stroke-dashoffset: 0; opacity: 0.55; }
+            72%  { stroke-dashoffset: 0; opacity: 0; }
+            100% { stroke-dashoffset: 240; opacity: 0; }
+        }
+        @keyframes cst2Dot {
+            0%   { opacity: 0; }
+            10%  { opacity: 0.8; }
+            62%  { opacity: 0.8; }
+            74%  { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        /* Stardust drift */
+        .dust { animation: dustDrift 46s ease-in-out infinite alternate; }
+
+        @keyframes dustDrift{ from { transform: translate(0,0); } to { transform: translate(-42px,-26px); } }
+
+        /* Self-drawing constellation */
+        .constellation-line {
+            stroke-dasharray: 260;
+            animation: constellationDraw 22s ease-in-out infinite;
+        }
+        .constellation-dot { opacity: 0; }
+        .cd1 { animation: dotIn 22s ease-out infinite; }
+        .cd2 { animation: dotIn 22s ease-out infinite 0.8s; }
+        .cd3 { animation: dotIn 22s ease-out infinite 1.6s; }
+        .cd4 { animation: dotIn 22s ease-out infinite 2.4s; }
+
+        @keyframes constellationDraw {
+            0%   { stroke-dashoffset: 260; opacity: 0; }
+            8%   { opacity: 0.7; }
+            32%  { stroke-dashoffset: 0; opacity: 0.7; }
+            58%  { stroke-dashoffset: 0; opacity: 0.7; }
+            72%  { stroke-dashoffset: 0; opacity: 0; }
+            100% { stroke-dashoffset: 260; opacity: 0; }
+        }
+        @keyframes dotIn {
+            0%   { opacity: 0; }
+            10%  { opacity: 0.9; }
+            62%  { opacity: 0.9; }
+            74%  { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        @keyframes breathe {
+            0%, 100% { opacity: 0.75; }
+            50%      { opacity: 1; }
+        }
+
+        @keyframes haloPulse {
+            0%, 100% { opacity: 0.55; transform: scale(1); }
+            50%      { opacity: 1;    transform: scale(1.06); }
+        }
+
+        @keyframes pressPulse {
+            0%, 100% { transform: scale(1); }
+            50%      { transform: scale(1.02); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; }
+        }
+    </style>
+
+    <!-- Flat GitHub dark background -->
+    <rect width="100%" height="100%" fill="#0d1117"/>
+
+    <!-- Breathing nebulas (atmospheric depth, from reference) -->
+    <ellipse class="neb neb-a" cx="950" cy="230" rx="320" ry="190" fill="url(#neb-blue)"/>
+    <ellipse class="neb neb-b" cx="250" cy="760" rx="290" ry="180" fill="url(#neb-warm)"/>
+    <ellipse class="neb neb-a" cx="980" cy="1030" rx="300" ry="170" fill="url(#neb-blue)" opacity="0.7"/>
+
+    <!-- Soft diagonal light beam sweeping across every ~22s -->
+    <g transform="rotate(16 600 515)" opacity="0.85">
+        <rect class="sky-sheen" x="0" y="-500" width="300" height="2000" fill="url(#sheen)"/>
+    </g>
+
+    <!-- ==================== DEEP SPACE ATMOSPHERE ==================== -->
+
+    <!-- Drifting stardust -->
+    <g class="dust" fill="#dbe6ff" opacity="0.35">
+        <circle cx="120" cy="240" r="0.7"/>
+        <circle cx="305" cy="165" r="0.8"/>
+        <circle cx="545" cy="245" r="0.6"/>
+        <circle cx="705" cy="185" r="0.7"/>
+        <circle cx="915" cy="305" r="0.8"/>
+        <circle cx="1105" cy="235" r="0.6"/>
+        <circle cx="85"  cy="580" r="0.7"/>
+        <circle cx="285" cy="665" r="0.6"/>
+        <circle cx="1015" cy="615" r="0.7"/>
+        <circle cx="1150" cy="805" r="0.8"/>
+        <circle cx="425" cy="935" r="0.7"/>
+        <circle cx="655" cy="905" r="0.6"/>
+        <circle cx="875" cy="845" r="0.7"/>
+    </g>
+
+    <!-- ==================== BACKGROUND SPACE ELEMENTS ==================== -->
+
+    <!-- Constellation (disabled for now)
+    <g stroke="#EADCB9" fill="#EADCB9">
+        <polyline class="constellation-line" points="120,160 190,120 260,170 330,130"
+            fill="none" stroke-width="0.8" opacity="0.7"/>
+        <circle class="constellation-dot cd1" cx="120" cy="160" r="2" filter="url(#glow)"/>
+        <circle class="constellation-dot cd2" cx="190" cy="120" r="2.5" filter="url(#glow)"/>
+        <circle class="constellation-dot cd3" cx="260" cy="170" r="2" filter="url(#glow)"/>
+        <circle class="constellation-dot cd4" cx="330" cy="130" r="2.8" filter="url(#glow)"/>
+    </g>
+    -->
+
+    <!-- Twinkling Star Field -->
+    <g opacity="0.85">
+        <!-- Distant faint stars (slow far drift) -->
+        <g class="drift-far" opacity="0.5">
+            <circle cx="95"   cy="140" r="0.8" class="star t4"/>
+            <circle cx="170"  cy="90"  r="0.6" class="star t2"/>
+            <circle cx="240"  cy="240" r="0.9" class="star t6"/>
+            <circle cx="330"  cy="60"  r="0.7" class="star t3"/>
+            <circle cx="410"  cy="180" r="0.8" class="star t7"/>
+            <circle cx="520"  cy="70"  r="0.6" class="star t1"/>
+            <circle cx="640"  cy="140" r="0.8" class="star t5"/>
+            <circle cx="760"  cy="90"  r="0.6" class="star t3"/>
+            <circle cx="880"  cy="210" r="0.9" class="star t2"/>
+            <circle cx="1010" cy="70"  r="0.7" class="star t6"/>
+            <circle cx="1120" cy="150" r="0.8" class="star t4"/>
+            <circle cx="1170" cy="260" r="0.6" class="star t1"/>
+            <circle cx="60"   cy="420" r="0.8" class="star t5"/>
+            <circle cx="200"  cy="470" r="0.6" class="star t7"/>
+            <circle cx="340"  cy="430" r="0.8" class="star t2"/>
+            <circle cx="1150" cy="430" r="0.7" class="star t1"/>
+            <circle cx="90"   cy="640" r="0.8" class="star t3"/>
+            <circle cx="220"  cy="720" r="0.6" class="star t6"/>
+            <circle cx="1160" cy="700" r="0.8" class="star t4"/>
+            <circle cx="1080" cy="760" r="0.6" class="star t2"/>
+            <circle cx="60"   cy="860" r="0.8" class="star t7"/>
+            <circle cx="330"  cy="930" r="0.6" class="star t1"/>
+            <circle cx="540"  cy="890" r="0.8" class="star t5"/>
+            <circle cx="760"  cy="930" r="0.6" class="star t3"/>
+            <circle cx="940"  cy="880" r="0.8" class="star t6"/>
+            <circle cx="1140" cy="930" r="0.6" class="star t4"/>
+        </g>
+
+        <!-- Mid-field stars (slow mid drift) -->
+        <g class="drift-mid">
+        <circle cx="150"  cy="180" r="1.4" class="star t1"/>
+        <circle cx="220"  cy="350" r="1"   class="star t3 star-blue"/>
+        <circle cx="310"  cy="120" r="1"   class="star t2"/>
+        <circle cx="450"  cy="850" r="1.2" class="star t5"/>
+        <circle cx="180"  cy="920" r="1.4" class="star t1"/>
+        <circle cx="850"  cy="150" r="1.4" class="star t2"/>
+        <circle cx="1100" cy="320" r="1"   class="star t5"/>
+        <circle cx="980"  cy="540" r="1.4" class="star t1"/>
+        <circle cx="1050" cy="820" r="1"   class="star t4 star-gold"/>
+        <circle cx="920"  cy="900" r="1.2" class="star t2"/>
+        <circle cx="500"  cy="950" r="1"   class="star t1"/>
+        <circle cx="400"  cy="200" r="1"   class="star t4"/>
+        <circle cx="600"  cy="100" r="1"   class="star t1"/>
+        <circle cx="750"  cy="300" r="1"   class="star t3"/>
+        <circle cx="250"  cy="600" r="1"   class="star t5"/>
+        <circle cx="800"  cy="700" r="1"   class="star t2"/>
+        <circle cx="1130" cy="540" r="1.3" class="star t6 star-gold"/>
+        <circle cx="70"   cy="760" r="1.2" class="star t6"/>
+        <circle cx="370"  cy="700" r="1"   class="star t2 star-blue"/>
+        <circle cx="1030" cy="240" r="1.2" class="star t4"/>
+        <circle cx="560"  cy="760" r="1"   class="star t8"/>
+        <circle cx="160"  cy="440" r="1"   class="star t9 star-gold"/>
+        <circle cx="1190" cy="380" r="1"   class="star t8 star-blue"/>
+        <circle cx="680"  cy="620" r="1"   class="star t9"/>
+        </g>
+
+        <!-- Bright hero stars (slow near drift) + constant ripple halos -->
+        <g class="drift-bright">
+        <circle cx="85"   cy="520" r="2"   class="star t4 star-gold" filter="url(#glow)"/>
+        <circle cx="1150" cy="650" r="2"   class="star t3 star-blue" filter="url(#glow)"/>
+        <circle cx="985"  cy="120" r="1.8" class="star t2"           filter="url(#glow)"/>
+        <circle cx="135"  cy="300" r="1.8" class="star t5 star-gold" filter="url(#glow)"/>
+        <circle cx="1090" cy="880" r="2"   class="star t6"           filter="url(#glow)"/>
+
+        <circle cx="85" cy="520" r="2" fill="none" stroke="#EADCB9" stroke-width="0.6" opacity="0">
+            <animate attributeName="r" values="2;13" dur="3.6s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.5;0" dur="3.6s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="1150" cy="650" r="2" fill="none" stroke="#a5c8ff" stroke-width="0.6" opacity="0">
+            <animate attributeName="r" values="2;13" dur="3.6s" begin="0.8s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.5;0" dur="3.6s" begin="0.8s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="985" cy="120" r="2" fill="none" stroke="#ffffff" stroke-width="0.6" opacity="0">
+            <animate attributeName="r" values="2;13" dur="3.6s" begin="1.6s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.5;0" dur="3.6s" begin="1.6s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="135" cy="300" r="2" fill="none" stroke="#EADCB9" stroke-width="0.6" opacity="0">
+            <animate attributeName="r" values="2;13" dur="3.6s" begin="2.4s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.5;0" dur="3.6s" begin="2.4s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="1090" cy="880" r="2" fill="none" stroke="#ffffff" stroke-width="0.6" opacity="0">
+            <animate attributeName="r" values="2;13" dur="3.6s" begin="3.2s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.5;0" dur="3.6s" begin="3.2s" repeatCount="indefinite"/>
+        </circle>
+        </g>
+    </g>
+
+    <!-- Four-point sparkle stars -->
+    <g class="drift-mid" fill="#ffffff">
+        <g transform="translate(255,215)"><path class="sparkle sp1" d="M0,-6 L1.3,-1.3 L6,0 L1.3,1.3 L0,6 L-1.3,1.3 L-6,0 L-1.3,-1.3 Z"/></g>
+        <g transform="translate(735,205)"><path class="sparkle sp2" d="M0,-5 L1.2,-1.2 L5,0 L1.2,1.2 L0,5 L-1.2,1.2 L-5,0 L-1.2,-1.2 Z" fill="#EADCB9"/></g>
+        <g transform="translate(1165,205)"><path class="sparkle sp3" d="M0,-7 L1.4,-1.4 L7,0 L1.4,1.4 L0,7 L-1.4,1.4 L-7,0 L-1.4,-1.4 Z"/></g>
+        <g transform="translate(45,330)"><path class="sparkle sp4" d="M0,-5 L1.2,-1.2 L5,0 L1.2,1.2 L0,5 L-1.2,1.2 L-5,0 L-1.2,-1.2 Z" fill="#a5c8ff"/></g>
+        <g transform="translate(1180,560)"><path class="sparkle sp5" d="M0,-6 L1.3,-1.3 L6,0 L1.3,1.3 L0,6 L-1.3,1.3 L-6,0 L-1.3,-1.3 Z"/></g>
+        <g transform="translate(75,935)"><path class="sparkle sp6" d="M0,-5 L1.2,-1.2 L5,0 L1.2,1.2 L0,5 L-1.2,1.2 L-5,0 L-1.2,-1.2 Z" fill="#EADCB9"/></g>
+        <g transform="translate(895,955)"><path class="sparkle sp7" d="M0,-6 L1.3,-1.3 L6,0 L1.3,1.3 L0,6 L-1.3,1.3 L-6,0 L-1.3,-1.3 Z"/></g>
+    </g>
+
+    <!-- Occasional sharp glints -->
+    <g fill="#ffffff">
+        <g transform="translate(760,120)"><path class="flare f1" d="M0,-9 L1.8,-1.8 L9,0 L1.8,1.8 L0,9 L-1.8,1.8 L-9,0 L-1.8,-1.8 Z"/></g>
+        <g transform="translate(150,660)"><path class="flare f2" d="M0,-8 L1.6,-1.6 L8,0 L1.6,1.6 L0,8 L-1.6,1.6 L-8,0 L-1.6,-1.6 Z" fill="#ffe9b8"/></g>
+        <g transform="translate(1065,470)"><path class="flare f3" d="M0,-9 L1.8,-1.8 L9,0 L1.8,1.8 L0,9 L-1.8,1.8 L-9,0 L-1.8,-1.8 Z" fill="#cfe1ff"/></g>
+        <g transform="translate(330,880)"><path class="flare f4" d="M0,-7 L1.5,-1.5 L7,0 L1.5,1.5 L0,7 L-1.5,1.5 L-7,0 L-1.5,-1.5 Z" fill="#a5c8ff"/></g>
+        <g transform="translate(900,300)"><path class="flare f5" d="M0,-8 L1.6,-1.6 L8,0 L1.6,1.6 L0,8 L-1.6,1.6 L-8,0 L-1.6,-1.6 Z" fill="#ffffff"/></g>
+    </g>
+
+    <!-- Shooting stars -->
+    <g transform="translate(980,170) rotate(-32)">
+        <line class="shooting-star shoot-a" x1="0" y1="0" x2="150" y2="0" stroke="url(#shoot-tail)" stroke-width="1.6"/>
+        <circle class="shooting-star shoot-a" cx="0" cy="0" r="1.6" fill="#ffffff" filter="url(#glow)"/>
+    </g>
+    <g transform="translate(140,420) rotate(-160)">
+        <line class="shooting-star shoot-b" x1="0" y1="0" x2="120" y2="0" stroke="url(#shoot-tail)" stroke-width="1.2"/>
+        <circle class="shooting-star shoot-b" cx="0" cy="0" r="1.3" fill="#ffffff"/>
+    </g>
+    <g transform="translate(1150,700) rotate(-38)">
+        <line class="shooting-star shoot-c" x1="0" y1="0" x2="110" y2="0" stroke="url(#shoot-tail-gold)" stroke-width="1.3"/>
+        <circle class="shooting-star shoot-c" cx="0" cy="0" r="1.4" fill="#ffe9b8"/>
+    </g>
+    <g transform="translate(90,560) rotate(-155)">
+        <line class="shooting-star shoot-d" x1="0" y1="0" x2="130" y2="0" stroke="url(#shoot-tail)" stroke-width="1.1"/>
+        <circle class="shooting-star shoot-d" cx="0" cy="0" r="1.2" fill="#ffffff"/>
+    </g>
+    <g transform="translate(980,1030) rotate(-40)">
+        <line class="shooting-star shoot-e" x1="0" y1="0" x2="120" y2="0" stroke="url(#shoot-tail-gold)" stroke-width="1.2"/>
+        <circle class="shooting-star shoot-e" cx="0" cy="0" r="1.3" fill="#ffe9b8"/>
+    </g>
+    <g transform="translate(700,180) rotate(-165)">
+        <line class="shooting-star shoot-f" x1="0" y1="0" x2="110" y2="0" stroke="url(#shoot-tail)" stroke-width="1.2"/>
+        <circle class="shooting-star shoot-f" cx="0" cy="0" r="1.3" fill="#cfe1ff"/>
+    </g>
+    <g transform="translate(1080,880) rotate(-30)">
+        <line class="shooting-star shoot-g" x1="0" y1="0" x2="100" y2="0" stroke="url(#shoot-tail)" stroke-width="1"/>
+        <circle class="shooting-star shoot-g" cx="0" cy="0" r="1.1" fill="#ffffff"/>
+    </g>
+
+    <!-- Rising light motes in the lower sky (seamless loop) -->
+    <g class="motes">
+        <g id="motes-row">
+            <circle cx="120"  cy="965"  r="1.1" fill="#dbe6ff"/>
+            <circle cx="300"  cy="1080" r="0.9" fill="#EADCB9"/>
+            <circle cx="415"  cy="1000" r="1.2" fill="#dbe6ff"/>
+            <circle cx="520"  cy="1120" r="0.8" fill="#a5c8ff"/>
+            <circle cx="705"  cy="1040" r="1"   fill="#dbe6ff"/>
+            <circle cx="830"  cy="975"  r="1.3" fill="#EADCB9"/>
+            <circle cx="960"  cy="1105" r="0.9" fill="#dbe6ff"/>
+            <circle cx="1065" cy="1010" r="1.1" fill="#a5c8ff"/>
+            <circle cx="1150" cy="1130" r="0.8" fill="#dbe6ff"/>
+            <circle cx="215"  cy="1150" r="1"   fill="#EADCB9"/>
+        </g>
+        <use href="#motes-row" y="160"/>
+    </g>
+
+    <!-- Fainter rising motes across the mid sky -->
+    <g class="motes motes-mid">
+        <g id="motes-row-2">
+            <circle cx="180"  cy="470" r="0.9" fill="#dbe6ff"/>
+            <circle cx="340"  cy="560" r="0.8" fill="#EADCB9"/>
+            <circle cx="520"  cy="450" r="1"   fill="#dbe6ff"/>
+            <circle cx="700"  cy="580" r="0.8" fill="#a5c8ff"/>
+            <circle cx="880"  cy="470" r="0.9" fill="#dbe6ff"/>
+            <circle cx="1040" cy="560" r="1"   fill="#EADCB9"/>
+            <circle cx="90"   cy="600" r="0.8" fill="#dbe6ff"/>
+            <circle cx="1150" cy="450" r="0.9" fill="#dbe6ff"/>
+        </g>
+        <use href="#motes-row-2" y="160"/>
+    </g>
+
+    <!-- Distant satellites constantly drifting across the sky -->
+    <g opacity="0.7">
+        <circle r="1.6" fill="#cfe1ff" filter="url(#glow)">
+            <animateMotion dur="47s" repeatCount="indefinite"
+                path="M -40 480 A 640 190 0 1 1 1240 480 A 640 190 0 1 1 -40 480"/>
+        </circle>
+        <circle r="1.2" fill="#ffe9b8">
+            <animateMotion dur="61s" begin="-25s" repeatCount="indefinite"
+                path="M 1240 760 A 640 210 0 1 0 -40 760 A 640 210 0 1 0 1240 760"/>
+        </circle>
+    </g>
+
+    <!-- Mini constellation (bottom right) -->
+    <g stroke="#EADCB9" fill="#EADCB9">
+        <polyline class="cst2-line" points="940,1000 1015,955 1085,1005 1150,962"
+            fill="none" stroke-width="0.7"/>
+        <circle class="cst2-dot c2d1" cx="940"  cy="1000" r="1.8" filter="url(#glow)"/>
+        <circle class="cst2-dot c2d2" cx="1015" cy="955"  r="2.2" filter="url(#glow)"/>
+        <circle class="cst2-dot c2d3" cx="1085" cy="1005" r="1.8" filter="url(#glow)"/>
+        <circle class="cst2-dot c2d4" cx="1150" cy="962"  r="2.4" filter="url(#glow)"/>
+    </g>
+
+    <!-- Orbiter circling the header block -->
+    <g opacity="0.6">
+        <circle r="1.4" fill="#fff6df" filter="url(#glow)">
+            <animateMotion dur="34s" repeatCount="indefinite"
+                path="M 1030 210 A 430 50 0 1 1 170 210 A 430 50 0 1 1 1030 210"/>
+        </circle>
+    </g>
+
+    <!-- ==================== FOREGROUND CONTENT ==================== -->
+
+    <!-- Header Section -->
+    <text x="600" y="180" class="subtitle">MUSEO ORBITAL</text>
+    <text x="605" y="255" class="title">ASTROINGENIERIA</text>
+
+    <!-- Main Paragraphs -->
+    <text x="600" y="390" class="body-text">Durante casi toda nuestra historia, mirar hacia arriba</text>
+    <text x="600" y="430" class="body-text">significó observar algo fuera de nuestro alcance.</text>
+
+    <text x="600" y="495" class="body-text">El cielo era distancia.</text>
+
+    <text x="600" y="555" class="body-text">Después se convirtió en destino.</text>
+
+    <text x="600" y="615" class="body-text">Quizá algún día se convierta en nuestra obra.</text>
+
+    <text x="600" y="675" class="body-text"><tspan class="bold-text">AstroIngeniería</tspan> explora lo que viene después de alcanzar las estrellas.</text>
+
+    <!-- Orbital system circling the ENTRAR button (constant motion) -->
+    <g transform="rotate(-12 600 848)" opacity="0.55">
+        <ellipse cx="600" cy="848" rx="250" ry="72" fill="none" stroke="#EADCB9"
+            stroke-width="0.5" stroke-dasharray="2 7" opacity="0.4"/>
+        <circle r="1.8" fill="#fff6df" filter="url(#glow)">
+            <animateMotion dur="9s" repeatCount="indefinite"
+                path="M 850 848 A 250 72 0 1 1 350 848 A 250 72 0 1 1 850 848"/>
+        </circle>
+        <circle r="1.3" fill="#a5c8ff">
+            <animateMotion dur="15s" begin="-6s" repeatCount="indefinite"
+                path="M 350 848 A 250 72 0 1 0 850 848 A 250 72 0 1 0 350 848"/>
+        </circle>
+        <circle r="1.4" fill="#EADCB9">
+            <animateMotion dur="21s" begin="-13s" repeatCount="indefinite"
+                path="M 600 776 A 250 72 0 1 1 600 920 A 250 72 0 1 1 600 776"/>
+        </circle>
+    </g>
+
+    <!-- Bottom call-to-action (subtle button, no box) -->
+    <g>
+        <!-- Expanding ripples emanating from the button (smooth easing) -->
+        <circle class="ripple rp1" cx="600" cy="848" r="115" fill="none" stroke="#e3ccaa" stroke-width="0.7"/>
+        <circle class="ripple rp2" cx="600" cy="848" r="115" fill="none" stroke="#e3ccaa" stroke-width="0.7"/>
+
+        <!-- Breathing halo behind the word -->
+        <ellipse class="halo" cx="600" cy="848" rx="210" ry="52" fill="url(#entrar-halo)"/>
+
+        <!-- The word itself (gently breathing, like a live button) -->
+        <text x="607" y="870" class="entrar-title entrar-press">ENTRAR</text>
+
+        <!-- Underline with fading edges + pulsing core -->
+        <line x1="470" y1="902" x2="590" y2="902" stroke="url(#fade-left)" stroke-width="1"/>
+        <circle cx="600" cy="902" r="2" fill="#e3ccaa" filter="url(#glow)">
+            <animate attributeName="opacity" values="0.6;1;0.6" dur="4.5s" repeatCount="indefinite"/>
+        </circle>
+        <line x1="610" y1="902" x2="730" y2="902" stroke="url(#fade-right)" stroke-width="1"/>
+        <circle class="ul-pulse" cx="470" cy="902" r="1.5" fill="#fff6df"/>
+    </g>
+
+</svg>
