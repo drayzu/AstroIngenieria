@@ -1,5 +1,7 @@
 <p align="center">
-  <img alt="Placeholder" src="public/readme/respaldos/google-ver.svg" width="780"/>
+  <a href="https://drayzu.github.io/AstroIngenieria/">
+    <img alt="Placeholder" src="public/readme/respaldos/google-ver.svg" width="780"/>
+  </a>
 </p>
 
 ![Portada del museo — AstroIngeniería](public/readme/1.png)
