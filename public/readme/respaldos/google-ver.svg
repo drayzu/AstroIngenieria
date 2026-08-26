@@ -1,0 +1,327 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1000" width="1200" height="1000">
+    <defs>
+        <!-- Shooting star tail gradient -->
+        <linearGradient id="shoot-tail" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+            <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="shoot-tail-gold" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ffe9b8" stop-opacity="1"/>
+            <stop offset="100%" stop-color="#ffe9b8" stop-opacity="0"/>
+        </linearGradient>
+
+        <!-- Animated shine sweeping across the title -->
+        <linearGradient id="title-shine" gradientUnits="userSpaceOnUse" x1="350" y1="0" x2="850" y2="0">
+            <stop offset="0" stop-color="#ecd9ae"/>
+            <stop offset="0.5" stop-color="#fff6df"/>
+            <stop offset="1" stop-color="#ecd9ae"/>
+            <animateTransform attributeName="gradientTransform" attributeType="XML"
+                type="translate" values="-720 0; 720 0" dur="9s" repeatCount="indefinite"/>
+        </linearGradient>
+
+        <linearGradient id="title-shine-2" gradientUnits="userSpaceOnUse" x1="320" y1="0" x2="880" y2="0">
+            <stop offset="0" stop-color="#ecd9ae"/>
+            <stop offset="0.5" stop-color="#fff6df"/>
+            <stop offset="1" stop-color="#ecd9ae"/>
+            <animateTransform attributeName="gradientTransform" attributeType="XML"
+                type="translate" values="-900 0; 900 0" dur="11s" begin="4s" repeatCount="indefinite"/>
+        </linearGradient>
+
+        <!-- Glow filter for premium stars -->
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </filter>
+    </defs>
+
+    <style>
+        /* Import Google Fonts (falls back gracefully when GitHub blocks external fonts) */
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400&amp;family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&amp;family=Montserrat:wght@400&amp;display=swap');
+
+        /* Typography */
+        .title {
+            font-family: 'Cinzel', 'Times New Roman', serif;
+            font-size: 54px;
+            fill: url(#title-shine);
+            text-anchor: middle;
+            letter-spacing: 2px;
+        }
+        .title-big {
+            font-family: 'Cinzel', 'Times New Roman', serif;
+            font-size: 68px;
+            fill: url(#title-shine-2);
+            text-anchor: middle;
+            letter-spacing: 6px;
+        }
+        .subtitle {
+            font-family: 'Montserrat', 'Segoe UI', sans-serif;
+            font-size: 13px;
+            fill: #b3b0aa;
+            text-anchor: middle;
+            letter-spacing: 0.9em;
+            animation: breathe 8s ease-in-out infinite;
+        }
+        .body-text {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 26px;
+            fill: #c5bcae;
+            text-anchor: middle;
+        }
+        .bold-text { font-weight: 600; fill: #e3ccaa; }
+
+        /* ===================== SPACE EFFECTS ===================== */
+
+        .star { fill: #ffffff; transform-box: fill-box; transform-origin: center; }
+        .star-gold { fill: #EADCB9; }
+        .star-blue { fill: #a5c8ff; }
+
+        /* Depth-layered twinkling */
+        .t1 { animation: twinkle 3s   ease-in-out infinite alternate; }
+        .t2 { animation: twinkle 4.5s ease-in-out infinite alternate 1s; }
+        .t3 { animation: twinkle 2.5s ease-in-out infinite alternate 2s; }
+        .t4 { animation: twinkle 6s   ease-in-out infinite alternate 0.5s; }
+        .t5 { animation: twinkle 3.5s ease-in-out infinite alternate 3s; }
+        .t6 { animation: twinkle 5s   ease-in-out infinite alternate 1.8s; }
+        .t7 { animation: twinkle 4s   ease-in-out infinite alternate 2.6s; }
+
+        @keyframes twinkle {
+            0%   { opacity: 0.12; transform: scale(0.7); }
+            100% { opacity: 0.95; transform: scale(1.25); }
+        }
+
+        /* Four-point sparkle stars (rotate + pulse) */
+        .sparkle { animation: sparklePulse 8s ease-in-out infinite; }
+        .sp1 { animation-duration: 7s; }
+        .sp2 { animation-duration: 9s;   animation-delay: 1.2s; }
+        .sp3 { animation-duration: 6.5s; animation-delay: 2.4s; }
+        .sp4 { animation-duration: 8.5s; animation-delay: 0.8s; }
+        .sp5 { animation-duration: 10s;  animation-delay: 3.1s; }
+        .sp6 { animation-duration: 7.5s; animation-delay: 4.2s; }
+        .sp7 { animation-duration: 11s;  animation-delay: 2s; }
+
+        @keyframes sparklePulse {
+            0%, 100% { opacity: 0.15; transform: scale(0.45) rotate(0deg); }
+            50%      { opacity: 1;    transform: scale(1.05) rotate(45deg); }
+        }
+
+        /* Shooting stars (short, staggered) */
+        .shooting-star { opacity: 0; stroke-linecap: round; }
+        .shoot-a { animation: shootA 13s linear infinite 2s; }
+        .shoot-b { animation: shootB 17s linear infinite 6s; }
+        .shoot-c { animation: shootC 19s linear infinite 11s; }
+        .shoot-d { animation: shootD 23s linear infinite 15s; }
+
+        @keyframes shootA { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 1; } 9% { transform: translateX(-430px); opacity: 0; } 100% { transform: translateX(-430px); opacity: 0; } }
+        @keyframes shootB { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 1; } 8% { transform: translateX(-520px); opacity: 0; } 100% { transform: translateX(-520px); opacity: 0; } }
+        @keyframes shootC { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 0.9; } 7% { transform: translateX(-380px); opacity: 0; } 100% { transform: translateX(-380px); opacity: 0; } }
+        @keyframes shootD { 0% { transform: translateX(0); opacity: 0; } 1% { opacity: 1; } 10% { transform: translateX(-460px); opacity: 0; } 100% { transform: translateX(-460px); opacity: 0; } }
+
+        /* Rare big meteor crossing the whole sky */
+        .big-meteor { opacity: 0; animation: meteorCross 36s linear infinite 6s; }
+
+        @keyframes meteorCross {
+            0%       { transform: translate(1340px, 60px);  opacity: 0; }
+            0.8%     { opacity: 1; }
+            4%       { transform: translate(240px, 470px);  opacity: 1; }
+            4.8%     { transform: translate(240px, 470px);  opacity: 0; }
+            100%     { transform: translate(240px, 470px);  opacity: 0; }
+        }
+
+        /* Stardust drift */
+        .dust { animation: dustDrift 46s ease-in-out infinite alternate; }
+
+        @keyframes dustDrift{ from { transform: translate(0,0); } to { transform: translate(-42px,-26px); } }
+
+        /* Self-drawing constellation */
+        .constellation-line {
+            stroke-dasharray: 260;
+            animation: constellationDraw 22s ease-in-out infinite;
+        }
+        .constellation-dot { opacity: 0; }
+        .cd1 { animation: dotIn 22s ease-out infinite; }
+        .cd2 { animation: dotIn 22s ease-out infinite 0.8s; }
+        .cd3 { animation: dotIn 22s ease-out infinite 1.6s; }
+        .cd4 { animation: dotIn 22s ease-out infinite 2.4s; }
+
+        @keyframes constellationDraw {
+            0%   { stroke-dashoffset: 260; opacity: 0; }
+            8%   { opacity: 0.7; }
+            32%  { stroke-dashoffset: 0; opacity: 0.7; }
+            58%  { stroke-dashoffset: 0; opacity: 0.7; }
+            72%  { stroke-dashoffset: 0; opacity: 0; }
+            100% { stroke-dashoffset: 260; opacity: 0; }
+        }
+        @keyframes dotIn {
+            0%   { opacity: 0; }
+            10%  { opacity: 0.9; }
+            62%  { opacity: 0.9; }
+            74%  { opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        @keyframes breathe {
+            0%, 100% { opacity: 0.75; }
+            50%      { opacity: 1; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; }
+        }
+    </style>
+
+    <!-- Flat GitHub dark background -->
+    <rect width="100%" height="100%" fill="#0d1117"/>
+
+    <!-- ==================== DEEP SPACE ATMOSPHERE ==================== -->
+
+    <!-- Drifting stardust -->
+    <g class="dust" fill="#dbe6ff" opacity="0.35">
+        <circle cx="120" cy="240" r="0.7"/>
+        <circle cx="305" cy="165" r="0.8"/>
+        <circle cx="545" cy="245" r="0.6"/>
+        <circle cx="705" cy="185" r="0.7"/>
+        <circle cx="915" cy="305" r="0.8"/>
+        <circle cx="1105" cy="235" r="0.6"/>
+        <circle cx="85"  cy="580" r="0.7"/>
+        <circle cx="285" cy="665" r="0.6"/>
+        <circle cx="1015" cy="615" r="0.7"/>
+        <circle cx="1150" cy="805" r="0.8"/>
+        <circle cx="425" cy="935" r="0.7"/>
+        <circle cx="655" cy="905" r="0.6"/>
+        <circle cx="875" cy="845" r="0.7"/>
+    </g>
+
+    <!-- ==================== BACKGROUND SPACE ELEMENTS ==================== -->
+
+    <!-- Constellation that draws itself (top left) -->
+    <g stroke="#EADCB9" fill="#EADCB9">
+        <polyline class="constellation-line" points="120,160 190,120 260,170 330,130"
+            fill="none" stroke-width="0.8" opacity="0.7"/>
+        <circle class="constellation-dot cd1" cx="120" cy="160" r="2" filter="url(#glow)"/>
+        <circle class="constellation-dot cd2" cx="190" cy="120" r="2.5" filter="url(#glow)"/>
+        <circle class="constellation-dot cd3" cx="260" cy="170" r="2" filter="url(#glow)"/>
+        <circle class="constellation-dot cd4" cx="330" cy="130" r="2.8" filter="url(#glow)"/>
+    </g>
+
+    <!-- Twinkling Star Field -->
+    <g opacity="0.85">
+        <!-- Distant faint stars -->
+        <g opacity="0.5">
+            <circle cx="95"   cy="140" r="0.8" class="star t4"/>
+            <circle cx="170"  cy="90"  r="0.6" class="star t2"/>
+            <circle cx="240"  cy="240" r="0.9" class="star t6"/>
+            <circle cx="330"  cy="60"  r="0.7" class="star t3"/>
+            <circle cx="410"  cy="180" r="0.8" class="star t7"/>
+            <circle cx="520"  cy="70"  r="0.6" class="star t1"/>
+            <circle cx="640"  cy="140" r="0.8" class="star t5"/>
+            <circle cx="760"  cy="90"  r="0.6" class="star t3"/>
+            <circle cx="880"  cy="210" r="0.9" class="star t2"/>
+            <circle cx="1010" cy="70"  r="0.7" class="star t6"/>
+            <circle cx="1120" cy="150" r="0.8" class="star t4"/>
+            <circle cx="1170" cy="260" r="0.6" class="star t1"/>
+            <circle cx="60"   cy="420" r="0.8" class="star t5"/>
+            <circle cx="200"  cy="470" r="0.6" class="star t7"/>
+            <circle cx="340"  cy="430" r="0.8" class="star t2"/>
+            <circle cx="1150" cy="430" r="0.7" class="star t1"/>
+            <circle cx="90"   cy="640" r="0.8" class="star t3"/>
+            <circle cx="220"  cy="720" r="0.6" class="star t6"/>
+            <circle cx="1160" cy="700" r="0.8" class="star t4"/>
+            <circle cx="1080" cy="760" r="0.6" class="star t2"/>
+            <circle cx="60"   cy="860" r="0.8" class="star t7"/>
+            <circle cx="330"  cy="930" r="0.6" class="star t1"/>
+            <circle cx="540"  cy="890" r="0.8" class="star t5"/>
+            <circle cx="760"  cy="930" r="0.6" class="star t3"/>
+            <circle cx="940"  cy="880" r="0.8" class="star t6"/>
+            <circle cx="1140" cy="930" r="0.6" class="star t4"/>
+        </g>
+
+        <!-- Mid-field stars -->
+        <circle cx="150"  cy="180" r="1.4" class="star t1"/>
+        <circle cx="220"  cy="350" r="1"   class="star t3 star-blue"/>
+        <circle cx="310"  cy="120" r="1"   class="star t2"/>
+        <circle cx="450"  cy="850" r="1.2" class="star t5"/>
+        <circle cx="180"  cy="920" r="1.4" class="star t1"/>
+        <circle cx="850"  cy="150" r="1.4" class="star t2"/>
+        <circle cx="1100" cy="320" r="1"   class="star t5"/>
+        <circle cx="980"  cy="540" r="1.4" class="star t1"/>
+        <circle cx="1050" cy="820" r="1"   class="star t4 star-gold"/>
+        <circle cx="920"  cy="900" r="1.2" class="star t2"/>
+        <circle cx="500"  cy="950" r="1"   class="star t1"/>
+        <circle cx="400"  cy="200" r="1"   class="star t4"/>
+        <circle cx="600"  cy="100" r="1"   class="star t1"/>
+        <circle cx="750"  cy="300" r="1"   class="star t3"/>
+        <circle cx="250"  cy="600" r="1"   class="star t5"/>
+        <circle cx="800"  cy="700" r="1"   class="star t2"/>
+        <circle cx="1130" cy="540" r="1.3" class="star t6 star-gold"/>
+        <circle cx="70"   cy="760" r="1.2" class="star t6"/>
+        <circle cx="370"  cy="700" r="1"   class="star t2 star-blue"/>
+        <circle cx="1030" cy="240" r="1.2" class="star t4"/>
+
+        <!-- Bright hero stars -->
+        <circle cx="85"   cy="520" r="2"   class="star t4 star-gold" filter="url(#glow)"/>
+        <circle cx="1150" cy="650" r="2"   class="star t3 star-blue" filter="url(#glow)"/>
+        <circle cx="985"  cy="120" r="1.8" class="star t2"           filter="url(#glow)"/>
+        <circle cx="135"  cy="300" r="1.8" class="star t5 star-gold" filter="url(#glow)"/>
+        <circle cx="1090" cy="880" r="2"   class="star t6"           filter="url(#glow)"/>
+    </g>
+
+    <!-- Four-point sparkle stars -->
+    <g fill="#ffffff">
+        <path class="sparkle sp1" transform="translate(255,75)"   d="M0,-6 L1.3,-1.3 L6,0 L1.3,1.3 L0,6 L-1.3,1.3 L-6,0 L-1.3,-1.3 Z"/>
+        <path class="sparkle sp2" transform="translate(735,65)"   d="M0,-5 L1.2,-1.2 L5,0 L1.2,1.2 L0,5 L-1.2,1.2 L-5,0 L-1.2,-1.2 Z" fill="#EADCB9"/>
+        <path class="sparkle sp3" transform="translate(1165,205)" d="M0,-7 L1.4,-1.4 L7,0 L1.4,1.4 L0,7 L-1.4,1.4 L-7,0 L-1.4,-1.4 Z"/>
+        <path class="sparkle sp4" transform="translate(45,330)"   d="M0,-5 L1.2,-1.2 L5,0 L1.2,1.2 L0,5 L-1.2,1.2 L-5,0 L-1.2,-1.2 Z" fill="#a5c8ff"/>
+        <path class="sparkle sp5" transform="translate(1180,560)" d="M0,-6 L1.3,-1.3 L6,0 L1.3,1.3 L0,6 L-1.3,1.3 L-6,0 L-1.3,-1.3 Z"/>
+        <path class="sparkle sp6" transform="translate(75,935)"   d="M0,-5 L1.2,-1.2 L5,0 L1.2,1.2 L0,5 L-1.2,1.2 L-5,0 L-1.2,-1.2 Z" fill="#EADCB9"/>
+        <path class="sparkle sp7" transform="translate(895,955)"  d="M0,-6 L1.3,-1.3 L6,0 L1.3,1.3 L0,6 L-1.3,1.3 L-6,0 L-1.3,-1.3 Z"/>
+    </g>
+
+    <!-- Shooting stars -->
+    <g transform="translate(980,170) rotate(-32)">
+        <line class="shooting-star shoot-a" x1="0" y1="0" x2="150" y2="0" stroke="url(#shoot-tail)" stroke-width="1.6"/>
+        <circle class="shooting-star shoot-a" cx="0" cy="0" r="1.6" fill="#ffffff" filter="url(#glow)"/>
+    </g>
+    <g transform="translate(430,120) rotate(-48)">
+        <line class="shooting-star shoot-b" x1="0" y1="0" x2="120" y2="0" stroke="url(#shoot-tail)" stroke-width="1.2"/>
+        <circle class="shooting-star shoot-b" cx="0" cy="0" r="1.3" fill="#ffffff"/>
+    </g>
+    <g transform="translate(1120,640) rotate(-22)">
+        <line class="shooting-star shoot-c" x1="0" y1="0" x2="110" y2="0" stroke="url(#shoot-tail-gold)" stroke-width="1.3"/>
+        <circle class="shooting-star shoot-c" cx="0" cy="0" r="1.4" fill="#ffe9b8"/>
+    </g>
+    <g transform="translate(300,320) rotate(-38)">
+        <line class="shooting-star shoot-d" x1="0" y1="0" x2="130" y2="0" stroke="url(#shoot-tail)" stroke-width="1.1"/>
+        <circle class="shooting-star shoot-d" cx="0" cy="0" r="1.2" fill="#ffffff"/>
+    </g>
+
+    <!-- Rare big meteor crossing the whole sky -->
+    <g class="big-meteor" transform="rotate(-21)">
+        <line x1="0" y1="0" x2="240" y2="0" stroke="url(#shoot-tail)" stroke-width="2"/>
+        <circle cx="0" cy="0" r="2.4" fill="#ffffff" filter="url(#glow)"/>
+    </g>
+
+    <!-- ==================== FOREGROUND CONTENT ==================== -->
+
+    <!-- Header Section -->
+    <text x="600" y="180" class="subtitle">MUSEO ORBITAL</text>
+    <text x="600" y="255" class="title">ASTROINGENIERIA</text>
+
+    <!-- Main Paragraphs -->
+    <text x="600" y="390" class="body-text">Durante casi toda nuestra historia, mirar hacia arriba</text>
+    <text x="600" y="430" class="body-text">significó observar algo fuera de nuestro alcance.</text>
+
+    <text x="600" y="495" class="body-text">El cielo era distancia.</text>
+
+    <text x="600" y="555" class="body-text">Después se convirtió en destino.</text>
+
+    <text x="600" y="615" class="body-text">Quizá algún día se convierta en nuestra obra.</text>
+
+    <text x="600" y="675" class="body-text"><tspan class="bold-text">AstroIngeniería</tspan> explora lo que viene después de alcanzar las estrellas.</text>
+
+    <!-- Big Bottom Title (empty space) -->
+    <text x="600" y="820" class="title-big">ENTRAR AL MUSEO</text>
+
+</svg>
