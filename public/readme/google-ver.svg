@@ -44,12 +44,12 @@
         </linearGradient>
 
         <!-- Animated shine sweeping across the title -->
-        <linearGradient id="title-shine" gradientUnits="userSpaceOnUse" x1="150" y1="0" x2="1050" y2="0">
+        <linearGradient id="title-shine" gradientUnits="userSpaceOnUse" x1="350" y1="0" x2="850" y2="0">
             <stop offset="0" stop-color="#ecd9ae"/>
             <stop offset="0.5" stop-color="#fff6df"/>
             <stop offset="1" stop-color="#ecd9ae"/>
             <animateTransform attributeName="gradientTransform" attributeType="XML"
-                type="translate" values="-920 0; 920 0; 920 0" keyTimes="0; 0.4; 1" dur="11s" repeatCount="indefinite"/>
+                type="translate" values="-720 0; 720 0; 720 0" keyTimes="0; 0.4; 1" dur="11s" repeatCount="indefinite"/>
         </linearGradient>
 
         <linearGradient id="title-shine-2" gradientUnits="userSpaceOnUse" x1="420" y1="0" x2="780" y2="0">
@@ -84,10 +84,10 @@
         /* Typography */
         .title {
             font-family: 'Cinzel', 'Times New Roman', serif;
-            font-size: 72px;
+            font-size: 54px;
             fill: url(#title-shine);
             text-anchor: middle;
-            letter-spacing: 10px;
+            letter-spacing: 2px;
         }
         .entrar-title {
             font-family: 'Cinzel', 'Times New Roman', serif;
@@ -108,7 +108,7 @@
         }
         .subtitle {
             font-family: 'Montserrat', 'Segoe UI', sans-serif;
-            font-size: 16px;
+            font-size: 13px;
             fill: #b3b0aa;
             text-anchor: middle;
             letter-spacing: 0.9em;
@@ -584,7 +584,7 @@
     <g opacity="0.6">
         <circle r="1.4" fill="#fff6df" filter="url(#glow)">
             <animateMotion dur="34s" repeatCount="indefinite"
-                path="M 1030 210 A 430 50 0 1 1 170 210 A 430 50 0 1 1 1030 210"/>
+                path="M 930 210 A 330 44 0 1 1 270 210 A 330 44 0 1 1 930 210"/>
         </circle>
     </g>
 
@@ -592,7 +592,7 @@
 
     <!-- Header Section -->
     <text x="600" y="180" class="subtitle">MUSEO ORBITAL</text>
-    <text x="605" y="255" class="title">ASTROINGENIERIA</text>
+    <text x="600" y="255" class="title">ASTROINGENIERIA</text>
 
     <!-- Main Paragraphs -->
     <text x="600" y="390" class="body-text">Durante casi toda nuestra historia, mirar hacia arriba</text>
