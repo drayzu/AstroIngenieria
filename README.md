@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://drayzu.github.io/AstroIngenieria/">
-    <img alt="Placeholder" src="public/readme/respaldos/google-ver.svg"/>
+    <img alt="Placeholder" src="public/readme/google-ver.svg"/>
   </a>
 </p>
 
