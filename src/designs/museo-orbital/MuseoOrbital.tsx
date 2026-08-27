@@ -773,11 +773,11 @@ const Hero = ({
                   ref={(el) => {
                     letterRefs.current[index] = el;
                   }}
-                  initial={{ y: '118%' }}
+                  initial={{ y: '180%' }}
                   animate={{ y: '0%' }}
                   transition={{
                     delay: reduced ? 0 : 0.55 + index * 0.038,
-                    duration: 1.1,
+                    duration: 1.25,
                     ease: EASE_OUT,
                   }}
                 >
