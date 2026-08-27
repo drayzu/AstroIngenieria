@@ -243,11 +243,6 @@ body:has(.mo-root) {
 
 .mo-hero-hover {
   display: inline-block;
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.mo-hero-letterbox:hover .mo-hero-hover {
-  transform: translateY(-0.07em);
 }
 
 .mo-hero-letter {

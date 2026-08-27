@@ -357,8 +357,6 @@ const Hero = ({
     const mouse = { x: -9999, y: -9999 };
     const motion2d = { x: -9999, y: -9999, t: 0, speed: 0 };
     const states = letters.map(() => ({
-      x: 0,
-      y: 0,
       w: 520,
       ix: 0,
       iy: 0,
@@ -368,6 +366,10 @@ const Hero = ({
       ivr: 0,
       is: 0,
       ivs: 0,
+    }));
+    const personas = letters.map(() => ({
+      k: 0.85 + Math.random() * 0.3,
+      c: 0.85 + Math.random() * 0.3,
     }));
     // Textos del hero que tambien reciben impactos (bloques completos)
     const extras: {
@@ -519,6 +521,7 @@ const Hero = ({
       mouse.x = event.clientX;
       mouse.y = event.clientY;
     };
+    window.addEventListener('mousemove', onMove, { passive: true });
 
     const loop = () => {
       clock += 0.016;
@@ -527,49 +530,68 @@ const Hero = ({
         glint.t0 = clock;
       }
       const glintP = (clock - glint.t0) / 0.85;
-      const calm = Math.max(0.25, 1 - motion2d.speed / 1100);
+      if (performance.now() - motion2d.t > 90) motion2d.speed *= 0.9;
+      const speedFactor = Math.min(1, motion2d.speed / 1000);
+      const radius = 190 + speedFactor * 70;
+      const push = 1 + speedFactor * 1.6;
+
+      const targets = letters.map((_, index) => {
+        const box = boxRefs.current[index];
+        const state = states[index];
+        if (!box || !state) return { x: 0, y: 0 };
+        const rect = box.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2 - state.ix;
+        const cy = rect.top + rect.height / 2 - state.iy;
+        const dx = cx - mouse.x;
+        const dy = cy - mouse.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist >= radius) return { x: 0, y: 0 };
+        const force = 1 - dist / radius;
+        const eased = force * force * (3 - 2 * force);
+        const tx = (dx / (dist || 1)) * eased * 11 * push;
+        let ty = (dy / (dist || 1)) * eased * 8.5 * push;
+        if (index === glint.index && glintP < 1) {
+          ty -= Math.sin(Math.PI * glintP) * 7;
+        }
+        return {
+          x: Math.max(-14, Math.min(14, tx)),
+          y: Math.max(-11, Math.min(11, ty)),
+        };
+      });
 
       letterRefs.current.forEach((el, index) => {
         if (!el) return;
-        const rect = el.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-        const dx = mouse.x - cx;
-        const dy = mouse.y - cy;
-        const dist = Math.hypot(dx, dy);
-        const radius = 170;
-        const force = (dist < radius ? 1 - dist / radius : 0) * calm;
-        const eased = force * force * (3 - 2 * force);
-
-        const targetX = (dx / (dist || 1)) * eased * 9;
-        const targetY = (dy / (dist || 1)) * eased * 6.5;
-        let targetW = 520 + eased * 170;
-        let lift = 0;
-        if (index === glint.index && glintP < 1) {
-          const spark = Math.sin(Math.PI * glintP);
-          targetW += spark * 190;
-          lift = -spark * 7;
-        }
-
         const state = states[index];
-        state.x += (targetX - state.x) * 0.09;
-        state.y += (targetY + lift - state.y) * 0.09;
-        state.w += (targetW - state.w) * 0.12;
+        const persona = personas[index];
+        const target = targets[index];
+        if (!state || !persona || !target) return;
 
-        el.style.transform = `translate(${state.x.toFixed(2)}px, ${state.y.toFixed(2)}px)`;
+        const leftX = states[index - 1]?.ix ?? 0;
+        const rightX = states[index + 1]?.ix ?? 0;
+        const leftY = states[index - 1]?.iy ?? 0;
+        const rightY = states[index + 1]?.iy ?? 0;
+        const k = 95 * persona.k;
+        const c = 5.8 * persona.c;
+        state.ivx += (k * (target.x - state.ix) + 14 * (leftX + rightX - 2 * state.ix) - c * state.ivx) * 0.016;
+        state.ivy += (k * (target.y - state.iy) + 14 * (leftY + rightY - 2 * state.iy) - c * state.ivy) * 0.016;
+        const targetR = Math.max(-0.05, Math.min(0.05, state.ivx * 0.0003));
+        state.ivr += (140 * (targetR - state.ir) - 7 * state.ivr) * 0.016;
+        state.ivs += (-170 * state.is - 8.5 * state.ivs) * 0.016;
+        state.ix += state.ivx * 0.016;
+        state.iy += state.ivy * 0.016;
+        state.ir += state.ivr * 0.016;
+        state.is += state.ivs * 0.016;
+
+        const dispMag = Math.hypot(state.ix, state.iy);
+        let targetW = 520 + Math.min(1, dispMag / 9) * 165;
+        if (index === glint.index && glintP < 1) {
+          targetW += Math.sin(Math.PI * glintP) * 190;
+        }
+        state.w += (targetW - state.w) * 0.12;
         el.style.fontVariationSettings = `'opsz' 144, 'wght' ${Math.round(state.w)}`;
 
-        // Muelle subamortiguado: la caja de la letra recibe el golpe y vuelve
         const box = boxRefs.current[index];
         if (box) {
-          state.ivx += (-140 * state.ix - 7 * state.ivx) * 0.016;
-          state.ivy += (-140 * state.iy - 7 * state.ivy) * 0.016;
-          state.ivr += (-140 * state.ir - 7 * state.ivr) * 0.016;
-          state.ivs += (-170 * state.is - 8.5 * state.ivs) * 0.016;
-          state.ix += state.ivx * 0.016;
-          state.iy += state.ivy * 0.016;
-          state.ir += state.ivr * 0.016;
-          state.is += state.ivs * 0.016;
           const scl = Math.max(0.55, Math.min(1.45, 1 + state.is));
           if (
             Math.abs(state.ix) > 0.05 ||
