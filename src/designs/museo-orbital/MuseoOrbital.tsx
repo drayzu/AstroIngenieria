@@ -49,6 +49,13 @@ const PLAYGROUND_WORD = 'ASTROINGENIERÍA';
 const PLAYGROUND_TIMES_KEY = 'mo-playground-best-times-v1';
 const PLAYGROUND_TIMES_CAP = 10;
 const PLAYGROUND_HOLD_MS = 2_000;
+const PG_TAIL_SEGMENTS = 16;
+const pgTailColor = (f: number) => {
+  const r = Math.round(158 + (255 - 158) * f);
+  const g = Math.round(197 + (246 - 197) * f);
+  const b = Math.round(255 + (227 - 255) * f);
+  return `rgb(${r}, ${g}, ${b})`;
+};
 const PLAYGROUND_MUSIC_MUTED_KEY = 'mo-playground-music-muted-v1';
 const PLAYGROUND_MUSIC_VOLUME = 0.35;
 const PLAYGROUND_MUSIC_ENTER_FADE_MS = 2_000;
@@ -347,6 +354,11 @@ const Hero = ({
   const letterRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const boxRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const pgRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const pgButtonRef = useRef<HTMLButtonElement | null>(null);
+  const pgCometRef = useRef<HTMLElement | null>(null);
+  const pgHeadRef = useRef<HTMLElement | null>(null);
+  const pgTailRefs = useRef<(HTMLElement | null)[]>([]);
+  const pgFlashRef = useRef<HTMLElement | null>(null);
   const kickerRef = useRef<HTMLParagraphElement>(null);
   const subRef = useRef<HTMLParagraphElement>(null);
   const hintRef = useRef<HTMLSpanElement>(null);
@@ -401,6 +413,189 @@ const Hero = ({
       vr: 0,
       vs: 0,
     }));
+    type CometMode = 'away' | 'enter' | 'orbit' | 'sweep' | 'nudge' | 'dive' | 'exit';
+    const comet = {
+      mode: 'away' as CometMode,
+      t: 0,
+      dur: 1.8 + Math.random() * 1.0,
+      x: 0,
+      y: 0,
+      sx: 0,
+      sy: 0,
+      cx: 0,
+      cy: 0,
+      tx: 0,
+      ty: 0,
+      theta: 0,
+      dir: 1,
+      ox: 0,
+      oy: 0,
+      rx: 0,
+      ry: 0,
+      target: 0,
+      pushes: 0,
+      lunging: false,
+      nextPushAt: 0,
+      hoverX: 0,
+      hoverY: 0,
+      visible: false,
+    };
+    const trail: { x: number; y: number }[] = [];
+    const fireFlash = (x: number, y: number) => {
+      const flash = pgFlashRef.current;
+      if (!flash) return;
+      flash.classList.remove('is-on');
+      void flash.offsetWidth;
+      flash.style.left = `${x.toFixed(1)}px`;
+      flash.style.top = `${y.toFixed(1)}px`;
+      flash.classList.add('is-on');
+    };
+    const wordMetrics = () => {
+      const btn = pgButtonRef.current;
+      const first = pgRefs.current[0];
+      const last = pgRefs.current[pgRefs.current.length - 1];
+      if (!btn || !first || !last) return null;
+      const br = btn.getBoundingClientRect();
+      const fr = first.getBoundingClientRect();
+      const lr = last.getBoundingClientRect();
+      const left = fr.left - br.left;
+      const right = lr.right - br.left;
+      const midY = (fr.top + fr.bottom) / 2 - br.top;
+      return { br, left, right, midY, cx: (left + right) / 2, width: right - left };
+    };
+    const letterCenter = (index: number) => {
+      const el = pgRefs.current[index];
+      const btn = pgButtonRef.current;
+      const st = pgStates[index];
+      if (!el || !btn || !st) return null;
+      const br = btn.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      return {
+        x: r.left + r.width / 2 - br.left - st.x,
+        y: r.top + r.height / 2 - br.top - st.y,
+      };
+    };
+    const setCometMode = (mode: CometMode, dur: number) => {
+      comet.mode = mode;
+      comet.t = 0;
+      comet.dur = dur;
+    };
+    const BEHAVIORS: CometMode[] = ['orbit', 'sweep', 'nudge', 'dive'];
+    let behaviorDeck: CometMode[] = [];
+    let lastBehavior: CometMode | null = null;
+    // Mazo barajado: garantiza que las 4 animaciones salgan antes de repetir
+    // y que dos consecutivas nunca sean iguales (contraste máximo).
+    const reshuffleDeck = () => {
+      const arr = [...BEHAVIORS];
+      for (let i = arr.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      if (lastBehavior && arr[0] === lastBehavior) {
+        const j = 1 + Math.floor(Math.random() * (arr.length - 1));
+        [arr[0], arr[j]] = [arr[j], arr[0]];
+      }
+      behaviorDeck = arr;
+    };
+    const nextBehavior = (): CometMode => {
+      if (behaviorDeck.length === 0) reshuffleDeck();
+      const b = behaviorDeck.shift();
+      if (!b) return 'orbit';
+      lastBehavior = b;
+      return b;
+    };
+    // Punto de entrada aleatorio alrededor de todo el perímetro del botón.
+    const entryPoint = (m: { br: DOMRect; midY: number }) => {
+      const w = m.br.width;
+      const h = m.br.height;
+      const margin = 70;
+      const side = Math.floor(Math.random() * 4);
+      if (side === 0) return { x: w * (0.15 + Math.random() * 0.7), y: -margin };
+      if (side === 1) return { x: w + margin, y: m.midY + (Math.random() - 0.5) * h * 0.7 };
+      if (side === 2) return { x: w * (0.15 + Math.random() * 0.7), y: h + margin };
+      return { x: -margin, y: m.midY + (Math.random() - 0.5) * h * 0.7 };
+    };
+    const pickBehavior = () => {
+      const m = wordMetrics();
+      if (!m) {
+        setCometMode('away', 4 + Math.random() * 3);
+        return;
+      }
+      const behavior = nextBehavior();
+      if (behavior === 'orbit') {
+        comet.sx = comet.x;
+        comet.sy = comet.y;
+        comet.ox = m.cx;
+        comet.oy = m.midY;
+        comet.rx = m.width / 2 + 26;
+        comet.ry = 24 + Math.random() * 10;
+        comet.dir = Math.random() < 0.5 ? 1 : -1;
+        comet.theta = Math.atan2(comet.y - comet.oy, comet.x - comet.ox);
+        setCometMode('orbit', 4 + Math.random() * 1.5);
+      } else if (behavior === 'sweep') {
+        comet.dir = Math.random() < 0.5 ? 1 : -1;
+        comet.sx = comet.x;
+        comet.sy = comet.y;
+        comet.cx = comet.dir === 1 ? m.left - 46 : m.right + 46;
+        comet.cy = m.midY + (Math.random() - 0.5) * 6;
+        comet.tx = comet.dir === 1 ? m.right + 46 : m.left - 46;
+        comet.ty = m.midY + (Math.random() - 0.5) * 6;
+        setCometMode('sweep', 1.15);
+      } else if (behavior === 'nudge') {
+        comet.target = Math.floor(Math.random() * pgStates.length);
+        comet.pushes = 0;
+        comet.lunging = false;
+        comet.nextPushAt = 0.55;
+        comet.dir = Math.random() < 0.5 ? 1 : -1;
+        setCometMode('nudge', 3.4);
+      } else {
+        comet.target = Math.floor(Math.random() * pgStates.length);
+        const lc = letterCenter(comet.target);
+        if (!lc) {
+          setCometMode('away', 4 + Math.random() * 3);
+          return;
+        }
+        comet.sx = comet.x;
+        comet.sy = comet.y;
+        comet.cx = lc.x;
+        comet.cy = lc.y - 64;
+        setCometMode('dive', 1.0);
+      }
+    };
+    const startExit = () => {
+      const m = wordMetrics();
+      const width = m ? m.br.width : 460;
+      comet.sx = comet.x;
+      comet.sy = comet.y;
+      // Continuamos la dirección de vuelo actual en vez de un salto forzado:
+      // la salida prolonga la trayectoria que ya traía el cometa.
+      let hx = 0;
+      let hy = 0;
+      const n = trail.length;
+      if (n >= 6) {
+        hx = trail[n - 1].x - trail[n - 6].x;
+        hy = trail[n - 1].y - trail[n - 6].y;
+      }
+      const hlen = Math.hypot(hx, hy);
+      if (hlen < 2) {
+        // Estaba casi quieto (p. ej. tras un nudge): salimos hacia el lado más
+        // cercano, alejándonos del centro de la palabra.
+        const cx = m ? m.cx : width / 2;
+        hx = comet.x < cx ? -1 : 1;
+        hy = -0.35;
+      } else {
+        hx /= hlen;
+        hy /= hlen;
+      }
+      const dist = 260;
+      comet.tx = comet.x + hx * dist;
+      comet.ty = comet.y + hy * dist;
+      // Curva suave: el punto de control se desvía un poco en perpendicular
+      const drift = (Math.random() - 0.5) * 46;
+      comet.cx = comet.x + hx * dist * 0.5 - hy * drift;
+      comet.cy = comet.y + hy * dist * 0.5 + hx * drift;
+      setCometMode('exit', 0.7);
+    };
 
     // Impacto de proyectiles de la resortera sobre las letras del título:
     // cada caja atravesada recibe su propio impulso una sola vez por proyectil.
@@ -637,10 +832,232 @@ const Hero = ({
         }
       }
 
-      // Letras de PLAYGROUND: subamortiguado como las cajas del título
+      // Cometa juguetón: protagonista ambiental que orbita, barre, juguetea
+      // y se lanza en picada sobre la palabra
+      comet.t += 0.016;
+      const cometEl = pgCometRef.current;
+      const cp = Math.min(1, comet.t / comet.dur);
+      if (comet.mode === 'away') {
+        if (comet.t >= comet.dur && !document.hidden) {
+          const m = wordMetrics();
+          if (m) {
+            const sp = entryPoint(m);
+            comet.sx = sp.x;
+            comet.sy = sp.y;
+            comet.tx = m.cx + (Math.random() - 0.5) * m.width * 0.5;
+            comet.ty = m.midY - 18 - Math.random() * 26;
+            const dx = comet.tx - comet.sx;
+            const dy = comet.ty - comet.sy;
+            const dlen = Math.hypot(dx, dy) || 1;
+            const bend = (Math.random() - 0.5) * 90;
+            comet.cx = (comet.sx + comet.tx) / 2 + (-dy / dlen) * bend;
+            comet.cy = (comet.sy + comet.ty) / 2 + (dx / dlen) * bend;
+            comet.x = comet.sx;
+            comet.y = comet.sy;
+            comet.visible = true;
+            if (cometEl) cometEl.style.opacity = '0';
+            setCometMode('enter', 0.6);
+          }
+        }
+      } else if (comet.mode === 'enter') {
+        const e = cp * cp;
+        const u = 1 - e;
+        comet.x = u * u * comet.sx + 2 * u * e * comet.cx + e * e * comet.tx;
+        comet.y = u * u * comet.sy + 2 * u * e * comet.cy + e * e * comet.ty;
+        if (cometEl) cometEl.style.opacity = Math.min(1, cp * 1.8).toFixed(3);
+        if (cp >= 1) pickBehavior();
+      } else if (comet.mode === 'orbit') {
+        comet.theta += comet.dir * 2.3 * (1 + 0.45 * Math.cos(comet.theta)) * 0.016;
+        const ex = comet.ox + Math.cos(comet.theta) * comet.rx;
+        const ey = comet.oy + Math.sin(comet.theta) * comet.ry;
+        const blend = Math.min(1, comet.t / 0.35);
+        comet.x = comet.sx + (ex - comet.sx) * blend;
+        comet.y = comet.sy + (ey - comet.sy) * blend;
+        if (comet.t >= comet.dur) startExit();
+      } else if (comet.mode === 'sweep') {
+        const approach = 0.3 / comet.dur;
+        if (cp < approach) {
+          const q = cp / approach;
+          const e = q * q;
+          comet.x = comet.sx + (comet.cx - comet.sx) * e;
+          comet.y = comet.sy + (comet.cy - comet.sy) * e;
+        } else {
+          const q = (cp - approach) / (1 - approach);
+          comet.x = comet.cx + (comet.tx - comet.cx) * q;
+          comet.y = comet.cy + (comet.ty - comet.cy) * q + Math.sin(q * Math.PI * 2.5) * 3.5;
+        }
+        if (cp >= 1) startExit();
+      } else if (comet.mode === 'nudge') {
+        const lc = letterCenter(comet.target);
+        if (!lc) {
+          startExit();
+        } else {
+          const st = pgStates[comet.target];
+          const glyphX = lc.x + st.x;
+          const glyphY = lc.y + st.y;
+          const downPush = comet.pushes === 1;
+          const contactX = downPush ? glyphX : glyphX + comet.dir * 4;
+          const contactY = downPush ? glyphY - 5 : glyphY - 2;
+          if (comet.lunging) {
+            comet.x += (contactX - comet.x) * 0.5;
+            comet.y += (contactY - comet.y) * 0.5;
+            if (Math.hypot(comet.x - contactX, comet.y - contactY) < 2) {
+              if (downPush) {
+                st.vy += 190;
+                st.vx += (Math.random() - 0.5) * 40;
+              } else {
+                const dx = glyphX - comet.x;
+                const dy = glyphY - comet.y;
+                const d = Math.hypot(dx, dy) || 1;
+                st.vx += (dx / d) * 150;
+                st.vy += (dy / d) * 150;
+              }
+              st.vs += 0.9;
+              st.vr += (Math.random() - 0.5) * 1.8;
+              comet.pushes += 1;
+              comet.lunging = false;
+              comet.nextPushAt = comet.t + 0.7;
+            }
+          } else {
+            comet.hoverX = glyphX + comet.dir * 18;
+            comet.hoverY = glyphY - 16;
+            comet.x += (comet.hoverX - comet.x) * 0.12;
+            comet.y += (comet.hoverY - comet.y) * 0.12;
+            if (comet.t >= comet.nextPushAt) {
+              if (comet.pushes < 3) {
+                comet.lunging = true;
+              } else {
+                startExit();
+              }
+            }
+          }
+          if (comet.t >= comet.dur) startExit();
+        }
+      } else if (comet.mode === 'dive') {
+        const lc = letterCenter(comet.target);
+        if (!lc) {
+          startExit();
+        } else if (comet.t < 0.45) {
+          const q = comet.t / 0.45;
+          const e = 1 - Math.pow(1 - q, 2);
+          comet.x = comet.sx + (comet.cx - comet.sx) * e;
+          comet.y = comet.sy + (comet.cy - comet.sy) * e;
+        } else if (comet.t < 0.7) {
+          comet.x = comet.cx + Math.sin(comet.t * 30) * 1.5;
+          comet.y = comet.cy + Math.cos(comet.t * 24) * 1.2;
+        } else {
+          const q = Math.min(1, (comet.t - 0.7) / 0.3);
+          const e = q * q;
+          comet.x = comet.cx + (lc.x - comet.cx) * e;
+          comet.y = comet.cy + (lc.y - comet.cy) * e;
+          if (q >= 1) {
+            const st = pgStates[comet.target];
+            const dx = lc.x - comet.cx;
+            const dy = lc.y - comet.cy;
+            const d = Math.hypot(dx, dy) || 1;
+            st.vx += (dx / d) * 230;
+            st.vy += (dy / d) * 230;
+            st.vs += 1.6;
+            st.vr += (Math.random() - 0.5) * 2.8;
+            for (const neighbor of [comet.target - 1, comet.target + 1]) {
+              const ns = pgStates[neighbor];
+              if (ns) {
+                ns.vx += (dx / d) * 80;
+                ns.vy += (dy / d) * 80;
+              }
+            }
+            fireFlash(lc.x, lc.y);
+            startExit();
+          }
+        }
+      } else if (comet.mode === 'exit') {
+        const e = cp * cp;
+        const u = 1 - e;
+        comet.x = u * u * comet.sx + 2 * u * e * comet.cx + e * e * comet.tx;
+        comet.y = u * u * comet.sy + 2 * u * e * comet.cy + e * e * comet.ty;
+        if (cometEl) cometEl.style.opacity = Math.max(0, 1 - cp * 1.15).toFixed(3);
+        if (cp >= 1) {
+          comet.visible = false;
+          if (cometEl) cometEl.style.opacity = '0';
+          setCometMode('away', 2.5 + Math.random() * 2.5);
+        }
+      }
+      if (comet.visible) {
+        trail.push({ x: comet.x, y: comet.y });
+        if (trail.length > 40) trail.shift();
+      } else if (trail.length > 0) {
+        trail.length = 0;
+      }
+      const headEl = pgHeadRef.current;
+      if (headEl) {
+        headEl.style.transform = `translate(${comet.x.toFixed(1)}px, ${comet.y.toFixed(1)}px) translate(-50%, -50%)`;
+      }
+      for (let k = 0; k < PG_TAIL_SEGMENTS; k += 1) {
+        const seg = pgTailRefs.current[k];
+        if (!seg) continue;
+        const a = trail[trail.length - 1 - k * 2];
+        const b = trail[trail.length - 1 - (k * 2 + 2)];
+        if (!a || !b) {
+          seg.style.opacity = '0';
+          continue;
+        }
+        const midX = (a.x + b.x) / 2;
+        const midY = (a.y + b.y) / 2;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 0.5) {
+          seg.style.opacity = '0';
+          continue;
+        }
+        const angle = Math.atan2(dy, dx);
+        const f = 1 - (k + 1) / (PG_TAIL_SEGMENTS + 1);
+        seg.style.opacity = (0.5 * f).toFixed(3);
+        seg.style.width = `${dist.toFixed(1)}px`;
+        seg.style.height = `${(1 + 3 * f).toFixed(2)}px`;
+        seg.style.transform = `translate(${midX.toFixed(1)}px, ${midY.toFixed(1)}px) translate(-50%, -50%) rotate(${angle.toFixed(3)}rad)`;
+      }
+
+      const btnRect = pgButtonRef.current ? pgButtonRef.current.getBoundingClientRect() : null;
+      const cometActive = btnRect !== null && comet.visible && comet.mode !== 'away' && comet.mode !== 'exit';
+      const cometVX = btnRect ? btnRect.left + comet.x : 0;
+      const cometVY = btnRect ? btnRect.top + comet.y : 0;
+
+      // Letras de PLAYGROUND: subamortiguado como las cajas del título,
+      // con evasión del cursor y del cometa
       pgStates.forEach((state, index) => {
         const el = pgRefs.current[index];
         if (!el) return;
+
+        const rect = el.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2 - state.x;
+        const cy = rect.top + rect.height / 2 - state.y;
+
+        if (mouse.x > -999) {
+          const dx = cx - mouse.x;
+          const dy = cy - mouse.y;
+          const dist = Math.hypot(dx, dy);
+          const pgRadius = 130;
+          if (dist < pgRadius) {
+            const proximity = 1 - dist / pgRadius;
+            const response = Math.pow(proximity, 1.4);
+            state.vx += (dx / (dist || 1)) * 950 * response * 0.016;
+            state.vy += (dy / (dist || 1)) * 950 * response * 0.016;
+          }
+        }
+
+        if (cometActive) {
+          const dx = cx - cometVX;
+          const dy = cy - cometVY;
+          const dist = Math.hypot(dx, dy);
+          const cometRadius = 90;
+          if (dist < cometRadius) {
+            const response = Math.pow(1 - dist / cometRadius, 1.3);
+            state.vx += (dx / (dist || 1)) * 2200 * response * 0.016;
+            state.vy += (dy / (dist || 1)) * 2200 * response * 0.016;
+          }
+        }
+
         state.vx += (-150 * state.x - 7.5 * state.vx) * 0.016;
         state.vy += (-150 * state.y - 7.5 * state.vy) * 0.016;
         state.vr += (-150 * state.r - 7.5 * state.vr) * 0.016;
@@ -672,6 +1089,21 @@ const Hero = ({
       pgRefs.current.forEach((el) => {
         if (el) el.style.transform = '';
       });
+      if (pgCometRef.current) {
+        pgCometRef.current.style.opacity = '0';
+      }
+      if (pgHeadRef.current) {
+        pgHeadRef.current.style.transform = '';
+      }
+      pgTailRefs.current.forEach((el) => {
+        if (el) {
+          el.style.opacity = '0';
+          el.style.transform = '';
+        }
+      });
+      if (pgFlashRef.current) {
+        pgFlashRef.current.classList.remove('is-on');
+      }
       cancelAnimationFrame(raf);
     };
   }, [reduced, letters]);
@@ -711,6 +1143,7 @@ const Hero = ({
 
       <motion.button
         type="button"
+        ref={pgButtonRef}
         className={`mo-hero-playground is-${playgroundEntryState}`}
         onClick={onOpenPlayground}
         data-cursor-label="Entrar"
@@ -734,15 +1167,25 @@ const Hero = ({
               </span>
             ))}
           </span>
-        <span className="mo-hero-playground-help" aria-live="polite">
-          {playgroundEntryState === 'charging'
-            ? 'Mantén W para entrar'
-            : playgroundEntryState === 'entering'
-              ? 'Iniciando Playground'
-              : 'Clic para entrar'}
-        </span>
         <span className="mo-hero-playground-charge" aria-hidden="true">
           <i style={{ transform: `scaleX(${playgroundHoldProgress})` }} />
+        </span>
+        <span ref={pgCometRef} className="mo-pg-comet" aria-hidden="true">
+          <i ref={pgHeadRef} className="mo-pg-comet-head" />
+          {Array.from({ length: PG_TAIL_SEGMENTS }, (_, index) => (
+            <i
+              key={index}
+              ref={(el) => {
+                pgTailRefs.current[index] = el;
+              }}
+              className="mo-pg-comet-tail"
+              style={{
+                background: pgTailColor(1 - (index + 1) / (PG_TAIL_SEGMENTS + 1)),
+                boxShadow: `0 0 6px ${pgTailColor(1 - (index + 1) / (PG_TAIL_SEGMENTS + 1))}`,
+              }}
+            />
+          ))}
+          <i ref={pgFlashRef} className="mo-pg-comet-flash" />
         </span>
       </motion.button>
 
