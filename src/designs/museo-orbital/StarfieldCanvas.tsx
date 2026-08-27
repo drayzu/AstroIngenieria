@@ -746,7 +746,6 @@ export const StarfieldCanvas = ({
     let studioRect: ViewRect | null = null;
     let rectsDirty = true;
     let nextRectCheck = 0;
-    let nextDirShot = 0;
     const visibleTextTargets = new Set<HTMLElement>();
     const observedTextTargets = new Set<HTMLElement>();
     const textObserver = new IntersectionObserver(
@@ -1553,52 +1552,6 @@ export const StarfieldCanvas = ({
           'button, a, input, textarea, select, [role="button"], [role="textbox"], [contenteditable="true"]',
         ),
       );
-
-    const spawnDirectionalComet = (dir: 'up' | 'down' | 'left' | 'right') => {
-      const big = Math.random() < 0.22;
-      const vivid = VIVID_TINTS[Math.floor(Math.random() * VIVID_TINTS.length)];
-      const speed = ((big ? 8.5 : 5.5) + Math.random() * 4.5) * vscale;
-      const jitter = (Math.random() - 0.5) * 3;
-      const opts: CometOptions = {
-        big,
-        sizeMul: 0.8 + Math.random() * 0.45,
-        tintRGB: vivid,
-      };
-      if (dir === 'left') {
-        opts.x = width + 40;
-        opts.y = height * (0.06 + Math.random() * 0.82);
-        opts.vx = -speed;
-        opts.vy = jitter;
-      } else if (dir === 'right') {
-        opts.x = -40;
-        opts.y = height * (0.06 + Math.random() * 0.82);
-        opts.vx = speed;
-        opts.vy = jitter;
-      } else if (dir === 'up') {
-        opts.x = width * (0.08 + Math.random() * 0.84);
-        opts.y = height + 40;
-        opts.vx = jitter;
-        opts.vy = -speed;
-      } else {
-        opts.x = width * (0.08 + Math.random() * 0.84);
-        opts.y = -40;
-        opts.vx = jitter;
-        opts.vy = speed;
-      }
-      spawnComet(opts);
-      // Gemela ocasional desfasada, con color propio
-      if (Math.random() < 0.18) {
-        const twinOpts: CometOptions = { ...opts };
-        if (dir === 'left' || dir === 'right') {
-          twinOpts.y = (opts.y ?? 0) + (Math.random() - 0.5) * 70;
-        } else {
-          twinOpts.x = (opts.x ?? 0) + (Math.random() - 0.5) * 70;
-        }
-        twinOpts.sizeMul = (opts.sizeMul ?? 1) * 0.75;
-        twinOpts.tintRGB = VIVID_TINTS[Math.floor(Math.random() * VIVID_TINTS.length)];
-        spawnComet(twinOpts);
-      }
-    };
 
     /* ---- Constelación dibujable ---- */
 
@@ -3259,24 +3212,6 @@ export const StarfieldCanvas = ({
       if (!isSceneTransition && time > nextComet) {
         spawnAmbientComet();
         nextComet = time + 5 + Math.random() * 8;
-      }
-
-      // La lluvia de teclado solo aparece cuando W/S siguen empujando contra
-      // el limite vertical. A/D no emiten meteoros fuera del Playground.
-      const museumScroll = scrollRef.current;
-      const keyboardEffectsBlocked = dimRef.current || isKeyboardInput(document.activeElement);
-      if (
-        !playgroundRef.current &&
-        !keyboardEffectsBlocked &&
-        museumScroll &&
-        time > nextDirShot
-      ) {
-        const maxScroll = Math.max(0, museumScroll.scrollHeight - museumScroll.clientHeight);
-        const atTop = museumScroll.scrollTop <= 2;
-        const atBottom = museumScroll.scrollTop >= maxScroll - 2;
-        if (atTop && heldDirs.has('up')) spawnDirectionalComet('up');
-        if (atBottom && heldDirs.has('down')) spawnDirectionalComet('down');
-        nextDirShot = time + 0.12 + Math.random() * 0.06;
       }
 
       ctx.clearRect(0, 0, width, height);
