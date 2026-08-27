@@ -284,6 +284,7 @@ export const StudioRoom = ({
                         key={variant.src}
                         src={variant.src}
                         alt={concept.illustration.alt}
+                        decoding="async"
                         initial={{ opacity: 0, scale: 1.03 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0 }}
@@ -322,7 +323,7 @@ export const StudioRoom = ({
                       data-cursor-label={item.label}
                       aria-pressed={itemIndex === variantIndex}
                     >
-                      <img src={item.src} alt="" loading="lazy" />
+                      <img src={item.src} alt="" loading="lazy" decoding="async" />
                       <span>{item.label}</span>
                     </button>
                   ))}
@@ -403,6 +404,7 @@ export const StudioRoom = ({
                           src={inlineVariants[sectionIndex].src}
                           alt={inlineVariants[sectionIndex].caption ?? concept.title}
                           loading="lazy"
+                          decoding="async"
                         />
                       </div>
                       <figcaption>

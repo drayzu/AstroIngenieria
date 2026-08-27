@@ -2,6 +2,7 @@
 import '@fontsource-variable/space-grotesk';
 import '@fontsource-variable/jetbrains-mono';
 import {
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -338,14 +339,16 @@ interface HeroProps {
   heroRef: RefObject<HTMLElement | null>;
   onOpenIndex: () => void;
   onOpenPlayground: () => void;
+  onPlaygroundArm: () => void;
   playgroundHoldProgress: number;
   playgroundEntryState: PlaygroundEntryState;
 }
 
-const Hero = ({
+const Hero = memo(({
   heroRef,
   onOpenIndex,
   onOpenPlayground,
+  onPlaygroundArm,
   playgroundHoldProgress,
   playgroundEntryState,
 }: HeroProps) => {
@@ -370,6 +373,7 @@ const Hero = ({
     const motion2d = { x: -9999, y: -9999, t: 0, speed: 0 };
     const states = letters.map(() => ({
       w: 520,
+      lw: -1,
       ix: 0,
       iy: 0,
       ir: 0,
@@ -400,6 +404,10 @@ const Hero = ({
     const glint = { index: -1, t0: 0 };
     let raf = 0;
     let clock = 0;
+    let prevT = 0;
+    // Fuera del viewport el bucle se detiene por completo: todo lo que anima
+    // (letras, palabra PLAYGROUND, cometa) vive dentro del hero.
+    let heroVisible = true;
 
     // Física propia de la palabra PLAYGROUND: muelles por letra que reaccionan
     // a impactos de cometas y ondas de choque (eventos mo-pg-hit del canvas).
@@ -718,14 +726,22 @@ const Hero = ({
     };
     window.addEventListener('mousemove', onMove, { passive: true });
 
-    const loop = () => {
-      clock += 0.016;
+    const loop = (now: number) => {
+      if (!heroVisible) {
+        raf = 0;
+        return;
+      }
+      const dt = prevT > 0 ? Math.min(0.032, Math.max(0.008, (now - prevT) / 1000)) : 0.016;
+      prevT = now;
+      // Lerp independiente del framerate para suavizados por-frame
+      const lerpK = (k: number) => 1 - Math.pow(1 - k, dt * 60);
+      clock += dt;
       if (clock - glint.t0 > 4.4) {
         glint.index = Math.floor(Math.random() * letters.length);
         glint.t0 = clock;
       }
       const glintP = (clock - glint.t0) / 0.85;
-      if (performance.now() - motion2d.t > 90) motion2d.speed *= 0.9;
+      if (performance.now() - motion2d.t > 90) motion2d.speed *= Math.pow(0.9, dt * 60);
       const speedFactor = Math.min(1, motion2d.speed / 1000);
       const radius = 190 + speedFactor * 70;
       const push = 1 + speedFactor * 1.6;
@@ -767,23 +783,27 @@ const Hero = ({
         const rightY = states[index + 1]?.iy ?? 0;
         const k = 95 * persona.k;
         const c = 5.8 * persona.c;
-        state.ivx += (k * (target.x - state.ix) + 14 * (leftX + rightX - 2 * state.ix) - c * state.ivx) * 0.016;
-        state.ivy += (k * (target.y - state.iy) + 14 * (leftY + rightY - 2 * state.iy) - c * state.ivy) * 0.016;
+        state.ivx += (k * (target.x - state.ix) + 14 * (leftX + rightX - 2 * state.ix) - c * state.ivx) * dt;
+        state.ivy += (k * (target.y - state.iy) + 14 * (leftY + rightY - 2 * state.iy) - c * state.ivy) * dt;
         const targetR = Math.max(-0.05, Math.min(0.05, state.ivx * 0.0003));
-        state.ivr += (140 * (targetR - state.ir) - 7 * state.ivr) * 0.016;
-        state.ivs += (-170 * state.is - 8.5 * state.ivs) * 0.016;
-        state.ix += state.ivx * 0.016;
-        state.iy += state.ivy * 0.016;
-        state.ir += state.ivr * 0.016;
-        state.is += state.ivs * 0.016;
+        state.ivr += (140 * (targetR - state.ir) - 7 * state.ivr) * dt;
+        state.ivs += (-170 * state.is - 8.5 * state.ivs) * dt;
+        state.ix += state.ivx * dt;
+        state.iy += state.ivy * dt;
+        state.ir += state.ivr * dt;
+        state.is += state.ivs * dt;
 
         const dispMag = Math.hypot(state.ix, state.iy);
         let targetW = 520 + Math.min(1, dispMag / 9) * 165;
         if (index === glint.index && glintP < 1) {
           targetW += Math.sin(Math.PI * glintP) * 190;
         }
-        state.w += (targetW - state.w) * 0.12;
-        el.style.fontVariationSettings = `'opsz' 144, 'wght' ${Math.round(state.w)}`;
+        state.w += (targetW - state.w) * lerpK(0.12);
+        const weight = Math.round(state.w);
+        if (weight !== state.lw) {
+          state.lw = weight;
+          el.style.fontVariationSettings = `'opsz' 144, 'wght' ${weight}`;
+        }
 
         const box = boxRefs.current[index];
         if (box) {
@@ -813,12 +833,12 @@ const Hero = ({
       for (const ex of extras) {
         const el = ex.el;
         if (!el) continue;
-        ex.vx += (-110 * ex.x - 7 * ex.vx) * 0.016;
-        ex.vy += (-110 * ex.y - 7 * ex.vy) * 0.016;
-        ex.vr += (-110 * ex.r - 7 * ex.vr) * 0.016;
-        ex.x += ex.vx * 0.016;
-        ex.y += ex.vy * 0.016;
-        ex.r += ex.vr * 0.016;
+        ex.vx += (-110 * ex.x - 7 * ex.vx) * dt;
+        ex.vy += (-110 * ex.y - 7 * ex.vy) * dt;
+        ex.vr += (-110 * ex.r - 7 * ex.vr) * dt;
+        ex.x += ex.vx * dt;
+        ex.y += ex.vy * dt;
+        ex.r += ex.vr * dt;
         if (Math.abs(ex.x) > 0.08 || Math.abs(ex.y) > 0.08 || Math.abs(ex.r) > 0.004) {
           el.style.transform = `translate(${ex.x.toFixed(2)}px, ${ex.y.toFixed(2)}px) rotate(${ex.r.toFixed(4)}rad)`;
         } else if (el.style.transform) {
@@ -834,7 +854,7 @@ const Hero = ({
 
       // Cometa juguetón: protagonista ambiental que orbita, barre, juguetea
       // y se lanza en picada sobre la palabra
-      comet.t += 0.016;
+      comet.t += dt;
       const cometEl = pgCometRef.current;
       const cp = Math.min(1, comet.t / comet.dur);
       if (comet.mode === 'away') {
@@ -867,7 +887,7 @@ const Hero = ({
         if (cometEl) cometEl.style.opacity = Math.min(1, cp * 1.8).toFixed(3);
         if (cp >= 1) pickBehavior();
       } else if (comet.mode === 'orbit') {
-        comet.theta += comet.dir * 2.3 * (1 + 0.45 * Math.cos(comet.theta)) * 0.016;
+        comet.theta += comet.dir * 2.3 * (1 + 0.45 * Math.cos(comet.theta)) * dt;
         const ex = comet.ox + Math.cos(comet.theta) * comet.rx;
         const ey = comet.oy + Math.sin(comet.theta) * comet.ry;
         const blend = Math.min(1, comet.t / 0.35);
@@ -899,8 +919,8 @@ const Hero = ({
           const contactX = downPush ? glyphX : glyphX + comet.dir * 4;
           const contactY = downPush ? glyphY - 5 : glyphY - 2;
           if (comet.lunging) {
-            comet.x += (contactX - comet.x) * 0.5;
-            comet.y += (contactY - comet.y) * 0.5;
+            comet.x += (contactX - comet.x) * lerpK(0.5);
+            comet.y += (contactY - comet.y) * lerpK(0.5);
             if (Math.hypot(comet.x - contactX, comet.y - contactY) < 2) {
               if (downPush) {
                 st.vy += 190;
@@ -921,8 +941,8 @@ const Hero = ({
           } else {
             comet.hoverX = glyphX + comet.dir * 18;
             comet.hoverY = glyphY - 16;
-            comet.x += (comet.hoverX - comet.x) * 0.12;
-            comet.y += (comet.hoverY - comet.y) * 0.12;
+            comet.x += (comet.hoverX - comet.x) * lerpK(0.12);
+            comet.y += (comet.hoverY - comet.y) * lerpK(0.12);
             if (comet.t >= comet.nextPushAt) {
               if (comet.pushes < 3) {
                 comet.lunging = true;
@@ -1041,8 +1061,8 @@ const Hero = ({
           if (dist < pgRadius) {
             const proximity = 1 - dist / pgRadius;
             const response = Math.pow(proximity, 1.4);
-            state.vx += (dx / (dist || 1)) * 950 * response * 0.016;
-            state.vy += (dy / (dist || 1)) * 950 * response * 0.016;
+            state.vx += (dx / (dist || 1)) * 950 * response * dt;
+            state.vy += (dy / (dist || 1)) * 950 * response * dt;
           }
         }
 
@@ -1053,19 +1073,19 @@ const Hero = ({
           const cometRadius = 90;
           if (dist < cometRadius) {
             const response = Math.pow(1 - dist / cometRadius, 1.3);
-            state.vx += (dx / (dist || 1)) * 2200 * response * 0.016;
-            state.vy += (dy / (dist || 1)) * 2200 * response * 0.016;
+            state.vx += (dx / (dist || 1)) * 2200 * response * dt;
+            state.vy += (dy / (dist || 1)) * 2200 * response * dt;
           }
         }
 
-        state.vx += (-150 * state.x - 7.5 * state.vx) * 0.016;
-        state.vy += (-150 * state.y - 7.5 * state.vy) * 0.016;
-        state.vr += (-150 * state.r - 7.5 * state.vr) * 0.016;
-        state.vs += (-180 * state.s - 8.5 * state.vs) * 0.016;
-        state.x += state.vx * 0.016;
-        state.y += state.vy * 0.016;
-        state.r += state.vr * 0.016;
-        state.s += state.vs * 0.016;
+        state.vx += (-150 * state.x - 7.5 * state.vx) * dt;
+        state.vy += (-150 * state.y - 7.5 * state.vy) * dt;
+        state.vr += (-150 * state.r - 7.5 * state.vr) * dt;
+        state.vs += (-180 * state.s - 8.5 * state.vs) * dt;
+        state.x += state.vx * dt;
+        state.y += state.vy * dt;
+        state.r += state.vr * dt;
+        state.s += state.vs * dt;
         const scl = Math.max(0.6, Math.min(1.4, 1 + state.s));
         if (
           Math.abs(state.x) > 0.06 ||
@@ -1081,8 +1101,26 @@ const Hero = ({
       raf = requestAnimationFrame(loop);
     };
 
+    const heroEl = heroRef.current;
+    let heroObserver: IntersectionObserver | null = null;
+    if (heroEl) {
+      heroObserver = new IntersectionObserver((entries) => {
+        const visible = entries[0]?.isIntersecting ?? true;
+        if (visible === heroVisible) return;
+        heroVisible = visible;
+        if (visible) {
+          if (!raf) raf = requestAnimationFrame(loop);
+        } else if (raf) {
+          cancelAnimationFrame(raf);
+          raf = 0;
+        }
+      });
+      heroObserver.observe(heroEl);
+    }
+
     raf = requestAnimationFrame(loop);
     return () => {
+      heroObserver?.disconnect();
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mo-title-hit', onTitleHit);
       window.removeEventListener('mo-pg-hit', onPgHit);
@@ -1146,6 +1184,7 @@ const Hero = ({
         ref={pgButtonRef}
         className={`mo-hero-playground is-${playgroundEntryState}`}
         onClick={onOpenPlayground}
+        onPointerEnter={onPlaygroundArm}
         data-cursor-label="Entrar"
         aria-label="Entrar al Playground"
         disabled={playgroundEntryState === 'entering' || playgroundEntryState === 'leaving'}
@@ -1290,9 +1329,9 @@ const Hero = ({
       </div>
     </section>
   );
-};
+});
 
-const Marquee = () => {
+const Marquee = memo(() => {
   const phrase = `COLECCIÓN PERMANENTE · ${chapters.length} SALAS · ${totalWorks} OBRAS · ENTRADA LIBRE · `;
   return (
     <div className="mo-marquee mo-layer" aria-hidden="true">
@@ -1302,11 +1341,11 @@ const Marquee = () => {
       </div>
     </div>
   );
-};
+});
 
 /* ---------------- Índice de salas ---------------- */
 
-const HallIndex = ({ activeId }: { activeId: string | null }) => (
+const HallIndex = memo(({ activeId }: { activeId: string | null }) => (
   <nav className="mo-halls mo-layer" aria-label="Salas de la exposición">
     {chapters.map((chapter) => (
       <button
@@ -1329,7 +1368,7 @@ const HallIndex = ({ activeId }: { activeId: string | null }) => (
       Archivo
     </button>
   </nav>
-);
+));
 
 /* ---------------- Número monumental que se rellena ---------------- */
 
@@ -1393,7 +1432,7 @@ const RevealWords = ({ text }: { text: string }) => {
 
 /* ---------------- Obra del muro ---------------- */
 
-const Obra = ({
+const Obra = memo(({
   concept,
   plate,
   featured,
@@ -1452,6 +1491,7 @@ const Obra = ({
               src={concept.illustration.src}
               alt={concept.illustration.alt}
               loading="lazy"
+              decoding="async"
             />
             {featured && <DistortOverlay imageRef={imgRef} active={hovered} />}
           </div>
@@ -1472,11 +1512,11 @@ const Obra = ({
       </button>
     </motion.article>
   );
-};
+});
 
 /* ---------------- Sala ---------------- */
 
-const Sala = ({
+const Sala = memo(({
   chapter,
   offset,
   enableFlight,
@@ -1530,6 +1570,7 @@ const Sala = ({
               src={chapter.visual?.heroImage}
               alt={chapter.visual?.visualFocus ?? chapter.title}
               loading="lazy"
+              decoding="async"
               style={reduced ? undefined : { y: imageY }}
             />
           </div>
@@ -1551,11 +1592,11 @@ const Sala = ({
       </div>
     </section>
   );
-};
+});
 
 /* ---------------- Vitrina de contrastes ---------------- */
 
-const Vitrina = ({
+const Vitrina = memo(({
   ids,
   onRemove,
   onOpen,
@@ -1651,7 +1692,7 @@ const Vitrina = ({
       )}
     </section>
   );
-};
+});
 
 /* ---------------- Sala archivo ---------------- */
 
@@ -1670,7 +1711,7 @@ const buildArchive = (): ArchiveSource[] => {
   return [...map.values()];
 };
 
-const Archivo = ({ sources }: { sources: ArchiveSource[] }) => (
+const Archivo = memo(({ sources }: { sources: ArchiveSource[] }) => (
   <section id="archivo" className="mo-archivo mo-layer">
     <header className="mo-section-head">
       <p className="mo-kicker">Sala archivo</p>
@@ -1705,11 +1746,11 @@ const Archivo = ({ sources }: { sources: ArchiveSource[] }) => (
       ))}
     </ol>
   </section>
-);
+));
 
 /* ---------------- Menú persistente ---------------- */
 
-const MenuOverlay = ({
+const MenuOverlay = memo(({
   open,
   onClose,
   onGo,
@@ -1813,7 +1854,7 @@ const MenuOverlay = ({
       </div>
     </motion.div>
   );
-};
+});
 
 /* ---------------- Principal ---------------- */
 
@@ -1917,12 +1958,12 @@ export default function MuseoOrbital() {
 
   const archiveSources = useMemo(buildArchive, []);
 
-  const triggerFlight = () => {
+  const triggerFlight = useCallback(() => {
     if (reduced) return;
     setFlight(true);
     window.clearTimeout(flightTimer.current);
     flightTimer.current = window.setTimeout(() => setFlight(false), 460);
-  };
+  }, [reduced]);
 
   const fadePlaygroundMusic = useCallback(
     (targetVolume: number, durationMs: number, pauseAfter = false) => {
@@ -1983,6 +2024,13 @@ export default function MuseoOrbital() {
     },
     [fadePlaygroundMusic],
   );
+
+  // Con preload="none" el MP3 no se descarga al abrir el museo: se calienta
+  // cuando el usuario se acerca al playground para que la entrada no espere.
+  const warmPlaygroundAudio = useCallback(() => {
+    const audio = playgroundAudioRef.current;
+    if (audio && audio.readyState === 0) audio.load();
+  }, []);
 
   const startPlaygroundMusic = useCallback(() => {
     const audio = playgroundAudioRef.current;
@@ -2078,6 +2126,7 @@ export default function MuseoOrbital() {
     setPlaygroundHoldProgress(0);
     preparePlaygroundScene();
     window.dispatchEvent(new CustomEvent('mo-cursor-reset'));
+    warmPlaygroundAudio();
     startPlaygroundMusic();
 
     if (reduced) {
@@ -2102,7 +2151,7 @@ export default function MuseoOrbital() {
       playgroundEntryStateRef.current = 'idle';
       setPlaygroundEntryState('idle');
     }, PLAYGROUND_ENTER_MS);
-  }, [activatePlayground, playground, preparePlaygroundScene, reduced, startPlaygroundMusic]);
+  }, [activatePlayground, playground, preparePlaygroundScene, reduced, startPlaygroundMusic, warmPlaygroundAudio]);
 
   const leavePlayground = useCallback(() => {
     if (!playground || playgroundEntryStateRef.current !== 'idle') return;
@@ -2435,6 +2484,7 @@ export default function MuseoOrbital() {
     let last = el.scrollTop;
     let vel = 0;
     let raf = 0;
+    let lastSkew = '';
     const onScroll = () => {
       const top = el.scrollTop;
       vel = vel * 0.8 + (top - last) * 0.2;
@@ -2442,8 +2492,11 @@ export default function MuseoOrbital() {
     };
     const loop = () => {
       vel *= 0.9;
-      const skew = Math.max(-5, Math.min(5, vel * 0.012));
-      el.style.setProperty('--marquee-skew', `${skew.toFixed(2)}deg`);
+      const skew = Math.max(-5, Math.min(5, vel * 0.012)).toFixed(2);
+      if (skew !== lastSkew) {
+        lastSkew = skew;
+        el.style.setProperty('--marquee-skew', `${skew}deg`);
+      }
       raf = requestAnimationFrame(loop);
     };
     el.addEventListener('scroll', onScroll, { passive: true });
@@ -2575,17 +2628,17 @@ export default function MuseoOrbital() {
     return () => observer.disconnect();
   }, []);
 
-  const openConcept = (concept: AstroConcept) => {
+  const openConcept = useCallback((concept: AstroConcept) => {
     triggerFlight();
     setActive(concept);
-  };
+  }, [triggerFlight]);
 
-  const closeConcept = () => {
+  const closeConcept = useCallback(() => {
     triggerFlight();
     setActive(null);
-  };
+  }, [triggerFlight]);
 
-  const toggleVitrine = (conceptId: string) => {
+  const toggleVitrine = useCallback((conceptId: string) => {
     setVitrineIds((current) => {
       if (current.includes(conceptId)) {
         return current.filter((id) => id !== conceptId);
@@ -2595,12 +2648,15 @@ export default function MuseoOrbital() {
       }
       return [...current, conceptId];
     });
-  };
+  }, []);
 
-  const goFromMenu = (targetId: string) => {
+  const goFromMenu = useCallback((targetId: string) => {
     setMenuOpen(false);
     window.setTimeout(() => scrollToId(targetId), 120);
-  };
+  }, []);
+
+  const openMenu = useCallback(() => setMenuOpen(true), []);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   let plateOffset = 0;
   const activeHall = chapters.find((chapter) => chapter.id === activeHallId);
@@ -2654,7 +2710,7 @@ export default function MuseoOrbital() {
       <audio
         ref={playgroundAudioRef}
         src={`${import.meta.env.BASE_URL}music/in-the-pool.mp3`}
-        preload="auto"
+        preload="none"
         loop
         aria-hidden="true"
       />
@@ -2856,8 +2912,9 @@ export default function MuseoOrbital() {
 
       <Hero
         heroRef={heroRef}
-        onOpenIndex={() => setMenuOpen(true)}
+        onOpenIndex={openMenu}
         onOpenPlayground={beginPlaygroundTransition}
+        onPlaygroundArm={warmPlaygroundAudio}
         playgroundHoldProgress={playgroundHoldProgress}
         playgroundEntryState={playgroundEntryState}
       />
@@ -2928,7 +2985,7 @@ export default function MuseoOrbital() {
 
       <AnimatePresence>
         {menuOpen && (
-          <MenuOverlay open={menuOpen} onClose={() => setMenuOpen(false)} onGo={goFromMenu} />
+          <MenuOverlay open={menuOpen} onClose={closeMenu} onGo={goFromMenu} />
         )}
       </AnimatePresence>
 

@@ -686,6 +686,9 @@ export const StarfieldCanvas = ({
     const labWormholes: LabWormhole[] = [];
     let raf = 0;
     let time = 0;
+    // Paso de simulación real (limitado): en equipos lentos los relojes y
+    // fases avanzan a tiempo real en vez de ir a camara lenta.
+    let dt = 0.016;
     let scrollVel = 0;
     let lastScroll = scrollRef.current?.scrollTop ?? 0;
     let dimLevel = 0;
@@ -957,9 +960,17 @@ export const StarfieldCanvas = ({
       };
     };
 
-    let dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    /* ---- Calidad adaptativa: si el equipo no llega a ~44fps de forma
+       sostenida se baja el DPR del canvas y luego la densidad de estrellas.
+       En equipos potentes no cambia nada; en débiles mantiene fluidez ---- */
+    let qualityStage = 0;
+    let lowFpsSince: number | null = null;
+    let dprCap = 1.5;
+    let starDensity = 1;
+
+    let dpr = Math.min(window.devicePixelRatio || 1, dprCap);
     const seed = () => {
-      const count = Math.round((width * height) / 5200);
+      const count = Math.round(((width * height) / 5200) * starDensity);
       stars = Array.from({ length: Math.min(560, Math.max(180, count)) }, () => ({
         x: Math.random() * width,
         y: Math.random() * height,
@@ -1100,7 +1111,7 @@ export const StarfieldCanvas = ({
       height = window.innerHeight;
       // Releer el dpr: cambia con el zoom de página y al mover la ventana
       // entre monitores con distinto DPI.
-      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      dpr = Math.min(window.devicePixelRatio || 1, dprCap);
       vscale = Math.min(width, height) / 900;
       // Altura del hero: define la banda del cielo sin constelaciones
       const heroEl = document.querySelector('.mo-hero');
@@ -2179,6 +2190,9 @@ export const StarfieldCanvas = ({
       running = !document.hidden;
       if (running) {
         lastScroll = scrollRef.current?.scrollTop ?? 0;
+        // El hueco sin frames no debe contar como fps bajo ni como dt gigante
+        lastFrameNow = 0;
+        lowFpsSince = null;
         raf = requestAnimationFrame(frame);
       } else {
         rapidFireHeld = false;
@@ -2370,7 +2384,7 @@ export const StarfieldCanvas = ({
 
     const updateLab = () => {
       if (!sandboxActive) return;
-      const step = 0.016 * sandboxTimeScale;
+      const step = dt * sandboxTimeScale;
 
       // Agujeros negros: atracción espiral, consumo de cometas, colapso final
       for (let i = labHoles.length - 1; i >= 0; i -= 1) {
@@ -3017,13 +3031,33 @@ export const StarfieldCanvas = ({
 
     const frame = () => {
       if (!running) return;
-      time += 0.016;
       const nowMs = performance.now();
+      dt = lastFrameNow > 0
+        ? Math.min(0.032, Math.max(0.008, (nowMs - lastFrameNow) / 1000))
+        : 0.016;
+      time += dt;
       if (lastFrameNow > 0) {
         const rawDt = Math.max(1, nowMs - lastFrameNow);
         labFps = labFps * 0.94 + (1000 / rawDt) * 0.06;
       }
       lastFrameNow = nowMs;
+      // Degradación progresiva: etapa 1 baja el DPR a 1, etapa 2 además
+      // reduce la densidad de estrellas. Solo tras 2.5s de fps bajo.
+      if (time > 5 && qualityStage < 2) {
+        if (labFps < 44) {
+          if (lowFpsSince === null) {
+            lowFpsSince = nowMs;
+          } else if (nowMs - lowFpsSince > 2500) {
+            qualityStage += 1;
+            dprCap = 1;
+            starDensity = qualityStage >= 2 ? 0.65 : 1;
+            lowFpsSince = null;
+            resize();
+          }
+        } else if (labFps > 55) {
+          lowFpsSince = null;
+        }
+      }
       const labStep = sandboxActive ? sandboxTimeScale : 1;
       // Entrada al sandbox: Q+E mantenidas 2s en el museo
       if (!sandboxActive && !playgroundRef.current && labQHeld && labEHeld) {
@@ -3171,7 +3205,7 @@ export const StarfieldCanvas = ({
         const orbitTargetX = hasPointer ? mouse.x : width / 2;
         const orbitTargetY = hasPointer ? mouse.y : height / 2;
         if (pulsarOrbitReady) {
-          const follow = 1 - Math.exp(-12 * 0.016);
+          const follow = 1 - Math.exp(-12 * dt);
           pulsarOrbitX += (orbitTargetX - pulsarOrbitX) * follow;
           pulsarOrbitY += (orbitTargetY - pulsarOrbitY) * follow;
         } else {
@@ -3179,8 +3213,8 @@ export const StarfieldCanvas = ({
           pulsarOrbitY = orbitTargetY;
           pulsarOrbitReady = true;
         }
-        pulsarAngle += PULSAR_ORBIT_SPIN * 0.016;
-        pulsarRingAngle += PULSAR_RING_PRECESSION * 0.016;
+        pulsarAngle += PULSAR_ORBIT_SPIN * dt;
+        pulsarRingAngle += PULSAR_RING_PRECESSION * dt;
         if (pulsarPhase === 'returning' && time >= pulsarReturnStart + pulsarReturnDuration) {
           resetPulsarPet();
         }
@@ -3549,7 +3583,7 @@ export const StarfieldCanvas = ({
               y: height / 2 + (fullCenter.y - height / 2) * sceneDepthScale,
             };
             if (isPlayground && playgroundPhase === 'active') {
-              const frameStep = 0.016;
+              const frameStep = dt;
               const minDimension = Math.max(320, Math.min(width, height));
               const slowFactor = target.slowedUntil > time ? PLAYGROUND_SLOW_FACTOR : 1;
               const toDestinationX = (target.destinationU - target.worldU) * width;
@@ -4770,9 +4804,9 @@ export const StarfieldCanvas = ({
         // Pulsos de conducción: energía dorada viajando por la constelación
         conductions = conductions.filter((dot) => dot.life > 0);
         for (const dot of conductions) {
-          dot.life -= 0.016;
-          dot.x += dot.vx * 0.016;
-          dot.y += dot.vy * 0.016;
+          dot.life -= dt;
+          dot.x += dot.vx * dt;
+          dot.y += dot.vy * dt;
           const lifeFrac = Math.max(0, dot.life / dot.maxLife);
           const target = effectContext(dot.layer);
           if (!target) continue;
@@ -4792,7 +4826,7 @@ export const StarfieldCanvas = ({
         // aleatorio de la paleta y deriva suavizado hacia el extremo claro
         bubbles = bubbles.filter((b) => b.alpha > 0.02);
         for (const b of bubbles) {
-          b.age += 0.016 * labStep;
+          b.age += dt * labStep;
           b.r += (b.grow ?? 8.5) * labStep;
           b.alpha *= Math.pow(0.954, labStep);
           const drift = Math.min(0.97, b.tintT + b.age * 0.15);
@@ -4822,7 +4856,7 @@ export const StarfieldCanvas = ({
         waves = waves.filter((wave) => wave.alpha > 0.02);
         for (const wave of waves) {
           if (wave.delay > 0) {
-            wave.delay -= 0.016;
+            wave.delay -= dt;
             continue;
           }
           wave.r += wave.grow ?? 7;

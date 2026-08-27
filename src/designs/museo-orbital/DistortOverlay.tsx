@@ -11,8 +11,16 @@ export const DistortOverlay = ({ imageRef, active }: DistortOverlayProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const handleRef = useRef<DistortHandle | null>(null);
   const [ready, setReady] = useState(false);
+  // El contexto WebGL se crea solo en el primer hover: el efecto es invisible
+  // hasta entonces, asi que montarlo antes solo gastaria GPU y memoria.
+  const [armed, setArmed] = useState(false);
 
   useEffect(() => {
+    if (active) setArmed(true);
+  }, [active]);
+
+  useEffect(() => {
+    if (!armed) return;
     let disposed = false;
     let detachMove: (() => void) | null = null;
     let detachLoad: (() => void) | null = null;
@@ -51,7 +59,7 @@ export const DistortOverlay = ({ imageRef, active }: DistortOverlayProps) => {
       handleRef.current?.destroy();
       handleRef.current = null;
     };
-  }, [imageRef]);
+  }, [armed, imageRef]);
 
   return (
     <div ref={wrapRef} className={ready ? 'mo-distort is-ready' : 'mo-distort'} aria-hidden="true">
