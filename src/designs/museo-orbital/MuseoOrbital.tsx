@@ -62,6 +62,10 @@ const PLAYGROUND_MUSIC_VOLUME = 0.35;
 const PLAYGROUND_MUSIC_ENTER_FADE_MS = 2_000;
 const PLAYGROUND_MUSIC_LEAVE_FADE_MS = 1_500;
 const PLAYGROUND_MUSIC_TOGGLE_FADE_MS = 180;
+const PLAYGROUND_MUSIC_TRACKS = [
+  `${import.meta.env.BASE_URL}music/in-the-pool.mp3`,
+  `${import.meta.env.BASE_URL}music/my-lady.mp3`,
+];
 const INITIAL_PLAYGROUND_PROGRESS: PlaygroundProgress = {
   destroyed: 0,
   total: PLAYGROUND_WORD.length,
@@ -1894,6 +1898,8 @@ export default function MuseoOrbital() {
   const playgroundAudioRef = useRef<HTMLAudioElement>(null);
   const playgroundAudioFadeFrame = useRef(0);
   const playgroundAudioRequestId = useRef(0);
+  const playgroundAudioTrackIndex = useRef(0);
+  const playgroundAudioPreloaderRef = useRef<HTMLAudioElement | null>(null);
   const railRef = useRef<HTMLElement>(null);
   const railStarRef = useRef<HTMLElement>(null);
   const railNodeRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -2032,17 +2038,52 @@ export default function MuseoOrbital() {
     if (audio && audio.readyState === 0) audio.load();
   }, []);
 
+  const preloadPlaygroundTrack = useCallback((trackIndex: number) => {
+    if (!playgroundAudioPreloaderRef.current) {
+      playgroundAudioPreloaderRef.current = new Audio();
+      playgroundAudioPreloaderRef.current.preload = 'auto';
+    }
+    const preloader = playgroundAudioPreloaderRef.current;
+    const trackSrc = PLAYGROUND_MUSIC_TRACKS[trackIndex];
+    if (preloader.getAttribute('src') !== trackSrc) {
+      preloader.src = trackSrc;
+      preloader.load();
+    }
+  }, []);
+
+  const selectPlaygroundTrack = useCallback(
+    (trackIndex: number) => {
+      const audio = playgroundAudioRef.current;
+      if (!audio) return;
+      playgroundAudioTrackIndex.current = trackIndex;
+      audio.src = PLAYGROUND_MUSIC_TRACKS[trackIndex];
+      preloadPlaygroundTrack((trackIndex + 1) % PLAYGROUND_MUSIC_TRACKS.length);
+    },
+    [preloadPlaygroundTrack],
+  );
+
   const startPlaygroundMusic = useCallback(() => {
     const audio = playgroundAudioRef.current;
     if (!audio) return;
-    const wasPaused = audio.paused;
+    selectPlaygroundTrack(Math.floor(Math.random() * PLAYGROUND_MUSIC_TRACKS.length));
     cancelAnimationFrame(playgroundAudioFadeFrame.current);
-    if (wasPaused) audio.volume = 0;
+    audio.volume = 0;
     requestPlaygroundMusic(
       playgroundMusicMuted ? 0 : PLAYGROUND_MUSIC_VOLUME,
       PLAYGROUND_MUSIC_ENTER_FADE_MS,
     );
-  }, [playgroundMusicMuted, requestPlaygroundMusic]);
+  }, [playgroundMusicMuted, requestPlaygroundMusic, selectPlaygroundTrack]);
+
+  const handlePlaygroundTrackEnded = useCallback(() => {
+    const audio = playgroundAudioRef.current;
+    if (!audio) return;
+    selectPlaygroundTrack((playgroundAudioTrackIndex.current + 1) % PLAYGROUND_MUSIC_TRACKS.length);
+    audio.volume = 0;
+    requestPlaygroundMusic(
+      playgroundMusicMuted ? 0 : PLAYGROUND_MUSIC_VOLUME,
+      PLAYGROUND_MUSIC_ENTER_FADE_MS,
+    );
+  }, [playgroundMusicMuted, requestPlaygroundMusic, selectPlaygroundTrack]);
 
   const stopPlaygroundMusic = useCallback(() => {
     playgroundAudioRequestId.current += 1;
@@ -2709,9 +2750,9 @@ export default function MuseoOrbital() {
       <MuseumCursor />
       <audio
         ref={playgroundAudioRef}
-        src={`${import.meta.env.BASE_URL}music/in-the-pool.mp3`}
+        src={PLAYGROUND_MUSIC_TRACKS[0]}
         preload="none"
-        loop
+        onEnded={handlePlaygroundTrackEnded}
         aria-hidden="true"
       />
 
