@@ -591,7 +591,7 @@ export const StarfieldCanvas = ({
     let width = 0;
     let height = 0;
     let vscale = 1;
-    let stars: Star[] = [];
+    const stars: Star[] = [];
     let comets: Comet[] = [];
     let waves: Wave[] = [];
     let bubbles: ShockBubble[] = [];
@@ -960,26 +960,41 @@ export const StarfieldCanvas = ({
       };
     };
 
-    /* ---- Calidad adaptativa: si el equipo no llega a ~44fps de forma
-       sostenida se baja el DPR del canvas y luego la densidad de estrellas.
-       En equipos potentes no cambia nada; en débiles mantiene fluidez ---- */
+    /* ---- Calidad adaptativa con recuperación: si el equipo no llega a
+       ~40fps de forma sostenida se baja el DPR del canvas y luego la
+       densidad de estrellas; cuando el fps se recupera (>56 sostenido)
+       se vuelve a la etapa anterior. La histéresis evita oscilar y la
+       recuperación impide que un pico de carga deje la calidad baja para
+       siempre (las constelaciones dependen de la densidad de estrellas) ---- */
+    const QUALITY_STAGES = [
+      { dprCap: 1.5, starDensity: 1 },
+      { dprCap: 1.25, starDensity: 1 },
+      { dprCap: 1, starDensity: 0.7 },
+    ];
     let qualityStage = 0;
     let lowFpsSince: number | null = null;
-    let dprCap = 1.5;
-    let starDensity = 1;
+    let highFpsSince: number | null = null;
+    let dprCap = QUALITY_STAGES[0].dprCap;
+    let starDensity = QUALITY_STAGES[0].starDensity;
 
     let dpr = Math.min(window.devicePixelRatio || 1, dprCap);
+    const makeStar = (): Star => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      z: 0.25 + Math.random() * 0.75,
+      tint: Math.random() < 0.82 ? 0 : Math.random() < 0.5 ? 1 : 2,
+      phase: Math.random() * Math.PI * 2,
+      ox: 0,
+      oy: 0,
+    });
+    // Siembra incremental: preserva las posiciones existentes y solo agrega o
+    // quita estrellas según la densidad objetivo. Evita el salto visual de
+    // re-sembrar todo el cielo al cambiar de calidad o redimensionar.
     const seed = () => {
       const count = Math.round(((width * height) / 5200) * starDensity);
-      stars = Array.from({ length: Math.min(560, Math.max(180, count)) }, () => ({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        z: 0.25 + Math.random() * 0.75,
-        tint: Math.random() < 0.82 ? 0 : Math.random() < 0.5 ? 1 : 2,
-        phase: Math.random() * Math.PI * 2,
-        ox: 0,
-        oy: 0,
-      }));
+      const target = Math.min(560, Math.max(180, count));
+      while (stars.length < target) stars.push(makeStar());
+      if (stars.length > target) stars.length = target;
     };
 
     const sizeCanvas = (target: HTMLCanvasElement | null) => {
@@ -1106,7 +1121,7 @@ export const StarfieldCanvas = ({
       return false;
     };
 
-    const resize = () => {
+    const resize = (reseedAmbient = true) => {
       width = window.innerWidth;
       height = window.innerHeight;
       // Releer el dpr: cambia con el zoom de página y al mover la ventana
@@ -1120,8 +1135,19 @@ export const StarfieldCanvas = ({
       sizeCanvas(fxRef.current);
       sizeCanvas(trailRef.current);
       seed();
-      seedAmbient();
+      if (reseedAmbient) seedAmbient();
       rectsDirty = true;
+    };
+
+    // Cambio de etapa de calidad sin re-sembrar las constelaciones ambientales
+    const applyQualityStage = (stage: number) => {
+      qualityStage = stage;
+      dprCap = QUALITY_STAGES[stage].dprCap;
+      starDensity = QUALITY_STAGES[stage].starDensity;
+      resize(false);
+      console.info(
+        `[starfield] calidad → etapa ${stage} (dprCap ${dprCap}, densidad ${starDensity}, fps ${Math.round(labFps)})`,
+      );
     };
 
     const onScroll = () => {
@@ -2193,6 +2219,7 @@ export const StarfieldCanvas = ({
         // El hueco sin frames no debe contar como fps bajo ni como dt gigante
         lastFrameNow = 0;
         lowFpsSince = null;
+        highFpsSince = null;
         raf = requestAnimationFrame(frame);
       } else {
         rapidFireHeld = false;
@@ -3041,21 +3068,33 @@ export const StarfieldCanvas = ({
         labFps = labFps * 0.94 + (1000 / rawDt) * 0.06;
       }
       lastFrameNow = nowMs;
-      // Degradación progresiva: etapa 1 baja el DPR a 1, etapa 2 además
-      // reduce la densidad de estrellas. Solo tras 2.5s de fps bajo.
-      if (time > 5 && qualityStage < 2) {
-        if (labFps < 44) {
-          if (lowFpsSince === null) {
-            lowFpsSince = nowMs;
-          } else if (nowMs - lowFpsSince > 2500) {
-            qualityStage += 1;
-            dprCap = 1;
-            starDensity = qualityStage >= 2 ? 0.65 : 1;
-            lowFpsSince = null;
-            resize();
+      // Degradación con recuperación: baja una etapa tras 4s de fps <40 y
+      // recupera la etapa anterior tras 10s de fps >56. Así un pico de carga
+      // no deja la calidad baja para siempre.
+      if (time > 5) {
+        if (labFps < 40) {
+          highFpsSince = null;
+          if (qualityStage < QUALITY_STAGES.length - 1) {
+            if (lowFpsSince === null) {
+              lowFpsSince = nowMs;
+            } else if (nowMs - lowFpsSince > 4000) {
+              lowFpsSince = null;
+              applyQualityStage(qualityStage + 1);
+            }
           }
-        } else if (labFps > 55) {
+        } else if (labFps > 56) {
           lowFpsSince = null;
+          if (qualityStage > 0) {
+            if (highFpsSince === null) {
+              highFpsSince = nowMs;
+            } else if (nowMs - highFpsSince > 10000) {
+              highFpsSince = null;
+              applyQualityStage(qualityStage - 1);
+            }
+          }
+        } else {
+          lowFpsSince = null;
+          highFpsSince = null;
         }
       }
       const labStep = sandboxActive ? sandboxTimeScale : 1;
@@ -5239,7 +5278,8 @@ export const StarfieldCanvas = ({
 
     syncTextTargets();
     resize();
-    window.addEventListener('resize', resize);
+    const onResize = () => resize();
+    window.addEventListener('resize', onResize);
     const DIR_KEYS: Record<string, 'up' | 'down' | 'left' | 'right'> = {
       KeyW: 'up',
       KeyS: 'down',
@@ -5457,7 +5497,7 @@ export const StarfieldCanvas = ({
     return () => {
       clearCharge();
       cancelAnimationFrame(raf);
-      window.removeEventListener('resize', resize);
+      window.removeEventListener('resize', onResize);
       window.removeEventListener('mo-warp', onWarp);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
