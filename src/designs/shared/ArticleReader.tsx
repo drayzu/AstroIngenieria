@@ -7,7 +7,12 @@ import { getConceptImageVariants } from './conceptImages';
 import { ImageLightbox, type ImageLightboxImage } from './ImageLightbox';
 import './articleReader.css';
 
-export function ArticleReader({ concept }: { concept: AstroConcept }) {
+interface ArticleReaderProps {
+  concept: AstroConcept;
+  onLightboxOpenChange?: (open: boolean) => void;
+}
+
+export function ArticleReader({ concept, onLightboxOpenChange }: ArticleReaderProps) {
   const [content, setContent] = useState<ConceptArticle | null>(null);
   const [error, setError] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<ImageLightboxImage | null>(null);
@@ -16,13 +21,14 @@ export function ArticleReader({ concept }: { concept: AstroConcept }) {
     setContent(null);
     setError(false);
     setLightboxImage(null);
+    onLightboxOpenChange?.(false);
     loadArticle(concept.chapterId, concept.id).then(article => {
       if (!cancelled) setContent(article);
     }).catch(() => {
       if (!cancelled) setError(true);
     });
     return () => { cancelled = true; };
-  }, [concept.id, concept.chapterId]);
+  }, [concept.id, concept.chapterId, onLightboxOpenChange]);
 
   if (error) return <div className="ar-status" role="alert"><p>No se pudo cargar la lectura.</p><button type="button" onClick={() => {
     // A rejected module import can stay cached until the document is reloaded.
@@ -31,6 +37,14 @@ export function ArticleReader({ concept }: { concept: AstroConcept }) {
   }}>Recargar lectura</button></div>;
   if (!content || content.id !== concept.id) return <div className="ar-status" role="status" aria-live="polite">Preparando la lectura…</div>;
   const variants = getConceptImageVariants(concept);
+  const openLightbox = (image: ImageLightboxImage) => {
+    onLightboxOpenChange?.(true);
+    setLightboxImage(image);
+  };
+  const closeLightbox = () => {
+    onLightboxOpenChange?.(false);
+    setLightboxImage(null);
+  };
   const changeLightboxImage = (direction: -1 | 1) => {
     if (!lightboxImage || variants.length < 2) return;
     const currentIndex = variants.findIndex(item => item.src === lightboxImage.src);
@@ -69,7 +83,7 @@ export function ArticleReader({ concept }: { concept: AstroConcept }) {
             <button
               type="button"
               className="ar-image-trigger"
-              onClick={() => setLightboxImage({ src: variant.src, alt: block.caption, caption: block.caption })}
+              onClick={() => openLightbox({ src: variant.src, alt: block.caption, caption: block.caption })}
               aria-label={`Ampliar imagen: ${block.caption}`}
               data-cursor-label="Ampliar imagen"
             >
@@ -88,7 +102,7 @@ export function ArticleReader({ concept }: { concept: AstroConcept }) {
       {lightboxImage && (
         <ImageLightbox
           image={lightboxImage}
-          onClose={() => setLightboxImage(null)}
+          onClose={closeLightbox}
           onPrevious={variants.length > 1 ? () => changeLightboxImage(-1) : undefined}
           onNext={variants.length > 1 ? () => changeLightboxImage(1) : undefined}
         />

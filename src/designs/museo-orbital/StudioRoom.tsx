@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -44,6 +45,11 @@ export const StudioRoom = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const figureRef = useRef<HTMLDivElement>(null);
   const [lightboxImage, setLightboxImage] = useState<ImageLightboxImage | null>(null);
+  const [articleLightboxOpen, setArticleLightboxOpen] = useState(false);
+  const lightboxOpen = Boolean(lightboxImage) || articleLightboxOpen;
+  const handleArticleLightboxOpenChange = useCallback((open: boolean) => {
+    setArticleLightboxOpen(open);
+  }, []);
 
   const variants = useMemo(() => getConceptImageVariants(concept), [concept]);
   const [variantIndex, setVariantIndex] = useState(0);
@@ -82,6 +88,7 @@ export const StudioRoom = ({
   useEffect(() => {
     setVariantIndex(0);
     setLightboxImage(null);
+    setArticleLightboxOpen(false);
     scrollRef.current?.scrollTo({ top: 0 });
   }, [concept]);
 
@@ -146,7 +153,7 @@ export const StudioRoom = ({
 
   return (
     <motion.div
-      className="mo-studio"
+      className={`mo-studio${lightboxOpen ? ' is-lightbox-open' : ''}`}
       role="dialog"
       aria-modal="true"
       aria-label={`Sala de estudio: ${concept.title}`}
@@ -352,7 +359,11 @@ export const StudioRoom = ({
           </section>
 
           <section className="mo-tab-pane mo-tab-pane-with-back" aria-label="Lectura del tema">
-            <ArticleReader key={concept.id} concept={concept} />
+            <ArticleReader
+              key={concept.id}
+              concept={concept}
+              onLightboxOpenChange={handleArticleLightboxOpenChange}
+            />
             <button
               type="button"
               className="mo-back-to-top"
