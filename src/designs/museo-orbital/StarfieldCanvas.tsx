@@ -1,4 +1,5 @@
 import { useEffect, useRef, type RefObject } from 'react';
+import { CursorConstellationLayer } from './CursorConstellationLayer';
 import {
   PLAYGROUND_ARRIVAL_END_MS,
   PLAYGROUND_ARRIVAL_START_MS,
@@ -754,6 +755,7 @@ export const StarfieldCanvas = ({
     let studioRect: ViewRect | null = null;
     let rectsDirty = true;
     let nextRectCheck = 0;
+    const cursorLayer = new CursorConstellationLayer(scrollEl ?? document.body, () => { rectsDirty = true; });
     const visibleTextTargets = new Set<HTMLElement>();
     const observedTextTargets = new Set<HTMLElement>();
     const textObserver = new IntersectionObserver(
@@ -1104,6 +1106,7 @@ export const StarfieldCanvas = ({
     };
 
     const refreshImgRects = () => {
+      cursorLayer.refresh();
       imgRects = Array.from(document.querySelectorAll('.mo-root img'), (img) => {
         const r = img.getBoundingClientRect();
         return { x: r.left, y: r.top, w: r.width, h: r.height };
@@ -1169,6 +1172,7 @@ export const StarfieldCanvas = ({
       // entre monitores con distinto DPI.
       dpr = Math.min(window.devicePixelRatio || 1, dprCap);
       rebuildConductionHaloSprite();
+      cursorLayer.resize(width, height, dpr);
       vscale = Math.min(width, height) / 900;
       // Altura del hero: define la banda del cielo sin constelaciones
       const heroEl = document.querySelector('.mo-hero');
@@ -3353,7 +3357,9 @@ export const StarfieldCanvas = ({
       const camSpd = Math.hypot(camVX, camVY);
       const camStretch = playgroundRef.current ? Math.min(40, camSpd * 2.4) : 0;
 
-      const cursorEnabled = cursorPresent && !(overHero && !hasPlaygroundScene) && dimLevel > 0.4;
+      const cursorEnabled = cursorPresent && !(overHero && !hasPlaygroundScene) && dimLevel > 0.4 &&
+        (hasPlaygroundScene || (!dimRef.current && !cursorLayer.blocked));
+      cursorLayer.clear();
       let activeCursorNodes = 0;
 
       /* ---- Capa trasera: estrellas ---- */
@@ -3432,7 +3438,7 @@ export const StarfieldCanvas = ({
           node = undefined;
         }
         // Departing nodes may fade without taking slots from the new constellation.
-        const activeNode = cursorEnabled && activeCursorNodes < 26 &&
+        const activeNode = cursorEnabled && activeCursorNodes < 23 &&
           dc < (node && node.near > 0 ? 250 : 230);
         if (activeNode) activeCursorNodes += 1;
         if (!node && activeNode) {
@@ -3496,8 +3502,7 @@ export const StarfieldCanvas = ({
             const [bId, b] = nodes[j];
             if (b.near === 0 || Math.hypot(b.x - mouse.x, b.y - mouse.y) >= 230) continue;
             const distance = Math.hypot(a.x - b.x, a.y - b.y);
-            if (distance < 22 || distance >= 126 || pointInImage((a.x + b.x) / 2, (a.y + b.y) / 2) ||
-              segmentInVitrineCard(a.x, a.y, b.x, b.y)) continue;
+            if (distance < 22 || distance >= 126) continue;
             candidates.push({ a: Math.min(aId, bId), b: Math.max(aId, bId), distance });
           }
         }
@@ -3545,41 +3550,50 @@ export const StarfieldCanvas = ({
             reserve(candidate.a, candidate.b);
           }
         }
-        fxCtx.save();
-        fxCtx.lineCap = 'round';
+        const cursorCtx = cursorLayer.context;
+        cursorCtx.save();
+        cursorCtx.lineCap = 'round';
         for (const edge of cursorEdges.values()) {
           const a = cursorNodes.get(edge.a)!;
           const b = cursorNodes.get(edge.b)!;
-          // Keep existing protected regions clear, including during fade-out.
-          if (pointInImage((a.x + b.x) / 2, (a.y + b.y) / 2) ||
-            segmentInVitrineCard(a.x, a.y, b.x, b.y)) continue;
           const alpha = edge.alpha * dimLevel * arrivalAlpha;
-          fxCtx.strokeStyle = `rgba(${flow.join(',')},${alpha * 0.42})`;
-          fxCtx.lineWidth = 4.4;
-          fxCtx.beginPath();
-          fxCtx.moveTo(a.x, a.y);
-          fxCtx.lineTo(b.x, b.y);
-          fxCtx.stroke();
-          fxCtx.strokeStyle = `rgba(${flowLite.join(',')},${alpha})`;
-          fxCtx.lineWidth = 2;
-          fxCtx.stroke();
+          cursorCtx.strokeStyle = `rgba(${flow.join(',')},${alpha * 0.42})`;
+          cursorCtx.lineWidth = 4.4;
+          cursorCtx.beginPath();
+          cursorCtx.moveTo(a.x, a.y);
+          cursorCtx.lineTo(b.x, b.y);
+          cursorCtx.stroke();
+          cursorCtx.strokeStyle = `rgba(${flowLite.join(',')},${alpha})`;
+          cursorCtx.lineWidth = 2;
+          cursorCtx.stroke();
         }
         const glowTint = mixRGB(flow, [250, 244, 224], 0.3);
         for (const node of cursorNodes.values()) {
-          if (node.alpha < 0.001 || pointInImage(node.x, node.y) || pointInVitrineCard(node.x, node.y)) continue;
+          if (node.alpha < 0.001) continue;
           const pulse = 0.85 + 0.15 * Math.sin(nowMs / 1000 * 1.2 + node.phase);
           const alpha = 0.55 * pulse * node.alpha * dimLevel * arrivalAlpha;
           const radius = node.z * 7;
-          const halo = fxCtx.createRadialGradient(node.x, node.y, 0, node.x, node.y, radius);
+          const halo = cursorCtx.createRadialGradient(node.x, node.y, 0, node.x, node.y, radius);
           halo.addColorStop(0, `rgba(${glowTint.join(',')},${alpha})`);
           halo.addColorStop(0.4, `rgba(${glowTint.join(',')},${alpha * 0.7})`);
           halo.addColorStop(1, `rgba(${glowTint.join(',')},0)`);
-          fxCtx.fillStyle = halo;
-          fxCtx.beginPath();
-          fxCtx.arc(node.x, node.y, radius, 0, Math.PI * 2);
-          fxCtx.fill();
+          cursorCtx.fillStyle = halo;
+          cursorCtx.beginPath();
+          cursorCtx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+          cursorCtx.fill();
         }
-        fxCtx.restore();
+        cursorCtx.restore();
+
+        if (cursorNodes.size > 0) {
+          const points = Array.from(cursorNodes.values());
+          const left = Math.min(...points.map(node => node.x)) - 12;
+          const top = Math.min(...points.map(node => node.y)) - 12;
+          cursorLayer.composite(fxCtx, !hasPlaygroundScene, {
+            x: left, y: top,
+            w: Math.max(...points.map(node => node.x)) + 12 - left,
+            h: Math.max(...points.map(node => node.y)) + 12 - top,
+          });
+        }
 
         // Constelaciones ambientales: presencia sutil de borde a borde.
         // Mueren en pantalla o salen por la izquierda y renacen a la derecha.
@@ -5649,6 +5663,7 @@ export const StarfieldCanvas = ({
       window.removeEventListener('pointercancel', onUp);
       window.removeEventListener('blur', onWinBlur);
       scrollEl?.removeEventListener('scroll', onScroll);
+      cursorLayer.dispose();
       structureObserver.disconnect();
       textObserver.disconnect();
       visibleTextTargets.clear();
