@@ -1106,25 +1106,36 @@ export const StarfieldCanvas = ({
     };
 
     const refreshImgRects = () => {
-      cursorLayer.refresh();
+      // One geometry read per element for this refresh; the cache is discarded
+      // immediately so scrolling and animated layouts can never reuse stale data.
+      const rectCache = new Map<Element, DOMRect>();
+      const measureRect = (element: Element) => {
+        let rect = rectCache.get(element);
+        if (!rect) {
+          rect = element.getBoundingClientRect();
+          rectCache.set(element, rect);
+        }
+        return rect;
+      };
+      cursorLayer.refresh(measureRect);
       imgRects = Array.from(document.querySelectorAll('.mo-root img'), (img) => {
-        const r = img.getBoundingClientRect();
+        const r = measureRect(img);
         return { x: r.left, y: r.top, w: r.width, h: r.height };
       }).filter((r) => r.w > 4 && r.h > 4);
       vitrineCardRects = Array.from(document.querySelectorAll('.mo-vitrina-card'), (card) => {
-        const r = card.getBoundingClientRect();
+        const r = measureRect(card);
         return { x: r.left, y: r.top, w: r.width, h: r.height };
       }).filter((r) => r.w > 4 && r.h > 4);
       letterRects = Array.from(document.querySelectorAll('.mo-hero-letterbox'), (el) => {
-        const r = el.getBoundingClientRect();
+        const r = measureRect(el);
         return { x: r.left, y: r.top, w: r.width, h: r.height };
       }).filter((r) => r.w > 2 && r.h > 2);
       pgLetterRects = Array.from(document.querySelectorAll('.mo-pg-letter'), (el) => {
-        const r = el.getBoundingClientRect();
+        const r = measureRect(el);
         return { x: r.left, y: r.top, w: r.width, h: r.height };
       }).filter((r) => r.w > 2 && r.h > 2);
       textRects = Array.from(visibleTextTargets, (element) => {
-        const r = element.getBoundingClientRect();
+        const r = measureRect(element);
         return { element, x: r.left, y: r.top, w: r.width, h: r.height };
       }).filter(
         (r) =>
@@ -1137,7 +1148,7 @@ export const StarfieldCanvas = ({
       );
       const panel = document.querySelector<HTMLElement>('.mo-studio-panel');
       if (panel) {
-        const r = panel.getBoundingClientRect();
+        const r = measureRect(panel);
         studioRect = { x: r.left, y: r.top, w: r.width, h: r.height };
       } else {
         if (studioRect) discardStudioEffects();
@@ -3585,13 +3596,24 @@ export const StarfieldCanvas = ({
         cursorCtx.restore();
 
         if (cursorNodes.size > 0) {
-          const points = Array.from(cursorNodes.values());
-          const left = Math.min(...points.map(node => node.x)) - 12;
-          const top = Math.min(...points.map(node => node.y)) - 12;
+          let left = Infinity;
+          let right = -Infinity;
+          let top = Infinity;
+          let bottom = -Infinity;
+          for (const node of cursorNodes.values()) {
+            left = Math.min(left, node.x);
+            right = Math.max(right, node.x);
+            top = Math.min(top, node.y);
+            bottom = Math.max(bottom, node.y);
+          }
+          left -= 12;
+          right += 12;
+          top -= 12;
+          bottom += 12;
           cursorLayer.composite(fxCtx, !hasPlaygroundScene, {
             x: left, y: top,
-            w: Math.max(...points.map(node => node.x)) + 12 - left,
-            h: Math.max(...points.map(node => node.y)) + 12 - top,
+            w: right - left,
+            h: bottom - top,
           });
         }
 

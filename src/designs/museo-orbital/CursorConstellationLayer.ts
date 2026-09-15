@@ -24,6 +24,7 @@ export class CursorConstellationLayer {
   private width = 0;
   private height = 0;
   private signature = '';
+  private pixels: ImageData | null = null;
   private readonly root: HTMLElement;
   blocked = false;
 
@@ -73,14 +74,18 @@ export class CursorConstellationLayer {
     // Half-resolution masks are smoothly upscaled; geometry stays in CSS pixels.
     this.mask.width = Math.ceil(width / 2);
     this.mask.height = Math.ceil(height / 2);
+    if (this.pixels &&
+      (this.pixels.width !== this.mask.width || this.pixels.height !== this.mask.height)) {
+      this.pixels = null;
+    }
     this.signature = '';
   }
 
-  refresh() {
+  refresh(measureRect: (element: Element) => DOMRect = element => element.getBoundingClientRect()) {
     const inViewport = (r: DOMRect) => r.width > 0 && r.height > 0 &&
       r.right > -32 && r.left < this.width + 32 && r.bottom > -32 && r.top < this.height + 32;
     this.blocked = Boolean(document.querySelector('.mo-image-lightbox,.mo-menu,.mo-studio-panel')) ||
-      Array.from(this.root.querySelectorAll('.mo-chapter-intro.is-image-focus')).some(el => inViewport(el.getBoundingClientRect()));
+      Array.from(this.root.querySelectorAll('.mo-chapter-intro.is-image-focus')).some(el => inViewport(measureRect(el)));
     const rects: MaskRect[] = [];
     const add = (r: DOMRect, strength: number, feather: number, padding = 0, chapterFade = false) => {
       if (!inViewport(r)) return;
@@ -90,14 +95,14 @@ export class CursorConstellationLayer {
     const seenText = new Set<Node>();
     const range = document.createRange();
     for (const element of this.visible) {
-      if (!element.isConnected || !inViewport(element.getBoundingClientRect())) continue;
+      if (!element.isConnected || !inViewport(measureRect(element))) continue;
       if (element.matches('img,.mo-vitrina-card')) {
         const chapter = element.closest('.mo-chapter-image');
-        add((chapter ?? element).getBoundingClientRect(), 0.45, 32, 0, Boolean(chapter));
+        add(measureRect(chapter ?? element), 0.45, 32, 0, Boolean(chapter));
         continue;
       }
       if (element.matches(CONTROL_SELECTOR)) {
-        add(element.getBoundingClientRect(), 1, 16, 6);
+        add(measureRect(element), 1, 16, 6);
         continue;
       }
       const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
@@ -116,7 +121,8 @@ export class CursorConstellationLayer {
     const h = this.mask.height;
     const sx = this.width / w;
     const sy = this.height / h;
-    const pixels = this.maskContext.createImageData(w, h);
+    const pixels = this.pixels ?? this.maskContext.createImageData(w, h);
+    this.pixels = pixels;
     pixels.data.fill(255);
     for (const rect of rects) {
       const isImage = rect.strength < 1;
@@ -174,6 +180,7 @@ export class CursorConstellationLayer {
     this.structureObserver.disconnect();
     this.observed.clear();
     this.visible.clear();
+    this.pixels = null;
     this.width = this.height = 0;
     this.canvas.width = this.canvas.height = this.mask.width = this.mask.height = 0;
   }
