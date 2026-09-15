@@ -590,6 +590,12 @@ export const StarfieldCanvas = ({
     let height = 0;
     let vscale = 1;
     const stars: Star[] = [];
+    // Stable star indices survive pointer movement; fading nodes also keep their slots.
+    const cursorNodes = new Map<number, {
+      x: number; y: number; z: number; phase: number; alpha: number; near: number;
+    }>();
+    const cursorEdges = new Map<string, { a: number; b: number; alpha: number }>();
+    let cursorPresent = false;
     let comets: Comet[] = [];
     let waves: Wave[] = [];
     let bubbles: ShockBubble[] = [];
@@ -1155,6 +1161,8 @@ export const StarfieldCanvas = ({
     };
 
     const resize = (reseedAmbient = true) => {
+      cursorNodes.clear();
+      cursorEdges.clear();
       width = window.innerWidth;
       height = window.innerHeight;
       // Releer el dpr: cambia con el zoom de página y al mover la ventana
@@ -1192,6 +1200,7 @@ export const StarfieldCanvas = ({
     };
 
     const onMove = (event: PointerEvent) => {
+      cursorPresent = event.pointerType !== 'touch';
       mouse.x = event.clientX;
       mouse.y = event.clientY;
       overHero = Boolean((event.target as HTMLElement | null)?.closest('.mo-hero'));
@@ -2250,6 +2259,7 @@ export const StarfieldCanvas = ({
 
     const onVisibility = () => {
       running = !document.hidden;
+      if (!running) cursorPresent = false;
       if (running) {
         lastScroll = scrollRef.current?.scrollTop ?? 0;
         // El hueco sin frames no debe contar como fps bajo ni como dt gigante
@@ -3095,6 +3105,9 @@ export const StarfieldCanvas = ({
     const frame = () => {
       if (!running) return;
       const nowMs = performance.now();
+      const cursorDt = lastFrameNow > 0 ? Math.max(0, (nowMs - lastFrameNow) / 1000) : 1 / 60;
+      const easeCursorAlpha = (current: number, target: number) =>
+        current + (target - current) * (1 - Math.exp(-3 * cursorDt / (target > current ? 0.2 : 0.45)));
       dt = lastFrameNow > 0
         ? Math.min(0.032, Math.max(0.008, (nowMs - lastFrameNow) / 1000))
         : 0.016;
@@ -3340,14 +3353,15 @@ export const StarfieldCanvas = ({
       const camSpd = Math.hypot(camVX, camVY);
       const camStretch = playgroundRef.current ? Math.min(40, camSpd * 2.4) : 0;
 
-      const drawn: { x: number; y: number; z: number }[] = [];
+      const cursorEnabled = cursorPresent && !(overHero && !hasPlaygroundScene) && dimLevel > 0.4;
+      let activeCursorNodes = 0;
 
       /* ---- Capa trasera: estrellas ---- */
       // Espacio infinito toroidal: la posición se envuelve dentro del viewport
       // con un margen de 80px; salir por un borde es reaparecer por el opuesto
       const spanW = width + 160;
       const spanH = height + 160;
-      for (const star of stars) {
+      for (const [starIndex, star] of stars.entries()) {
         star.x -= 0.05 * star.z;
         star.y -= effectiveScrollVelocity * 0.045 * star.z;
 
@@ -3407,81 +3421,165 @@ export const StarfieldCanvas = ({
           ctx.fill();
         }
 
-        if (mouse.x > -999) {
-          const dc = Math.hypot(px - mouse.x, py - mouse.y);
-          if (dc < 230 && drawn.length < 26) drawn.push({ x: px, y: py, z: star.z });
+        const dc = Math.hypot(px - mouse.x, py - mouse.y);
+        let node = cursorNodes.get(starIndex);
+        // Wrapped stars must never drag a fading connection across the viewport.
+        if (node && (Math.abs(px - node.x) > spanW / 2 || Math.abs(py - node.y) > spanH / 2)) {
+          cursorNodes.delete(starIndex);
+          for (const [key, edge] of cursorEdges) {
+            if (edge.a === starIndex || edge.b === starIndex) cursorEdges.delete(key);
+          }
+          node = undefined;
+        }
+        // Departing nodes may fade without taking slots from the new constellation.
+        const activeNode = cursorEnabled && activeCursorNodes < 26 &&
+          dc < (node && node.near > 0 ? 250 : 230);
+        if (activeNode) activeCursorNodes += 1;
+        if (!node && activeNode) {
+          node = { x: px, y: py, z: star.z, phase: star.phase, alpha: 0, near: 0 };
+          cursorNodes.set(starIndex, node);
+        }
+        if (node) {
+          node.x = px;
+          node.y = py;
+          node.near = activeNode ? smoothstep((250 - dc) / 40) : 0;
+          node.alpha = easeCursorAlpha(node.alpha, node.near);
+          if (node.near === 0 && node.alpha < 0.001) cursorNodes.delete(starIndex);
         }
       }
 
       /* ---- Capa frontal: chispas, supernova, meteoros, ondas, carga, boceto ---- */
       if (fxCtx) {
-        // Constelación del cursor: viaja por encima del museo para no lavarse
-        // contra la nebulosa del hero (mismo lenguaje que el boceto shift+clic).
-        // Sobre el hero se apaga: allí manda la estela fugaz del cursor.
+        // Preserve active topology; departing edges do not block new connections.
         const degree = new Map<number, number>();
-
-        // En playground conviven estela aurora y constelacion del cursor:
-        // solo el hero real suprime esta ultima (allí la estela es la protagonista)
-        const cursorConstellationOff = overHero && !hasPlaygroundScene;
-        const constellationArrivalAlpha = isSceneTransition ? sceneProgress : 1;
-        if (drawn.length > 1 && dimLevel > 0.4 && !cursorConstellationOff) {
-          // Misma paleta aurora que la estela: el matiz deriva con el tiempo
-          const flow = sampleStops(AURORA, (time * 0.08) % 1);
-          const flowLite = mixRGB(flow, [250, 244, 224], 0.6);
-          for (let i = 0; i < drawn.length; i += 1) {
-            for (let j = i + 1; j < drawn.length; j += 1) {
-              if ((degree.get(i) ?? 0) >= 3 || (degree.get(j) ?? 0) >= 3) continue;
-              const dx = drawn[i].x - drawn[j].x;
-              const dy = drawn[i].y - drawn[j].y;
-              const d = Math.hypot(dx, dy);
-              if (d < 126) {
-                const midX = (drawn[i].x + drawn[j].x) / 2;
-                const midY = (drawn[i].y + drawn[j].y) / 2;
-                if (
-                  pointInImage(midX, midY) ||
-                  segmentInVitrineCard(drawn[i].x, drawn[i].y, drawn[j].x, drawn[j].y)
-                ) continue;
-                degree.set(i, (degree.get(i) ?? 0) + 1);
-                degree.set(j, (degree.get(j) ?? 0) + 1);
-                const near = 1 - Math.min(1, Math.hypot(midX - mouse.x, midY - mouse.y) / 230);
-                const lineAlpha = Math.min(
-                  1,
-                  0.95 * (1 - d / 126) * near * dimLevel * constellationArrivalAlpha,
-                );
-                fxCtx.lineCap = 'round';
-                fxCtx.strokeStyle = `rgba(${flow[0]},${flow[1]},${flow[2]},${(lineAlpha * 0.42).toFixed(3)})`;
-                fxCtx.lineWidth = 4.4;
-                fxCtx.beginPath();
-                fxCtx.moveTo(drawn[i].x, drawn[i].y);
-                fxCtx.lineTo(drawn[j].x, drawn[j].y);
-                fxCtx.stroke();
-                fxCtx.strokeStyle = `rgba(${flowLite[0]},${flowLite[1]},${flowLite[2]},${lineAlpha.toFixed(3)})`;
-                fxCtx.lineWidth = 2;
-                fxCtx.beginPath();
-                fxCtx.moveTo(drawn[i].x, drawn[i].y);
-                fxCtx.lineTo(drawn[j].x, drawn[j].y);
-                fxCtx.stroke();
-              }
+        const neighbors = new Map<number, Set<number>>();
+        const shapeEdges: { a: number; b: number }[] = [];
+        const arrivalAlpha = isSceneTransition ? sceneProgress : 1;
+        // Ping-pong through the existing palette without a discontinuous wrap.
+        const flow = sampleStops(AURORA, (1 - Math.cos(nowMs / 1000 * Math.PI * 0.08)) / 2);
+        const flowLite = mixRGB(flow, [250, 244, 224], 0.6);
+        const reserve = (a: number, b: number) => {
+          degree.set(a, (degree.get(a) ?? 0) + 1);
+          degree.set(b, (degree.get(b) ?? 0) + 1);
+          if (!neighbors.has(a)) neighbors.set(a, new Set());
+          if (!neighbors.has(b)) neighbors.set(b, new Set());
+          neighbors.get(a)!.add(b);
+          neighbors.get(b)!.add(a);
+          shapeEdges.push({ a, b });
+        };
+        for (const [key, edge] of cursorEdges) {
+          const a = cursorNodes.get(edge.a);
+          const b = cursorNodes.get(edge.b);
+          if (!a || !b) {
+            cursorEdges.delete(key);
+            continue;
+          }
+          const distance = Math.hypot(a.x - b.x, a.y - b.y);
+          const midpointDistance = Math.hypot((a.x + b.x) / 2 - mouse.x, (a.y + b.y) / 2 - mouse.y);
+          const proximity = Math.max(0, 1 - midpointDistance / 250);
+          const activeEdge = a.near > 0 && b.near > 0 && distance < 146 &&
+            (degree.get(edge.a) ?? 0) < 3 && (degree.get(edge.b) ?? 0) < 3;
+          const target = activeEdge ? 0.95 * (1 - distance / 146) * proximity : 0;
+          edge.alpha = easeCursorAlpha(edge.alpha, target);
+          if (target === 0 && edge.alpha < 0.001) {
+            cursorEdges.delete(key);
+            continue;
+          }
+          if (activeEdge) reserve(edge.a, edge.b);
+        }
+        const nodes = Array.from(cursorNodes.entries());
+        const candidates: { a: number; b: number; distance: number }[] = [];
+        for (let i = 0; i < nodes.length; i += 1) {
+          const [aId, a] = nodes[i];
+          if (a.near === 0 || Math.hypot(a.x - mouse.x, a.y - mouse.y) >= 230) continue;
+          for (let j = i + 1; j < nodes.length; j += 1) {
+            const [bId, b] = nodes[j];
+            if (b.near === 0 || Math.hypot(b.x - mouse.x, b.y - mouse.y) >= 230) continue;
+            const distance = Math.hypot(a.x - b.x, a.y - b.y);
+            if (distance < 22 || distance >= 126 || pointInImage((a.x + b.x) / 2, (a.y + b.y) / 2) ||
+              segmentInVitrineCard(a.x, a.y, b.x, b.y)) continue;
+            candidates.push({ a: Math.min(aId, bId), b: Math.max(aId, bId), distance });
+          }
+        }
+        // Prefer readable segments over tiny knots, while keeping natural variation.
+        const lengthScore = (distance: number) => distance + Math.max(0, 45 - distance) * 2;
+        candidates.sort((a, b) => lengthScore(a.distance) - lengthScore(b.distance) || a.a - b.a || a.b - b.b);
+        const fitsShape = (aId: number, bId: number) => {
+          const a = cursorNodes.get(aId)!;
+          const b = cursorNodes.get(bId)!;
+          for (const edge of shapeEdges) {
+            if (edge.a === aId || edge.b === aId || edge.a === bId || edge.b === bId) continue;
+            const c = cursorNodes.get(edge.a)!;
+            const d = cursorNodes.get(edge.b)!;
+            if (segmentIntersection(a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y)) return false;
+          }
+          // Leave breathing room between branches instead of nearly doubled lines.
+          for (const [originId, targetId] of [[aId, bId], [bId, aId]]) {
+            const origin = cursorNodes.get(originId)!;
+            const target = cursorNodes.get(targetId)!;
+            for (const neighborId of neighbors.get(originId) ?? []) {
+              const neighbor = cursorNodes.get(neighborId)!;
+              const ux = target.x - origin.x;
+              const uy = target.y - origin.y;
+              const vx = neighbor.x - origin.x;
+              const vy = neighbor.y - origin.y;
+              const cosine = (ux * vx + uy * vy) / (Math.hypot(ux, uy) * Math.hypot(vx, vy) || 1);
+              if (cosine > Math.cos(28 * Math.PI / 180)) return false;
+              // Larger triangular silhouettes are welcome; tiny closed knots are not.
+              if (neighbors.get(targetId)?.has(neighborId) &&
+                Math.max(Math.hypot(ux, uy), Math.hypot(vx, vy),
+                  Math.hypot(target.x - neighbor.x, target.y - neighbor.y)) < 75) return false;
             }
           }
-        }
-
-        if (!cursorConstellationOff) {
-          const glowTint = mixRGB(sampleStops(AURORA, (time * 0.08) % 1), [250, 244, 224], 0.3);
-          for (const node of drawn) {
-            if (pointInImage(node.x, node.y) || pointInVitrineCard(node.x, node.y)) continue;
-            const pulse = 0.75 + 0.25 * Math.sin(time * 2.2 + node.x);
-            fxCtx.fillStyle = `rgba(${glowTint[0]},${glowTint[1]},${glowTint[2]},${(
-              0.42 *
-              pulse *
-              dimLevel *
-              constellationArrivalAlpha
-            ).toFixed(3)})`;
-            fxCtx.beginPath();
-            fxCtx.arc(node.x, node.y, node.z * 6.2, 0, Math.PI * 2);
-            fxCtx.fill();
+          return true;
+        };
+        // Grow into unused stars first, then add branches and spacious closed shapes.
+        for (const growOnly of [true, false]) {
+          for (const candidate of candidates) {
+            const key = `${candidate.a}:${candidate.b}`;
+            const degreeA = degree.get(candidate.a) ?? 0;
+            const degreeB = degree.get(candidate.b) ?? 0;
+            if (cursorEdges.has(key) || degreeA >= 3 || degreeB >= 3 ||
+              (growOnly && degreeA > 0 && degreeB > 0) || !fitsShape(candidate.a, candidate.b)) continue;
+            cursorEdges.set(key, { a: candidate.a, b: candidate.b, alpha: 0 });
+            reserve(candidate.a, candidate.b);
           }
         }
+        fxCtx.save();
+        fxCtx.lineCap = 'round';
+        for (const edge of cursorEdges.values()) {
+          const a = cursorNodes.get(edge.a)!;
+          const b = cursorNodes.get(edge.b)!;
+          // Keep existing protected regions clear, including during fade-out.
+          if (pointInImage((a.x + b.x) / 2, (a.y + b.y) / 2) ||
+            segmentInVitrineCard(a.x, a.y, b.x, b.y)) continue;
+          const alpha = edge.alpha * dimLevel * arrivalAlpha;
+          fxCtx.strokeStyle = `rgba(${flow.join(',')},${alpha * 0.42})`;
+          fxCtx.lineWidth = 4.4;
+          fxCtx.beginPath();
+          fxCtx.moveTo(a.x, a.y);
+          fxCtx.lineTo(b.x, b.y);
+          fxCtx.stroke();
+          fxCtx.strokeStyle = `rgba(${flowLite.join(',')},${alpha})`;
+          fxCtx.lineWidth = 2;
+          fxCtx.stroke();
+        }
+        const glowTint = mixRGB(flow, [250, 244, 224], 0.3);
+        for (const node of cursorNodes.values()) {
+          if (node.alpha < 0.001 || pointInImage(node.x, node.y) || pointInVitrineCard(node.x, node.y)) continue;
+          const pulse = 0.85 + 0.15 * Math.sin(nowMs / 1000 * 1.2 + node.phase);
+          const alpha = 0.55 * pulse * node.alpha * dimLevel * arrivalAlpha;
+          const radius = node.z * 7;
+          const halo = fxCtx.createRadialGradient(node.x, node.y, 0, node.x, node.y, radius);
+          halo.addColorStop(0, `rgba(${glowTint.join(',')},${alpha})`);
+          halo.addColorStop(0.4, `rgba(${glowTint.join(',')},${alpha * 0.7})`);
+          halo.addColorStop(1, `rgba(${glowTint.join(',')},0)`);
+          fxCtx.fillStyle = halo;
+          fxCtx.beginPath();
+          fxCtx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+          fxCtx.fill();
+        }
+        fxCtx.restore();
 
         // Constelaciones ambientales: presencia sutil de borde a borde.
         // Mueren en pantalla o salen por la izquierda y renacen a la derecha.
@@ -5500,7 +5598,9 @@ export const StarfieldCanvas = ({
       const sameDirectionHeld = Array.from(heldMovementCodes).some((code) => DIR_KEYS[code] === dir);
       if (!sameDirectionHeld) heldDirs.delete(dir);
     };
+    const onCursorLeave = () => { cursorPresent = false; };
     const onWinBlur = () => {
+      onCursorLeave();
       onUp();
       heldDirs.clear();
       heldMovementCodes.clear();
@@ -5519,6 +5619,7 @@ export const StarfieldCanvas = ({
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('mo-warp', onWarp);
 
+    document.documentElement.addEventListener('pointerleave', onCursorLeave);
     window.addEventListener('pointermove', onMove, { passive: true });
     window.addEventListener('pointerdown', onDown);
     window.addEventListener('pointerup', onUp);
@@ -5541,6 +5642,7 @@ export const StarfieldCanvas = ({
       window.removeEventListener('mo-warp', onWarp);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      document.documentElement.removeEventListener('pointerleave', onCursorLeave);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerdown', onDown);
       window.removeEventListener('pointerup', onUp);
