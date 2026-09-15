@@ -1103,15 +1103,33 @@ body:has(.mo-root) {
   align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  margin-top: 18px;
+  margin-top: 12px;
   font-family: var(--mo-mono);
   text-transform: uppercase;
 }
 
 .mo-metric-profile-heading span {
+  position: relative;
+  top: 18px;
   font-size: 9px;
   letter-spacing: 0.25em;
   color: rgba(245, 241, 232, 0.72);
+}
+
+.mo-metric-profile-heading .mo-vitrine-toggle {
+  align-self: flex-start;
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  font-size: 9px;
+  color: rgba(245, 241, 232, .82);
+  border-color: rgba(245, 241, 232, .28);
+  opacity: 1;
+}
+
+.mo-metric-profile-heading .mo-vitrine-toggle:hover,
+.mo-metric-profile-heading .mo-vitrine-toggle:focus-visible,
+.mo-metric-profile-heading .mo-vitrine-toggle.is-in {
+  opacity: 1;
 }
 
 .mo-metrics-v2 dt {
@@ -3040,6 +3058,10 @@ body:has(.mo-root) {
     align-items: flex-start;
     flex-direction: column;
     gap: 6px;
+  }
+
+  .mo-metric-profile-heading .mo-vitrine-toggle {
+    align-self: flex-end;
   }
 
   .mo-studio-brief .mo-metrics-v2 > div,

@@ -331,17 +331,16 @@ export const StudioRoom = ({
               </div>
               <p className="mo-studio-lead">{concept.summary}</p>
 
-              <button
-                type="button"
-                className={`mo-vitrine-toggle${inVitrine ? ' is-in' : ''}`}
-                onClick={() => onToggleVitrine(concept.id)}
-                data-cursor-label={inVitrine ? 'Quitar' : 'Añadir'}
-              >
-                {inVitrine ? '✓ En la vitrina de contrastes' : '+ Añadir a la vitrina de contrastes'}
-              </button>
-
               <div className="mo-metric-profile-heading">
                 <span>Perfil comparativo</span>
+                <button
+                  type="button"
+                  className={`mo-vitrine-toggle${inVitrine ? ' is-in' : ''}`}
+                  onClick={() => onToggleVitrine(concept.id)}
+                  data-cursor-label={inVitrine ? 'Quitar' : 'Añadir'}
+                >
+                  {inVitrine ? '✓ En la vitrina de contrastes' : '+ Añadir a la vitrina de contrastes'}
+                </button>
               </div>
               <dl className="mo-metrics-v2">
                 {profileRows.map((row) => (
