@@ -1478,6 +1478,38 @@ const RevealWords = ({ text }: { text: string }) => {
 
 /* ---------------- Obra del muro ---------------- */
 
+const OBRA_IMAGE_LOAD_MARGIN = '1200px 0px';
+const TRANSPARENT_IMAGE =
+  'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%221%22 height=%221%22/%3E';
+
+const useNearViewportImage = (imageRef: RefObject<HTMLImageElement | null>) => {
+  const [shouldLoad, setShouldLoad] = useState(false);
+
+  useEffect(() => {
+    if (shouldLoad) return;
+    const image = imageRef.current;
+    if (!image) return;
+    if (!('IntersectionObserver' in window)) {
+      setShouldLoad(true);
+      return;
+    }
+
+    const root = image.closest<HTMLElement>('.mo-root');
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        setShouldLoad(true);
+        observer.disconnect();
+      },
+      { root, rootMargin: OBRA_IMAGE_LOAD_MARGIN },
+    );
+    observer.observe(image);
+    return () => observer.disconnect();
+  }, [imageRef, shouldLoad]);
+
+  return shouldLoad;
+};
+
 const Obra = memo(({
   concept,
   plate,
@@ -1493,6 +1525,7 @@ const Obra = memo(({
 }) => {
   const [hovered, setHovered] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+  const shouldLoadImage = useNearViewportImage(imgRef);
 
   const tilt = (event: ReactMouseEvent<HTMLElement>) => {
     const target = event.currentTarget;
@@ -1534,12 +1567,12 @@ const Obra = memo(({
             <motion.img
               ref={imgRef}
               layoutId={enableFlight ? `obra-${concept.id}` : undefined}
-              src={concept.illustration.src}
+              src={shouldLoadImage ? concept.illustration.src : TRANSPARENT_IMAGE}
               alt={concept.illustration.alt}
               loading="lazy"
               decoding="async"
             />
-            {featured && <DistortOverlay imageRef={imgRef} active={hovered} />}
+            {featured && shouldLoadImage && <DistortOverlay imageRef={imgRef} active={hovered} />}
           </div>
           <span className="mo-frame-glow" aria-hidden="true" />
         </figure>
