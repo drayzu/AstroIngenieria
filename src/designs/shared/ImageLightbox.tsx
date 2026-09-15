@@ -80,8 +80,9 @@ export function ImageLightbox({ image, onClose, onPrevious, onNext }: ImageLight
                 src={image.src}
                 alt={image.alt}
                 draggable={false}
-                onDoubleClick={onClose}
-                title="Doble clic para cerrar"
+                onClick={onClose}
+                title="Clic para cerrar"
+                data-cursor-label="Cerrar"
               />
               {onNext && (
                 <button

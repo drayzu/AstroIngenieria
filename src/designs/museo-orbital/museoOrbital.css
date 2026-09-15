@@ -988,7 +988,7 @@ body:has(.mo-root) {
   z-index: 3;
   display: grid;
   align-items: center;
-  width: 14%;
+  width: 25%;
   padding: 0 12px;
   border: 0;
   color: rgba(245, 241, 232, .62);
