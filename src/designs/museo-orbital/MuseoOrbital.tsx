@@ -26,6 +26,7 @@ import { Aperture, Volume2, VolumeX } from 'lucide-react';
 import { chapters, conceptById, plausibilityLabels, scaleLabels } from '../../data/astroData';
 import { refs } from '../../data/articles/sources';
 import { metricRows, metricValueLabel } from '../../data/metricProfile';
+import { readingSequence } from '../../data/readingJourney';
 import type { AstroChapter, AstroConcept, SourceRef } from '../../types';
 import { Grain } from '../shared/Grain';
 import { useScrollLock } from '../shared/useScrollLock';
@@ -1351,8 +1352,8 @@ const Hero = memo(({
           transition={{ delay: reduced ? 0 : 1.6, duration: 1, ease: EASE_OUT }}
         >
           Nueve salas convertidas en <Counter to={chapters.length} /> puertas. <Counter to={totalWorks} /> obras
-          esperando. Un recorrido desde la primera estación orbital hasta civilizaciones capaces
-          de mover estrellas.
+          esperando. Un recorrido para comprender mundos artificiales, civilizaciones capaces
+          de mover estrellas y las huellas que podrían dejar.
         </motion.p>
 
         <motion.button
@@ -1366,7 +1367,7 @@ const Hero = memo(({
         >
           <i className="mo-orbit a" aria-hidden="true" />
           <i className="mo-orbit b" aria-hidden="true" />
-          Descender a la Sala 00
+          Iniciar recorrido
           <span aria-hidden="true">↓</span>
         </motion.button>
 
@@ -1418,6 +1419,7 @@ const HallIndex = memo(({ activeId }: { activeId: string | null }) => (
         key={chapter.id}
         type="button"
         className={`mo-hall-chip${activeId === chapter.id ? ' is-active' : ''}`}
+        aria-current={activeId === chapter.id ? 'location' : undefined}
         style={{ '--accent': chapter.color } as CSSProperties}
         onClick={() => scrollToId(`sala-${chapter.id}`)}
       >
@@ -1545,6 +1547,7 @@ const Obra = memo(({
   return (
     <motion.article
       className={`mo-obra${featured ? ' is-featured' : ''}`}
+      data-concept-id={concept.id}
       initial={{ opacity: 0, y: 60, rotateZ: plate % 2 === 0 ? -1.1 : 1.1 }}
       whileInView={{ opacity: 1, y: 0, rotateZ: 0 }}
       viewport={{ once: true, margin: '-60px' }}
@@ -1664,6 +1667,7 @@ const ChapterIntro = memo(({ chapter }: { chapter: AstroChapter }) => {
           <span aria-hidden="true">{chapter.number}</span>
           <h2><RevealWords text={chapter.title} /></h2>
         </div>
+        <p className="mo-chapter-question">{chapter.question}</p>
         <p className="mo-chapter-summary">{chapter.summary}</p>
         <div className="mo-chapter-notes">
           {chapter.sections.map((section) => (
@@ -1699,19 +1703,16 @@ const Sala = memo(({
       style={{ '--accent': chapter.color } as CSSProperties}
     >
       <ChapterIntro chapter={chapter} />
-
-      <div className="mo-wall">
-        {chapter.concepts.map((concept, conceptIndex) => (
-          <Obra
-            key={concept.id}
-            concept={concept}
-            plate={offset + conceptIndex + 1}
-            featured={conceptIndex % 5 === 0}
-            enableFlight={enableFlight}
-            onSelect={onSelect}
-          />
-        ))}
-      </div>
+      {chapter.groups?.map(group => <section className="mo-topic-group" key={group.title} aria-label={group.title}>
+          <h3>{group.title}</h3>
+          {group.description && <p>{group.description}</p>}
+          <div className="mo-wall">
+            {group.conceptIds.map(id => {
+              const concept = conceptById.get(id)!;
+              return <Obra key={id} concept={concept} plate={offset + chapter.concepts.indexOf(concept) + 1} featured={false} enableFlight={enableFlight} onSelect={onSelect} />;
+            })}
+          </div>
+      </section>)}
     </section>
   );
 });
@@ -3006,9 +3007,7 @@ export default function MuseoOrbital() {
   const activeUsesVitrineNavigation = Boolean(active && vitrineIds.includes(active.id));
   const activeSiblings = activeUsesVitrineNavigation
     ? vitrineConcepts
-    : active
-      ? resolveChapter(active).concepts
-      : [];
+    : readingSequence;
   const playgroundArriving = playgroundEntryState === 'entering';
   const playgroundDeparting = playgroundEntryState === 'leaving';
   const playgroundTransitioning = playgroundArriving || playgroundDeparting;
@@ -3358,7 +3357,7 @@ export default function MuseoOrbital() {
             concept={active}
             chapter={resolveChapter(active)}
             siblings={activeSiblings}
-            navigationContext={activeUsesVitrineNavigation ? 'vitrine' : 'chapter'}
+            navigationContext={activeUsesVitrineNavigation ? 'vitrine' : 'journey'}
             enableFlight={!reduced}
             inVitrine={vitrineIds.includes(active.id)}
             onToggleVitrine={toggleVitrine}

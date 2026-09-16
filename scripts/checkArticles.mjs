@@ -13,9 +13,12 @@ try {
   let editoriallyReviewed = 0;
   let notes = 0;
   assert.deepEqual(Object.keys(editorialPlan).sort(), allConcepts.map(item => item.id).sort(), 'Editorial plan coverage');
+  const storageIds = new Set(allConcepts.map(item => item.sourceChapterId));
+  for (const storageId of storageIds) {
+    const { default: articles } = await server.ssrLoadModule(`/src/data/articles/chapters/${storageId}.ts`);
+    assert.deepEqual(articles.map(item => item.id).sort(), allConcepts.filter(item => item.sourceChapterId === storageId).map(item => item.id).sort(), `Storage coverage: ${storageId}`);
+  }
   for (const chapter of chapters) {
-    const { default: articles } = await server.ssrLoadModule(`/src/data/articles/chapters/${chapter.id}.ts`);
-    assert.deepEqual(articles.map(item => item.id).sort(), chapter.concepts.map(item => item.id).sort(), `Coverage: ${chapter.id}`);
     for (const concept of chapter.concepts) {
       assert.deepEqual(
         Object.keys(concept.metrics).sort(),
@@ -25,7 +28,7 @@ try {
       Object.entries(concept.metrics).forEach(([key, value]) => {
         assert(Number.isInteger(value) && value >= 1 && value <= 5, `Invalid metric ${key}: ${concept.id}/${value}`);
       });
-      const item = await loadArticle(chapter.id, concept.id);
+      const item = await loadArticle(concept.sourceChapterId, concept.id);
       const variants = getConceptImageVariants(concept);
       assert(!seen.has(item.id), `Duplicate id: ${item.id}`);
       seen.add(item.id);
@@ -72,7 +75,7 @@ try {
         assert(mainWordCount >= editorialMinimums[editorial.category], `Insufficient editorial content: ${item.id} (${mainWordCount}/${editorialMinimums[editorial.category]} main words)`);
         editoriallyReviewed++;
       }
-      if (chapter.id === 'intro' || chapter.id === 'habitats') {
+      if (concept.sourceChapterId === 'intro' || concept.sourceChapterId === 'habitats') {
         const expectedVariants = variants.filter(variant => variant.id !== 'exterior').map(variant => variant.id);
         const imageBlocks = item.blocks.filter(block => block.kind === 'image');
         assert.equal(imageBlocks.length, expectedVariants.length, `Image coverage count: ${item.id}`);
@@ -82,7 +85,7 @@ try {
       }
       words += count;
     }
-    console.log(`${chapter.id}: ${articles.length} lecturas verificadas`);
+    console.log(`${chapter.id}: ${chapter.concepts.length} lecturas verificadas`);
   }
   assert.equal(seen.size, allConcepts.length);
   await assert.rejects(loadArticle('missing-chapter', 'missing-concept'));

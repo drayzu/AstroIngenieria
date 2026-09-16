@@ -1,5 +1,7 @@
 # Guía editorial de AstroIngeniería
 
+La organización visible del museo se define en [Recorrido editorial](./reading-journey.md). Las tandas y archivos históricos conservan sus identificadores; el capítulo visible de una lectura puede diferir de su archivo de almacenamiento.
+
 Esta guía gobierna la reescritura por tandas de las 106 lecturas. El objetivo es que una persona curiosa, sin formación técnica previa, pueda representar cada idea, explicar su mecanismo y comprender por qué resulta extraordinaria sin confundir una escena hipotética con un hecho demostrado.
 
 ## Referencias de estilo

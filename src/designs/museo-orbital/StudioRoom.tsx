@@ -10,6 +10,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { plausibilityLabels, scaleLabels } from '../../data/astroData';
 import type { AstroChapter, AstroConcept } from '../../types';
 import { metricRows, metricValueLabel } from '../../data/metricProfile';
+import { getReadingConnections, type ReadingContext } from '../../data/readingJourney';
 import { getConceptImageVariants } from '../shared/conceptImages';
 import { ArticleReader } from '../shared/ArticleReader';
 import { ImageLightbox, type ImageLightboxImage } from '../shared/ImageLightbox';
@@ -21,7 +22,7 @@ interface StudioProps {
   concept: AstroConcept;
   chapter: AstroChapter;
   siblings: AstroConcept[];
-  navigationContext: 'chapter' | 'vitrine';
+  navigationContext: ReadingContext;
   enableFlight?: boolean;
   inVitrine: boolean;
   onToggleVitrine: (conceptId: string) => void;
@@ -54,9 +55,8 @@ export const StudioRoom = ({
   const variants = useMemo(() => getConceptImageVariants(concept), [concept]);
   const [variantIndex, setVariantIndex] = useState(0);
 
-  const index = siblings.findIndex((item) => item.id === concept.id);
-  const previous = index > 0 ? siblings[index - 1] : null;
-  const next = index < siblings.length - 1 ? siblings[index + 1] : null;
+  const navigation = getReadingConnections(concept.id, siblings, navigationContext);
+  const { index, previous, next, previousLabel, nextLabel } = navigation;
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -95,7 +95,7 @@ export const StudioRoom = ({
   useEffect(() => {
     const closeBtn = panelRef.current?.querySelector<HTMLButtonElement>('.mo-studio-close');
     closeBtn?.focus();
-  }, []);
+  }, [concept.id]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -201,23 +201,27 @@ export const StudioRoom = ({
           </span>
           <nav
             className="mo-studio-nav"
-            aria-label={navigationContext === 'vitrine' ? 'Obras de la vitrina' : 'Obras contiguas'}
+            aria-label={navigationContext === 'vitrine' ? 'Obras de la vitrina' : 'Lecturas del recorrido'}
           >
             <button
               type="button"
               disabled={!previous}
               onClick={() => previous && onSelect(previous)}
               data-cursor-label="Anterior"
+              aria-label={previousLabel}
+              title={previousLabel}
             >
-              ← {previous?.title ?? '—'}
+              ← {previousLabel}
             </button>
             <button
               type="button"
               disabled={!next}
               onClick={() => next && onSelect(next)}
               data-cursor-label="Siguiente"
+              aria-label={nextLabel}
+              title={nextLabel}
             >
-              {next?.title ?? '—'} →
+              {nextLabel} →
             </button>
           </nav>
         </header>

@@ -101,6 +101,8 @@ export interface VisualLayer {
 export interface AstroConcept {
   id: string;
   chapterId: string;
+  /** Stable storage location, independent of the editorial chapter. */
+  sourceChapterId: string;
   title: string;
   category: string;
   scale: AstroScale;
@@ -153,4 +155,6 @@ export interface AstroChapter {
   sources: SourceRef[];
   visualization: VisualizationSpec;
   visual?: ChapterVisual;
+  question?: string;
+  groups?: { title: string; description?: string; conceptIds: string[] }[];
 }

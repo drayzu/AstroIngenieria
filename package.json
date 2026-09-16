@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "check:articles": "node scripts/checkArticles.mjs",
     "check:reader": "node scripts/checkArticleReader.mjs",
+    "check:journey": "node scripts/checkJourney.mjs",
     "build": "tsc && vite build && node scripts/createSpaFallback.mjs",
     "preview": "vite preview",
     "predeploy": "npm run build",

@@ -10,6 +10,7 @@ import type {
   VisualLayer,
   VisualLayerId,
 } from '../types';
+import { organizeChapters } from './editorialJourney';
 
 const sources = {
   nasaSettlements: {
@@ -180,6 +181,7 @@ const concept = (
   const baseConcept = {
     id,
     chapterId,
+    sourceChapterId: chapterId,
     title,
     category,
     scale,
@@ -828,10 +830,10 @@ export const scaleLabels: Record<AstroScale, string> = {
 };
 
 export const plausibilityLabels: Record<Plausibility, string> = {
-  actual: 'Actual',
-  plausible: 'Plausible',
-  frontera: 'Frontera',
-  especulativo: 'Especulativo',
+  actual: 'Tecnología o ciencia actual',
+  plausible: 'Propuesta estudiada',
+  frontera: 'Frontera tecnológica',
+  especulativo: 'Especulación',
 };
 
 const introConcepts = [
@@ -2584,7 +2586,7 @@ const complementaryConcepts = [
   ),
 ];
 
-export const chapters: AstroChapter[] = [
+const catalogChapters: AstroChapter[] = [
   {
     id: 'intro',
     number: '0',
@@ -2843,9 +2845,11 @@ export const chapters: AstroChapter[] = [
   },
 ];
 
-chapters.forEach((chapter) => {
+catalogChapters.forEach((chapter) => {
   chapter.visual = getChapterVisual(chapter.id);
 });
+
+export const chapters = organizeChapters(catalogChapters);
 
 export const allConcepts = chapters.flatMap((chapter) => chapter.concepts);
 

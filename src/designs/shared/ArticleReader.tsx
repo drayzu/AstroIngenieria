@@ -22,13 +22,13 @@ export function ArticleReader({ concept, onLightboxOpenChange }: ArticleReaderPr
     setError(false);
     setLightboxImage(null);
     onLightboxOpenChange?.(false);
-    loadArticle(concept.chapterId, concept.id).then(article => {
+    loadArticle(concept.sourceChapterId, concept.id).then(article => {
       if (!cancelled) setContent(article);
     }).catch(() => {
       if (!cancelled) setError(true);
     });
     return () => { cancelled = true; };
-  }, [concept.id, concept.chapterId, onLightboxOpenChange]);
+  }, [concept.id, concept.sourceChapterId, onLightboxOpenChange]);
 
   if (error) return <div className="ar-status" role="alert"><p>No se pudo cargar la lectura.</p><button type="button" onClick={() => {
     // A rejected module import can stay cached until the document is reloaded.

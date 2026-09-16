@@ -406,7 +406,7 @@ try {
     assert.equal(layout.adjacent, false, `Adjacent figures for ${id}`);
     assert.equal(layout.missingAlt, false, `Missing image alt text for ${id}`);
   }
-  console.log('Capítulos 0 y 1: variantes visuales intercaladas y accesibles en los ocho temas principales.');
+  console.log('Ocho lecturas verificadas: variantes visuales intercaladas y accesibles.');
 
   await page.setViewportSize({ width: 390, height: 844 });
   for (const id of editorialBatchOne) {
@@ -615,7 +615,7 @@ try {
   await page.evaluate((value) => { globalThis.location.hash = `obra-${value}`; }, outsideVitrine);
   await expect(page.locator(`#article-${outsideVitrine}-title`)).toBeVisible();
   await expect(page.locator('.mo-studio-plate')).toContainText('N.º');
-  console.log('Vitrina: nueve tarjetas, clic amplio, navegación contextual, teclado, límites y fallback de capítulo correctos.');
+  console.log('Vitrina: nueve tarjetas, clic amplio, navegación contextual, teclado, límites y retorno al recorrido completo correctos.');
 
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(`${base}disenos`);
