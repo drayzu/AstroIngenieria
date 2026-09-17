@@ -156,5 +156,5 @@ export interface AstroChapter {
   visualization: VisualizationSpec;
   visual?: ChapterVisual;
   question?: string;
-  groups?: { title: string; description?: string; conceptIds: string[] }[];
+  groups?: { title: string; conceptIds: string[] }[];
 }

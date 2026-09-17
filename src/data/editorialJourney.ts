@@ -14,13 +14,13 @@ export const editorialJourney: EditorialChapter[] = [
   {
     id: 'intro', title: 'Introducción',
     question: '¿Qué significa construir a escala cósmica?',
-    summary: 'Una estación y una civilización que transforma estrellas comparten una pregunta: qué parte de su entorno podrían aprender a construir. Los capítulos reúnen todos los temas en grupos abiertos: puedes seguir su orden, pasar de una lectura a la siguiente o entrar directamente en la que te interese.',
+    summary: 'Antes de imaginar qué puede construirse, hay que aprender a pensar en escalas, flujos y límites. Todo proyecto depende de materia, energía, calor, tiempo y mantenimiento, desde una estación orbital hasta una intervención a escala galáctica.',
     groups: [{ title: 'La ingeniería como paisaje', conceptIds: ['astroingenieria'] }],
   },
   {
     id: 'habitats', title: 'Hábitats espaciales',
-    question: '¿Podemos construir un lugar donde vivir?',
-    summary: 'Las estaciones actuales muestran qué exige vivir fuera de la Tierra. La gravedad artificial y el soporte vital permiten después comprender distintas arquitecturas habitables, desde una esfera o un toro hasta un cilindro, un anillo o el interior de un asteroide.',
+    question: '¿Qué necesita un mundo artificial para seguir siendo habitable?',
+    summary: 'Vivir fuera de la Tierra no empieza por elegir una forma, sino por sostener aire, agua, temperatura, protección y gravedad. Desde las estaciones que ya operan en órbita hasta los mundos artificiales, la escala cambia la arquitectura, pero no elimina esas exigencias.',
     groups: [
       { title: 'Vivir fuera de la Tierra', conceptIds: ['iss', 'artificial-gravity', 'life-support'] },
       { title: 'Arquitecturas habitables', conceptIds: ['bernal-sphere', 'stanford-torus', 'oneill-cylinder', 'bishop-ring', 'mckendree-cylinder', 'asteroid-habitat'] },
@@ -34,7 +34,7 @@ export const editorialJourney: EditorialChapter[] = [
   {
     id: 'infrastructure', title: 'Industria espacial',
     question: '¿De dónde salen los materiales y las máquinas?',
-    summary: 'Lanzamientos, puertos y depósitos conectan la Tierra con una posible industria espacial. Las bases, la extracción de recursos y los astilleros muestran cómo construir allí; los grandes sistemas de transporte y la organización social completan esa red.',
+    summary: 'Ninguna megaestructura podría construirse enviando cada pieza desde la Tierra. Antes tendría que existir una cadena capaz de alcanzar la órbita, almacenar recursos, extraer materiales, fabricar componentes y transportarlos: la infraestructura que convierte misiones excepcionales en una actividad sostenida.',
     groups: [
       { title: 'Acceso y logística orbital', conceptIds: ['reusable-launch', 'orbital-ports', 'fuel-depots'] },
       { title: 'Recursos y fabricación', conceptIds: ['lunar-bases', 'isru', 'asteroid-mining', 'shipyards'] },
@@ -49,7 +49,7 @@ export const editorialJourney: EditorialChapter[] = [
   {
     id: 'planetary', title: 'Ingeniería planetaria',
     question: '¿Adaptarnos a un mundo o modificarlo?',
-    summary: 'Conocer otros planetas y las condiciones de la vida permite distinguir entre construir un ambiente local y transformar un mundo entero. Marte y Venus concretan esas alternativas; el control de la luz, los materiales y la atmósfera conduce también a preguntas sobre biología y protección planetaria.',
+    summary: 'Entre vivir bajo una cúpula y transformar un planeta entero hay diferencias enormes de escala, tiempo y riesgo. Comparar ambientes locales, terraformación y control planetario permite separar lo físicamente imaginable de lo que podría ser biológicamente viable, reversible o aceptable.',
     groups: [
       { title: 'Mundos y condiciones para la vida', conceptIds: ['exoplanets', 'astrobiology', 'habitable-zone', 'habitability'] },
       { title: 'Construir ambientes locales', conceptIds: ['paraterraforming', 'domed-cities', 'worldhouse'] },
@@ -60,8 +60,8 @@ export const editorialJourney: EditorialChapter[] = [
   },
   {
     id: 'energy', title: 'Energía estelar',
-    question: '¿Cómo alimentar proyectos de esta escala?',
-    summary: 'Captar luz, transportar energía y expulsar calor son partes de un mismo sistema. Desde la energía solar espacial, el capítulo avanza hasta las estructuras Dyson y compara las formas y los límites de aprovechar la radiación de una estrella.',
+    question: '¿Cómo captar tanta energía sin quedar atrapados por su calor?',
+    summary: 'Una civilización no solo tendría que captar más energía: también debería transportarla, utilizarla y expulsar el calor residual. Desde la energía solar espacial hasta las arquitecturas Dyson, potencia, temperatura y superficie son partes inseparables de un mismo problema.',
     groups: [
       { title: 'Captación, transmisión y calor', conceptIds: ['space-based-solar', 'microwave-power', 'radiators'] },
       { title: 'Estructuras Dyson', conceptIds: ['dyson-swarm', 'dyson-ring', 'dyson-bubble', 'dyson-shell'] },
@@ -70,14 +70,14 @@ export const editorialJourney: EditorialChapter[] = [
   {
     id: 'propulsion', title: 'Viaje interestelar',
     question: '¿Cómo llegar, frenar y sobrevivir al viaje?',
-    summary: 'Los motores químicos, eléctricos y nucleares, junto con las velas y los haces de energía, ofrecen distintas formas de mover una nave. Las distancias interestelares añaden el problema de frenar y sostener una comunidad durante el viaje; las propuestas más especulativas permiten examinar los límites de esas ideas.',
+    summary: 'Elegir una forma de propulsión es decidir qué se sacrifica: empuje, eficiencia, masa, tiempo o infraestructura externa. En un viaje interestelar aparece además el problema decisivo: no basta con acelerar; también hay que frenar y sostener la nave durante el trayecto.',
     groups: [
       { title: 'Propulsión química', conceptIds: ['chemical-rockets'] },
       { title: 'Propulsión eléctrica', conceptIds: ['ion-engines', 'hall-thruster', 'solar-electric', 'nuclear-electric'] },
       { title: 'Propulsión nuclear y fuentes extremas', conceptIds: ['nuclear-thermal', 'project-orion', 'fusion-propulsion', 'antimatter', 'bussard-ramjet'] },
       { title: 'Velas y haces de energía', conceptIds: ['solar-sail', 'laser-sail', 'beamed-propulsion', 'magnetic-sail', 'electric-sail'] },
       { title: 'El viaje interestelar', conceptIds: ['relativistic-propulsion', 'interstellar-braking', 'worldship'] },
-      { title: 'Propuestas especulativas y límites físicos', description: 'Estas lecturas examinan límites y propuestas de distinto respaldo. Un modelo matemático o una idea sugerente no demuestra la existencia de un motor realizable.', conceptIds: ['alcubierre', 'wormholes', 'reactionless'] },
+      { title: 'Propuestas especulativas y límites físicos', conceptIds: ['alcubierre', 'wormholes', 'reactionless'] },
     ],
     foundation: {
       title: 'Acelerar es solo una parte del viaje',
@@ -86,8 +86,8 @@ export const editorialJourney: EditorialChapter[] = [
   },
   {
     id: 'stellar', title: 'Ingeniería estelar',
-    question: '¿Podríamos intervenir sobre nuestro propio Sol?',
-    summary: 'Entender una estrella como sistema físico abre preguntas sobre su movimiento, su materia y su evolución. Los motores estelares, la extracción y el procesamiento de plasma, y la ingeniería con agujeros negros exploran intervenciones muy alejadas de nuestra capacidad actual.',
+    question: '¿Puede una estrella convertirse en objeto de ingeniería?',
+    summary: 'Intervenir una estrella significa trabajar con un sistema que no puede apagarse: materia, radiación, gravedad y evolución permanecen acopladas. Moverla, extraer su plasma, alterar su futuro o aprovechar un agujero negro exige energías y tiempos que exceden cualquier ingeniería actual.',
     groups: [
       { title: 'Física y movimiento estelar', conceptIds: ['stellar-physics', 'stellar-engines', 'shkadov', 'caplan', 'stellar-navigation'] },
       { title: 'Materia y evolución estelar', conceptIds: ['star-lifting', 'plasma-processing', 'stellar-husbandry'] },
@@ -96,8 +96,8 @@ export const editorialJourney: EditorialChapter[] = [
   },
   {
     id: 'civilizations', title: 'Civilizaciones cósmicas',
-    question: '¿Qué formas de existencia permitiría todo esto?',
-    summary: 'Las escalas de energía, la computación y las posibles formas de existencia plantean qué podría llegar a ser una civilización. Su expansión introduce distancias, tiempos de comunicación y decisiones colectivas que adquieren otra dimensión frente al futuro del universo.',
+    question: '¿En qué podría convertirse una civilización capaz de construir a escala cósmica?',
+    summary: 'Cuando la ingeniería alcanza escalas planetarias o estelares, deja de describir objetos aislados y empieza a describir formas de civilización. Energía, computación, expansión, comunicación y tiempo profundo determinan no solo qué podría construir una sociedad, sino también en qué podría convertirse.',
     groups: [
       { title: 'Escalas de actividad', conceptIds: ['kardashev', 'tipo-i', 'tipo-ii', 'tipo-iii'] },
       { title: 'Computación y otras formas de existencia', conceptIds: ['computronium', 'jupiter-brain', 'matrioshka-brain', 'civilizaciones-digitales', 'postbiological'] },
@@ -108,10 +108,10 @@ export const editorialJourney: EditorialChapter[] = [
   {
     id: 'search', visualFrom: 'civilizations', title: 'Inteligencia extraterrestre',
     question: '¿Cómo reconoceríamos a quienes ya lo hicieron?',
-    summary: 'La búsqueda de otras tecnologías conecta señales observables con los instrumentos y métodos para detectarlas. La paradoja de Fermi reúne después las preguntas sobre el silencio cósmico y las distintas hipótesis propuestas para interpretarlo.',
+    summary: 'Buscar inteligencia extraterrestre no consiste en imaginar su apariencia, sino en identificar los efectos que una tecnología dejaría en señales de radio, atmósferas o estrellas. El recorrido parte de esas huellas y de cómo observarlas; solo después pregunta qué puede —y qué no puede— concluirse del silencio.',
     groups: [
       { title: 'Señales y métodos de búsqueda', conceptIds: ['seti', 'technosignatures', 'radio-seti', 'optical-seti', 'stellar-technosignatures'] },
-      { title: 'Fermi e interpretaciones del silencio', description: 'Escenarios para discutir supuestos y observaciones; ninguno debe leerse como una explicación confirmada del silencio cósmico.', conceptIds: ['fermi', 'great-filter', 'zoo-hypothesis', 'dark-forest', 'grabby-aliens', 'civilizaciones-silenciosas', 'berserker'] },
+      { title: 'Fermi e interpretaciones del silencio', conceptIds: ['fermi', 'great-filter', 'zoo-hypothesis', 'dark-forest', 'grabby-aliens', 'civilizaciones-silenciosas', 'berserker'] },
     ],
   },
 ];

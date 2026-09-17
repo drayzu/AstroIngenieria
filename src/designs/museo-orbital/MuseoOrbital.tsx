@@ -1602,7 +1602,6 @@ const Obra = memo(({
             {concept.category} · {scaleLabels[concept.scale]} ·{' '}
             {plausibilityLabels[concept.plausibility]}
           </p>
-          <span className="mo-obra-cta">Entrar a la sala de estudio →</span>
         </div>
       </button>
     </motion.article>
@@ -1683,14 +1682,6 @@ const ChapterIntro = memo(({ chapter }: { chapter: AstroChapter }) => {
         </div>
         <p className="mo-chapter-question">{chapter.question}</p>
         <p className="mo-chapter-summary">{chapter.summary}</p>
-        <div className="mo-chapter-notes">
-          {chapter.sections.map((section) => (
-            <div key={section.title}>
-              <h3>{section.title}</h3>
-              <p>{section.body}</p>
-            </div>
-          ))}
-        </div>
       </div>
     </header>
   );
@@ -1719,7 +1710,6 @@ const Sala = memo(({
       <ChapterIntro chapter={chapter} />
       {chapter.groups?.map(group => <section className="mo-topic-group" key={group.title} aria-label={group.title}>
           <h3>{group.title}</h3>
-          {group.description && <p>{group.description}</p>}
           <div className="mo-wall">
             {group.conceptIds.map(id => {
               const concept = conceptById.get(id)!;

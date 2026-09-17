@@ -101,6 +101,7 @@ try {
     await expect(page.locator('.mo-studio')).toHaveCount(0);
     const cards = page.locator('.mo-sala .mo-obra');
     await expect(cards).toHaveCount(106);
+    await expect(page.locator('.mo-obra-cta, .mo-topic-group > p')).toHaveCount(0);
     assert.deepEqual(await cards.evaluateAll(items => items.map(item => item.dataset.conceptId)), ids);
     assert(await cards.evaluateAll(items => items.every(item => !item.closest('details, [hidden]') && item.getClientRects().length > 0)), 'All cards available without expanding controls');
     await expect(page.locator('.mo-sala details, .mo-recommended-wall, .mo-explore')).toHaveCount(0);
@@ -108,6 +109,7 @@ try {
     assert.deepEqual(plates.map(value => Number(value.replace(/[^0-9]/g, ''))), ids.map((_, index) => index + 1));
     const habitats = page.locator('#sala-habitats');
     await expect(page.locator('.mo-foundation-links')).toHaveCount(0);
+    await expect(page.locator('.mo-chapter-notes')).toHaveCount(0);
     await habitats.getByRole('heading', { name: 'Arquitecturas habitables', exact: true }).scrollIntoViewIfNeeded();
     const bernalImage = habitats.locator('[data-concept-id="bernal-sphere"] img');
     await expect.poll(() => bernalImage.evaluate(el => el.complete && el.naturalWidth > 1 && !el.src.startsWith('data:'))).toBe(true);
@@ -115,7 +117,6 @@ try {
     assert(await page.locator('.mo-root').evaluate(el => el.scrollWidth <= el.clientWidth + 1), 'Page overflow: ' + viewport.width);
     if (viewport.width < 720) {
       assert(await page.locator('.mo-halls').evaluate(el => el.clientHeight < 80), 'Compact mobile index');
-      assert(await habitats.locator('.mo-chapter-notes p').evaluate(el => el.scrollHeight <= el.clientHeight + 1), 'Complete foundation text');
     }
     for (const chapterId of chapters.map(chapter => chapter.id)) {
       const chapter = page.locator('#sala-' + chapterId);
