@@ -26,7 +26,7 @@ import { Aperture, Volume2, VolumeX } from 'lucide-react';
 import { chapters, conceptById, plausibilityLabels, scaleLabels } from '../../data/astroData';
 import { refs } from '../../data/articles/sources';
 import { metricRows, metricValueLabel } from '../../data/metricProfile';
-import { readingSequence } from '../../data/readingJourney';
+import { readingSequence, type ReadingContext } from '../../data/readingJourney';
 import type { AstroChapter, AstroConcept, SourceRef } from '../../types';
 import { Grain } from '../shared/Grain';
 import { useScrollLock } from '../shared/useScrollLock';
@@ -90,9 +90,23 @@ type PlaygroundEntryState = 'idle' | 'charging' | 'entering' | 'leaving';
 const resolveChapter = (concept: AstroConcept): AstroChapter =>
   chapters.find((chapter) => chapter.id === concept.chapterId) ?? chapters[0];
 
-const conceptFromHash = (): AstroConcept | null => {
-  const match = window.location.hash.match(/^#obra-(.+)$/);
-  return match ? conceptById.get(match[1]) ?? null : null;
+const readingFromHash = (vitrineIds: readonly string[]): {
+  concept: AstroConcept | null;
+  context: ReadingContext;
+} => {
+  const vitrineMatch = window.location.hash.match(/^#vitrina-obra-(.+)$/);
+  if (vitrineMatch) {
+    const concept = conceptById.get(vitrineMatch[1]) ?? null;
+    return {
+      concept,
+      context: concept && vitrineIds.includes(concept.id) ? 'vitrine' : 'journey',
+    };
+  }
+  const journeyMatch = window.location.hash.match(/^#obra-(.+)$/);
+  return {
+    concept: journeyMatch ? conceptById.get(journeyMatch[1]) ?? null : null,
+    context: 'journey',
+  };
 };
 
 const loadVitrine = (): string[] => {
@@ -2054,10 +2068,12 @@ export default function MuseoOrbital() {
   usePageTextPhysics(Boolean(reduced));
   const rootRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
-  const [active, setActive] = useState<AstroConcept | null>(() => conceptFromHash());
+  const [vitrineIds, setVitrineIds] = useState<string[]>(loadVitrine);
+  const initialReading = useRef(readingFromHash(vitrineIds));
+  const [active, setActive] = useState<AstroConcept | null>(initialReading.current.concept);
+  const [readingContext, setReadingContext] = useState<ReadingContext>(initialReading.current.context);
   const [activeHallId, setActiveHallId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [vitrineIds, setVitrineIds] = useState<string[]>(loadVitrine);
   const [flight, setFlight] = useState(false);
   const [eclipsedChapterId, setEclipsedChapterId] = useState<string | null>(null);
   const [playground, setPlayground] = useState(false);
@@ -2692,18 +2708,31 @@ export default function MuseoOrbital() {
   }, [playgroundMusicMuted]);
 
   useEffect(() => {
-    const hash = active ? `#obra-${active.id}` : '';
+    const hash = active
+      ? `${readingContext === 'vitrine' ? '#vitrina-obra-' : '#obra-'}${active.id}`
+      : '';
     const desired = hash || `${window.location.pathname}${window.location.search}`;
     if (window.location.hash !== hash) {
       window.history.replaceState(null, '', desired);
     }
-  }, [active]);
+  }, [active, readingContext]);
 
   useEffect(() => {
-    const onHash = () => setActive(conceptFromHash());
+    const onHash = () => {
+      const reading = readingFromHash(vitrineIds);
+      setActive(reading.concept);
+      setReadingContext(reading.context);
+      if (
+        reading.concept
+        && reading.context === 'journey'
+        && window.location.hash.startsWith('#vitrina-obra-')
+      ) {
+        window.history.replaceState(null, '', `#obra-${reading.concept.id}`);
+      }
+    };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
-  }, []);
+  }, [vitrineIds]);
 
   useEffect(() => {
     if (reduced) return;
@@ -2971,7 +3000,19 @@ export default function MuseoOrbital() {
     return () => observer.disconnect();
   }, []);
 
-  const openConcept = useCallback((concept: AstroConcept) => {
+  const openJourneyConcept = useCallback((concept: AstroConcept) => {
+    triggerFlight();
+    setReadingContext('journey');
+    setActive(concept);
+  }, [triggerFlight]);
+
+  const openVitrineConcept = useCallback((concept: AstroConcept) => {
+    triggerFlight();
+    setReadingContext('vitrine');
+    setActive(concept);
+  }, [triggerFlight]);
+
+  const selectActiveConcept = useCallback((concept: AstroConcept) => {
     triggerFlight();
     setActive(concept);
   }, [triggerFlight]);
@@ -2982,6 +3023,9 @@ export default function MuseoOrbital() {
   }, [triggerFlight]);
 
   const toggleVitrine = useCallback((conceptId: string) => {
+    if (active?.id === conceptId && readingContext === 'vitrine') {
+      setReadingContext('journey');
+    }
     setVitrineIds((current) => {
       if (current.includes(conceptId)) {
         return current.filter((id) => id !== conceptId);
@@ -2991,7 +3035,7 @@ export default function MuseoOrbital() {
       }
       return [...current, conceptId];
     });
-  }, []);
+  }, [active?.id, readingContext]);
 
   const goFromMenu = useCallback((targetId: string) => {
     setMenuOpen(false);
@@ -3004,7 +3048,7 @@ export default function MuseoOrbital() {
   let plateOffset = 0;
   const activeHall = chapters.find((chapter) => chapter.id === activeHallId);
   const vitrineConcepts = getVitrineConcepts(vitrineIds);
-  const activeUsesVitrineNavigation = Boolean(active && vitrineIds.includes(active.id));
+  const activeUsesVitrineNavigation = readingContext === 'vitrine';
   const activeSiblings = activeUsesVitrineNavigation
     ? vitrineConcepts
     : readingSequence;
@@ -3278,7 +3322,7 @@ export default function MuseoOrbital() {
             chapter={chapter}
             offset={offset}
             enableFlight={!reduced}
-            onSelect={openConcept}
+            onSelect={openJourneyConcept}
           />
         );
       })}
@@ -3286,7 +3330,7 @@ export default function MuseoOrbital() {
       <Vitrina
         ids={vitrineIds}
         onRemove={toggleVitrine}
-        onOpen={openConcept}
+        onOpen={openVitrineConcept}
       />
 
       <Archivo sources={archiveSources} />
@@ -3362,7 +3406,7 @@ export default function MuseoOrbital() {
             inVitrine={vitrineIds.includes(active.id)}
             onToggleVitrine={toggleVitrine}
             onClose={closeConcept}
-            onSelect={openConcept}
+            onSelect={selectActiveConcept}
           />
         )}
       </AnimatePresence>

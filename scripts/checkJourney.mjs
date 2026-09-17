@@ -134,23 +134,56 @@ try {
     console.log(viewport.width + 'px: 106 tarjetas abiertas, grupos, títulos largos, navegación y recarga correctos.');
   }
 
-  const vitrineIds = ['dyson-swarm', 'iss', 'ringworld'];
+  const vitrineIds = ['dyson-swarm', 'iss', 'ringworld', 'tethers'];
   const vitrine = vitrineIds.map(id => conceptById.get(id));
   await page.evaluate(selected => {
     globalThis.localStorage.setItem('mo-vitrine', JSON.stringify(selected));
-    globalThis.history.replaceState(null, '', globalThis.location.pathname + '#obra-dyson-swarm');
+    globalThis.history.replaceState(null, '', globalThis.location.pathname + '#obra-tethers');
   }, vitrineIds);
   await page.reload();
+  await expect(page.locator(titleFor('tethers'))).toBeVisible();
+  await verifyNavigation('tethers');
+  await expect(page.locator('.mo-studio-plate')).toHaveText(
+    'N.º ' + String(ids.indexOf('tethers') + 1).padStart(2, '0') + ' / 106',
+  );
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator(titleFor('skyhook'))).toBeVisible();
+  await expect(page).toHaveURL(/#obra-skyhook$/);
+  console.log('Una obra guardada en la vitrina conserva la navegación del recorrido general.');
+
+  await page.evaluate(() => {
+    globalThis.location.hash = 'vitrina-obra-dyson-swarm';
+  });
+  await page.reload();
   await expect(page.locator(titleFor(vitrineIds[0]))).toBeVisible();
+  await expect(page).toHaveURL(/#vitrina-obra-dyson-swarm$/);
   for (const [index, id] of vitrineIds.entries()) {
     await expect(page.locator(titleFor(id))).toBeVisible();
     await verifyNavigation(id, vitrine, 'vitrine');
+    await expect(page.locator('.mo-studio-plate')).toHaveText(
+      'Vitrina · ' + String(index + 1).padStart(2, '0') + ' / 04',
+    );
     if (index < vitrineIds.length - 1) await headerNext.click();
   }
   await expect(headerNext).toBeDisabled();
   await headerPrevious.click();
-  await expect(page.locator(titleFor('iss'))).toBeVisible();
-  console.log('Vitrina: orden propio, anterior/siguiente coherentes y límites conservados.');
+  await expect(page.locator(titleFor('ringworld'))).toBeVisible();
+  await page.getByRole('button', { name: /En la vitrina de contrastes/ }).click();
+  await expect(page.locator(titleFor('ringworld'))).toBeVisible();
+  await expect(page.locator('.mo-studio-plate')).toHaveText(
+    'N.º ' + String(ids.indexOf('ringworld') + 1).padStart(2, '0') + ' / 106',
+  );
+  await expect(page).toHaveURL(/#obra-ringworld$/);
+
+  await page.evaluate(() => {
+    globalThis.location.hash = 'vitrina-obra-ringworld';
+  });
+  await expect(page.locator(titleFor('ringworld'))).toBeVisible();
+  await expect(page.locator('.mo-studio-plate')).toHaveText(
+    'N.º ' + String(ids.indexOf('ringworld') + 1).padStart(2, '0') + ' / 106',
+  );
+  await expect(page).toHaveURL(/#obra-ringworld$/);
+  console.log('Vitrina: contexto persistente, eliminación activa y URL inválida normalizados.');
   assert.deepEqual(errors, []);
   console.log('Capturas: ' + tmpdir() + '/astro-open-*.png');
 } finally {
