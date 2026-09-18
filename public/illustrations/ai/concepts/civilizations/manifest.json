@@ -128,7 +128,7 @@
     {
       "id": "berserker",
       "title": "Berserker probes",
-      "file": "berserker.webp",
+      "file": "berserker-v02.webp",
       "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Berserker probes.\nMission context: civilizaciones cosmicas. Category: Riesgo. Scale: galactica. Plausibility: especulativo.\nCore idea: La autorreplicación sin control es uno de los miedos lógicos de la expansión automática.\nVisual mental image: Máquinas silenciosas desmantelando asteroides y apagando mundos habitados.\nMechanism to imply visually: Sondas con objetivos mal definidos, hostiles o corruptos podrían usar recursos locales para multiplicarse y atacar.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
       "credit": "OpenAI image generation via Codex built-in image_gen."
     },

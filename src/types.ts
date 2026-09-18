@@ -58,8 +58,13 @@ export interface ConceptIllustrationVariant {
   credit: string;
 }
 
+export interface ConceptIllustrationGalleryItem extends ConceptIllustrationVariant {
+  label: string;
+}
+
 export interface ConceptIllustration extends ConceptIllustrationVariant {
   interior?: ConceptIllustrationVariant;
+  gallery?: ConceptIllustrationGalleryItem[];
 }
 
 export interface ConceptVisualNarrativeLayer {

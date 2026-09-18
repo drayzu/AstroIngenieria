@@ -16,6 +16,7 @@ export const getConceptImageVariants = (concept: AstroConcept): ConceptImageVari
   };
 
   push('Exterior', concept.visualNarrative.exterior.src, concept.visualNarrative.exterior.caption);
+  concept.illustration.gallery?.forEach((image) => push(image.label, image.src, image.alt));
   push('Interior', concept.illustration.interior?.src, concept.illustration.interior?.alt);
   push(
     'Boceto conceptual',

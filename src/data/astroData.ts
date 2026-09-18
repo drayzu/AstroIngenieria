@@ -67,6 +67,54 @@ const sources = {
 
 const assetBase = import.meta.env.BASE_URL;
 
+const studyRoomImageRevisionIds = new Set([
+  'venus-terraforming',
+  'fuel-depots',
+  'lunar-bases',
+  'isru',
+  'asteroid-mining',
+  'shipyards',
+  'tethers',
+  'space-law',
+  'domed-cities',
+  'terraforming',
+  'orbital-mirrors',
+  'magnetosphere',
+  'ecopoiesis',
+  'planetary-protection',
+  'ion-engines',
+  'hall-thruster',
+  'solar-electric',
+  'nuclear-electric',
+  'nuclear-thermal',
+  'fusion-propulsion',
+  'antimatter',
+  'bussard-ramjet',
+  'magnetic-sail',
+  'electric-sail',
+  'caplan',
+  'stellar-navigation',
+  'plasma-processing',
+  'stellar-husbandry',
+  'black-hole-engineering',
+  'tipo-i',
+  'jupiter-brain',
+  'matrioshka-brain',
+  'civilizaciones-digitales',
+  'postbiological',
+  'von-neumann',
+  'civilizaciones-y-luz',
+  'deep-time',
+  'future-universe',
+  'seti',
+  'radio-seti',
+  'optical-seti',
+  'fermi',
+  'grabby-aliens',
+  'civilizaciones-silenciosas',
+  'berserker',
+]);
+
 export const chapterVisuals = {
   intro: {
     heroImage: `${assetBase}illustrations/ai/intro.webp`,
@@ -677,7 +725,20 @@ const getConceptIllustration = (
   mechanism: string,
 ): AstroConcept['illustration'] => {
   const habitatPrompt = habitatConceptVisualPrompts[id];
-  const conceptPath = `${assetBase}illustrations/ai/concepts/${chapterId}/${id}.webp`;
+  const hasUpdatedStudyRoomImage = studyRoomImageRevisionIds.has(id);
+  const conceptPath = hasUpdatedStudyRoomImage
+    ? `${assetBase}illustrations/ai/concepts/${chapterId}/${id}-v02.webp`
+    : `${assetBase}illustrations/ai/concepts/${chapterId}/${id}.webp`;
+  const gallery = hasUpdatedStudyRoomImage
+    ? [{
+        label: 'Versión anterior',
+        src: `${assetBase}illustrations/ai/concepts/${chapterId}/${id}.webp`,
+        alt: `Versión anterior de la imagen de ${title}`,
+        prompt: 'Imagen principal anterior, conservada como alternativa en la sala de estudio.',
+        style: 'Realismo científico cinematográfico.',
+        credit: 'Imagen original del atlas, conservada como versión anterior.',
+      }]
+    : undefined;
 
   if (habitatPrompt) {
     return {
@@ -688,6 +749,7 @@ const getConceptIllustration = (
         'Realismo científico cinematográfico, negro dominante, iluminación aeroespacial sobria, continuidad visual con las imágenes IA de la portada.',
       credit:
         'Imagen IA WebP generada para el atlas con composicion cinematografica y realismo cientifico especifico del concepto.',
+      ...(gallery ? { gallery } : {}),
       ...(habitatInteriorAssets.has(id)
         ? {
             interior: {
@@ -718,6 +780,7 @@ const getConceptIllustration = (
     style:
       'Realismo cientifico cinematografico, negro dominante, iluminacion aeroespacial sobria, sin texto incrustado.',
     credit: 'Imagen IA WebP generada para el atlas con realismo cientifico especifico del concepto.',
+    ...(gallery ? { gallery } : {}),
   };
 };
 

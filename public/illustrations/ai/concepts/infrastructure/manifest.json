@@ -65,7 +65,7 @@
     {
       "id": "tethers",
       "title": "Tethers espaciales",
-      "file": "tethers.webp",
+      "file": "tethers-v02.webp",
       "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Tethers espaciales.\nMission context: infraestructura espacial. Category: Transporte orbital. Scale: orbital. Plausibility: plausible.\nCore idea: Un cable orbital puede ser máquina, motor, freno y grúa a la vez.\nVisual mental image: Hilos tensos cruzando la órbita con pequeñas cargas desplazándose por su longitud.\nMechanism to imply visually: Interactúan con campos magnéticos, rotación y dinámica orbital para mover energía y momento entre sistemas.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
       "credit": "OpenAI image generation via Codex built-in image_gen."
     },
