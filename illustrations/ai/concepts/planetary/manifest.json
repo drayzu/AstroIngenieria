@@ -37,7 +37,7 @@
     {
       "id": "venus-terraforming",
       "title": "Terraformación de Venus",
-      "file": "venus-terraforming.webp",
+      "file": "venus-terraforming-v02.webp",
       "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Terraformación de Venus.\nMission context: ingenieria planetaria. Category: Venus. Scale: planetaria. Plausibility: frontera.\nCore idea: Venus exige primero enfriar y rediseñar una atmósfera planetaria completa.\nVisual mental image: Un planeta cubierto por parasoles gigantes, nubes brillantes y futuras ciudades flotantes.\nMechanism to imply visually: Ideas incluyen parasoles solares, fijación de carbono, importación de hidrógeno, enfriamiento global y ciudades atmosféricas previas.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
       "credit": "OpenAI image generation via Codex built-in image_gen."
     },
@@ -107,7 +107,7 @@
     {
       "id": "planetary-protection",
       "title": "Protección planetaria",
-      "file": "planetary-protection.webp",
+      "file": "planetary-protection-v02.webp",
       "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Protección planetaria.\nMission context: ingenieria planetaria. Category: Ética. Scale: planetaria. Plausibility: actual.\nCore idea: No todo mundo debe ser usado antes de ser entendido.\nVisual mental image: Sondas esterilizadas, laboratorios sellados y regiones marcianas marcadas como sensibles.\nMechanism to imply visually: Controla biocarga, misiones, muestras, zonas especiales y protocolos científicos para preservar evidencia de vida.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
       "credit": "OpenAI image generation via Codex built-in image_gen."
     }

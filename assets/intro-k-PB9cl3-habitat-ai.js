@@ -123,8 +123,6 @@ Imagina un ascensor radial, encerrado por razones de seguridad. A medida que sub
 
 En una rueda pequeña, esa variación se notaría incluso entre los pies y la cabeza. Si el radio del suelo es de diez metros y la cabeza está dos metros más cerca del eje, la aceleración centrífuga allí es un veinte por ciento menor. En una estructura de un kilómetro de radio, la misma diferencia de altura supone una variación mucho menor. Es un ejemplo geométrico ideal, no una predicción médica sobre sus ocupantes.
 
-@image visión inmersiva|Una escena inmersiva dentro de la rueda: el ascensor se acerca al eje, el peso disminuye y la arquitectura cambia poco a poco mientras la ciudad continúa girando.
-
 ::: Radio, vueltas y peso aparente
 
 La relación básica es a = ω²r. La aceleración a se expresa en m/s², el radio r en metros y la velocidad angular ω en radianes por segundo. Para convertir n revoluciones por minuto: ω = 2πn/60.

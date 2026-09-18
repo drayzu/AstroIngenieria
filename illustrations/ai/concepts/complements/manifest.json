@@ -30,7 +30,7 @@
     {
       "id": "future-universe",
       "title": "Futuro lejano del universo",
-      "file": "future-universe.webp",
+      "file": "future-universe-v02.webp",
       "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Futuro lejano del universo.\nMission context: sistemas complementarios. Category: Tiempo profundo. Scale: galactica. Plausibility: actual.\nCore idea: La astroingeniería extrema aparece cuando una civilización piensa más allá de una estrella.\nVisual mental image: Civilizaciones migrando lentamente mientras el universo se enfría y se vacía.\nMechanism to imply visually: Analiza fuentes de energía futuras, expansión acelerada, evolución estelar y límites de computación y vida a largo plazo.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
       "credit": "OpenAI image generation via Codex built-in image_gen."
     },

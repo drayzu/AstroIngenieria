@@ -397,5 +397,4 @@ La autonomía incluye conservar la capacidad de reparar los equipos de recuperac
 
 Así, la imagen de una gota que vuelve a empezar contiene algo más profundo que una promesa de reciclaje perfecto. Muestra una relación de dependencia que puede hacerse visible y administrarse. En un mundo artificial, cuidar el entorno significaría también conocer sus flujos: saber qué parte de la próxima respiración ya pasó antes por otro rincón de la casa.
 
-@image visión inmersiva|Una vista inmersiva del ciclo cerrado: la gota atraviesa tratamiento, cultivo y depósito antes de volver a una persona, mientras la energía mantiene el circuito en marcha.
 `)];export{n as default};

@@ -65,7 +65,7 @@
     {
       "id": "black-hole-engineering",
       "title": "Ingeniería con agujeros negros",
-      "file": "black-hole-engineering.webp",
+      "file": "black-hole-engineering-v02.webp",
       "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Ingeniería con agujeros negros.\nMission context: ingenieria estelar. Category: Frontera extrema. Scale: estelar. Plausibility: especulativo.\nCore idea: En la frontera, hasta los objetos más extremos pueden imaginarse como infraestructura.\nVisual mental image: Un disco de acreción blanco alrededor de una sombra negra, rodeado por colectores de energía.\nMechanism to imply visually: Podría explotar acreción, rotación, radiación de Hawking en casos diminutos o asistencia gravitatoria extrema.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
       "credit": "OpenAI image generation via Codex built-in image_gen."
     },

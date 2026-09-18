@@ -65,7 +65,7 @@
     {
       "id": "life-support",
       "title": "Soporte vital cerrado",
-      "file": "life-support.webp",
+      "file": "life-support-v02.webp",
       "prompt": "Photorealistic bioregenerative life support system inside an orbital habitat, greenhouse cylinders, water recycling loops, pipes, radiators, soft grow lights, sterile aerospace modules and black space beyond windows, no text, no logos, no watermark.",
       "credit": "OpenAI image generation via Codex built-in image_gen."
     }

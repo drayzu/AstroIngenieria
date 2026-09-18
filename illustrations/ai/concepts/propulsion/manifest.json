@@ -79,7 +79,7 @@
     {
       "id": "electric-sail",
       "title": "Electric sails",
-      "file": "electric-sail.webp",
+      "file": "electric-sail-v02.webp",
       "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Electric sails.\nMission context: propulsion avanzada. Category: Velas. Scale: nave. Plausibility: frontera.\nCore idea: Una nave puede navegar el plasma solar con hilos cargados.\nVisual mental image: Filamentos finísimos desplegados como una estrella alrededor de una sonda.\nMechanism to imply visually: Tethers cargados repelen protones del viento solar, transfiriendo momento a la nave.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
       "credit": "OpenAI image generation via Codex built-in image_gen."
     },
