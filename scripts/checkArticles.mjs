@@ -76,7 +76,9 @@ try {
         editoriallyReviewed++;
       }
       if (concept.sourceChapterId === 'intro' || concept.sourceChapterId === 'habitats') {
-        const expectedVariants = variants.filter(variant => variant.id !== 'exterior').map(variant => variant.id);
+        const expectedVariants = variants
+          .filter(variant => !['exterior', 'versión anterior'].includes(variant.id))
+          .map(variant => variant.id);
         const imageBlocks = item.blocks.filter(block => block.kind === 'image');
         assert.equal(imageBlocks.length, expectedVariants.length, `Image coverage count: ${item.id}`);
         for (const variant of expectedVariants) {

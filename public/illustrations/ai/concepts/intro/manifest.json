@@ -23,7 +23,7 @@
     {
       "id": "artificial-gravity",
       "title": "Gravedad artificial por rotación",
-      "file": "artificial-gravity.webp",
+      "file": "artificial-gravity-v02.webp",
       "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Gravedad artificial por rotación.\nMission context: introduccion y marco conceptual. Category: Física mínima. Scale: habitat. Plausibility: plausible.\nCore idea: El tamaño permite girar más lento y reducir mareos por Coriolis.\nVisual mental image: Personas caminando por el interior de un anillo que gira lentamente alrededor de un eje luminoso.\nMechanism to imply visually: La aceleración centrípeta sostiene a los habitantes contra el suelo interior; el radio y la velocidad angular definen la comodidad.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
       "credit": "OpenAI image generation via Codex built-in image_gen."
     }

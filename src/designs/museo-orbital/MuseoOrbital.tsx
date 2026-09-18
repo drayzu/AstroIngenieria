@@ -1202,13 +1202,9 @@ const Hero = memo(({
     if (reduced) return;
     const target = event.currentTarget;
     const rect = target.getBoundingClientRect();
-    target.style.setProperty('--sx', `${event.clientX - rect.left}px`);
-    target.style.setProperty('--sy', `${event.clientY - rect.top}px`);
-    // Parallax sutil del cielo de fondo
-    const px = (event.clientX - rect.left) / rect.width - 0.5;
-    const py = (event.clientY - rect.top) / rect.height - 0.5;
-    target.style.setProperty('--hbx', `${(-px * 14).toFixed(1)}px`);
-    target.style.setProperty('--hby', `${(-py * 10).toFixed(1)}px`);
+    const spotlight = target.querySelector<HTMLElement>('.mo-hero-spot');
+    spotlight?.style.setProperty('--sx', `${event.clientX - rect.left}px`);
+    spotlight?.style.setProperty('--sy', `${event.clientY - rect.top}px`);
   };
 
   return (
@@ -1241,11 +1237,11 @@ const Hero = memo(({
         </button>
       )}
       <motion.div
-        className="mo-hero-bg"
+        className="mo-hero-bg mo-hero-bg-static"
         style={{ backgroundImage: `url(${chapters[1].visual?.heroImage})` }}
-        initial={{ scale: 1.22, opacity: 0 }}
-        animate={{ scale: 1, opacity: 0.9 }}
-        transition={{ duration: reduced ? 0 : 3, ease: EASE_OUT }}
+        initial={{ scale: 1.12, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: reduced ? 0 : 2.2, ease: EASE_OUT }}
       />
       <div className="mo-hero-scrim" />
       <div className="mo-hero-spot" aria-hidden="true" />

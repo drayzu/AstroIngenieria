@@ -1,4 +1,6 @@
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
+import { CosmicLab, LAB_TOOLS, holeAcceleration, type LabState, type LabTool } from './CosmicLab';
+import { CosmicLabPanel } from './CosmicLabPanel';
 import { CursorConstellationLayer } from './CursorConstellationLayer';
 import {
   PLAYGROUND_ARRIVAL_END_MS,
@@ -70,9 +72,6 @@ interface Comet {
   launchPower?: number;
   bounceCount?: number;
   lateralBounces?: number;
-  labMirror?: boolean;
-  labWarpAt?: number;
-  labCaptured?: { x: number; y: number; t0: number } | null;
   seed?: number;
   spin?: number;
   spinAngle?: number;
@@ -553,6 +552,8 @@ export const StarfieldCanvas = ({
   onPlaygroundProgress,
 }: StarfieldProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [labUi, setLabUi] = useState<LabState | null>(null);
+  const labCommandRef = useRef<(command: LabTool | 'clear' | 'exit') => void>(() => {});
   const fxRef = useRef<HTMLCanvasElement>(null);
   const trailRef = useRef<HTMLCanvasElement>(null);
   const dimRef = useRef(dim);
@@ -601,7 +602,7 @@ export const StarfieldCanvas = ({
     let sparkles: Sparkle[] = [];
     let conductions: ConductionDot[] = [];
 
-    /* ==== SANDBOX LAB: escena secreta de experimentación (mantén ← 2s) ====
+    /* ==== SANDBOX LAB: escena de experimentación local (Q+E, 2s) ====
        Objetos de prueba invocables con teclas; costo cero fuera de ella. */
     let sandboxActive = false;
     let sandboxChargeT0: number | null = null;
@@ -610,82 +611,6 @@ export const StarfieldCanvas = ({
     let labEHeld = false;
     let labFps = 60;
     let lastFrameNow = 0;
-    /* Primera generación de experimentos (enjambre, pozos, espejo): el código
-       queda vivo pero fuera del teclado — SANDBOX_CLASSIC_EXPERIMENTS en true
-       los recupera sin tocar nada más. */
-    const SANDBOX_CLASSIC_EXPERIMENTS = false;
-    /* Diseño "Gargantua" del agujero negro: sombra pura + anillo de fotones
-       con doppler beaming + disco de acreción térmico + luz doblada por el
-       lente. false = diseño clásico (disco azul + anillo simple). */
-    const LAB_BLACKHOLE_V2 = true;
-    interface LabHole {
-      x: number;
-      y: number;
-      born: number;
-    }
-    interface LabWell {
-      x: number;
-      y: number;
-      strength: number;
-    }
-    interface LabDummy {
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      warpAt?: number;
-    }
-    interface LabSwarm {
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      hue: number;
-    }
-    interface LabEmitter {
-      x: number;
-      y: number;
-      born: number;
-      angle: number;
-      nextShot: number;
-    }
-    interface LabRing {
-      x: number;
-      y: number;
-      born: number;
-      tilt: number;
-      particles: {
-        ang: number;
-        rad: number;
-        speed: number;
-        size: number;
-        tint: number;
-        kick: number;
-        kickAng: number;
-      }[];
-    }
-    interface LabBinary {
-      x: number;
-      y: number;
-      born: number;
-      phase: number;
-      nextFlare: number;
-    }
-    interface LabWormhole {
-      ax: number;
-      ay: number;
-      bx: number;
-      by: number;
-      born: number;
-    }
-    const labHoles: LabHole[] = [];
-    const labWells: LabWell[] = [];
-    const labDummies: LabDummy[] = [];
-    const labSwarm: LabSwarm[] = [];
-    const labEmitters: LabEmitter[] = [];
-    const labRings: LabRing[] = [];
-    const labBinaries: LabBinary[] = [];
-    const labWormholes: LabWormhole[] = [];
     let raf = 0;
     let time = 0;
     // Paso de simulación real (limitado): en equipos lentos los relojes y
@@ -1221,6 +1146,7 @@ export const StarfieldCanvas = ({
         mouse.sx = mouse.x;
         mouse.sy = mouse.y;
       }
+      if (sandboxActive) cosmicLab.move({ x: event.clientX, y: event.clientY });
       // Arrastre de la resortera
       if (charge) {
         charge.dx = event.clientX;
@@ -1709,9 +1635,17 @@ export const StarfieldCanvas = ({
         'button, a, input, textarea, select, [contenteditable="true"], [role="button"], [data-cursor]',
       ));
       if (sandboxActive) {
-        // En el lab las armas funcionan: supernova y cometa con clic cargado.
-        if (SANDBOX_CLASSIC_EXPERIMENTS) labScatterSwarm(event.clientX, event.clientY);
-        if (event.shiftKey || interactive) return;
+        if (interactive || target?.closest('[data-lab-ui]')) return;
+        if (event.shiftKey) {
+          cosmicLab.cancel();
+          addSketchNode(event.clientX, event.clientY, 'museum');
+          return;
+        }
+        if (cosmicLab.down({ x: event.clientX, y: event.clientY })) {
+          event.preventDefault();
+          clearCharge();
+          return;
+        }
         if (event.pointerType !== 'touch') event.preventDefault();
         window.getSelection()?.removeAllRanges();
         setCatapultDragging(true);
@@ -2132,6 +2066,7 @@ export const StarfieldCanvas = ({
 
       if (pull < 24) {
         // Sin arrastre: supernova sin proyectiles, solo onda de choque y chispas
+        if (sandboxActive) cosmicLab.blast({ x, y }, power);
         bubbles.push({
           x,
           y,
@@ -2170,10 +2105,16 @@ export const StarfieldCanvas = ({
     };
 
     const onUp = () => {
+      if (sandboxActive && cosmicLab.up()) { clearCharge(); return; }
       releaseCharge();
+    };
+    const onPointerCancel = () => {
+      if (sandboxActive) cosmicLab.cancel();
+      clearCharge();
     };
 
     const onWarp = (event: Event) => {
+      if (sandboxActive) exitSandbox();
       const detail = (event as CustomEvent<WarpDetail>).detail;
       const strength = Number.isFinite(detail?.strength) ? Math.max(0, detail.strength ?? 22) : 22;
       warpBoost = Math.min(detail?.strength === undefined ? 34 : 40, warpBoost + strength);
@@ -2285,833 +2226,42 @@ export const StarfieldCanvas = ({
       }
     };
 
-    /* ==== SANDBOX LAB: spawns, física y render del laboratorio ==== */
+    const cosmicLab = new CosmicLab(
+      state => { if (sandboxActive) setLabUi(state); },
+      (p, velocity) => {
+        if (comets.length >= 100) return;
+        spawnComet({ x: p.x, y: p.y, vx: velocity.x, vy: velocity.y,
+          curve: 0, power: 0.55, sizeMul: 0.8, tintRGB: [153, 214, 255], layer: 'museum' });
+      },
+    );
     const clearLab = () => {
-      labHoles.length = 0;
-      labWells.length = 0;
-      labDummies.length = 0;
-      labSwarm.length = 0;
-      labEmitters.length = 0;
-      labRings.length = 0;
-      labBinaries.length = 0;
-      labWormholes.length = 0;
-      comets = comets.filter((comet) => !comet.labMirror);
+      cosmicLab.clear();
+      comets = []; sparkles = []; waves = []; bubbles = []; flashes = []; conductions = [];
+      clearCharge(); clearSketch(); rapidFireHeld = false; resetPulsarPet();
       sandboxTimeScale = 1;
     };
     const enterSandbox = () => {
       sandboxActive = true;
-      comets = [];
-      waves = [];
-      bubbles = [];
-      flashes = [];
-      sparkles = [];
+      cosmicLab.resize(width, height);
+      clearLab();
       trail.length = 0;
-      clearCharge();
-      clearSketch();
-      flashes.push({ x: width / 2, y: height / 2, r: 20, alpha: 0.8, rgb: [143, 208, 255], layer: 'museum' });
-      waves.push({
-        x: width / 2,
-        y: height / 2,
-        r: 30,
-        alpha: 0.9,
-        grow: 14,
-        width: 2.2,
-        delay: 0,
-        rgb: [143, 208, 255],
-        layer: 'museum',
-      });
+      museumRoot?.classList.add('is-cosmic-lab');
     };
     const exitSandbox = () => {
-      sandboxActive = false;
       clearLab();
-      heldDirs.clear();
-      heldMovementCodes.clear();
-      boostedWasdCodes.clear();
-      camVX = 0;
-      camVY = 0;
-      rapidFireHeld = false;
-      resetPulsarPet();
+      sandboxActive = false;
+      setLabUi(null);
+      labQHeld = false; labEHeld = false; sandboxChargeT0 = null;
+      heldDirs.clear(); heldMovementCodes.clear(); boostedWasdCodes.clear();
+      camVX = 0; camVY = 0;
+      museumRoot?.classList.remove('is-cosmic-lab');
     };
-    const labSpawnHole = () => {
-      labHoles.push({ x: mouse.x, y: mouse.y, born: time });
-      if (labHoles.length > 3) labHoles.shift();
-    };
-    const labSpawnSwarm = () => {
-      for (let i = 0; i < 26; i += 1) {
-        const ang = Math.random() * Math.PI * 2;
-        labSwarm.push({
-          x: mouse.x + Math.cos(ang) * (10 + Math.random() * 60),
-          y: mouse.y + Math.sin(ang) * (10 + Math.random() * 60),
-          vx: 0,
-          vy: 0,
-          hue: Math.random(),
-        });
-      }
-      if (labSwarm.length > 80) labSwarm.splice(0, labSwarm.length - 80);
-    };
-    const labSpawnIons = () => {
-      labEmitters.push({
-        x: mouse.x,
-        y: mouse.y,
-        born: time,
-        angle: Math.random() * Math.PI * 2,
-        nextShot: 0,
-      });
-      if (labEmitters.length > 2) labEmitters.shift();
-    };
-    const labSpawnWell = (repulsor: boolean) => {
-      labWells.push({ x: mouse.x, y: mouse.y, strength: repulsor ? -1 : 1 });
-      if (labWells.length > 6) labWells.shift();
-    };
-    const labSpawnChain = () => {
-      for (let i = 0; i < 5; i += 1) {
-        window.setTimeout(() => {
-          if (!sandboxActive) return;
-          const cx = mouse.x + (i - 2) * 150;
-          const cy = mouse.y + Math.sin(i * 1.7) * 40;
-          bubbles.push({
-            x: cx,
-            y: cy,
-            r: 12,
-            alpha: 0.6,
-            age: 0,
-            tintT: Math.random() * 0.65,
-            grow: 9,
-            layer: 'museum',
-          });
-          flashes.push({ x: cx, y: cy, r: 7, alpha: 0.7, layer: 'museum' });
-          waves.push({ x: cx, y: cy, r: 10, alpha: 0.8, grow: 8, width: 2, delay: 0, layer: 'museum' });
-          spawnSparkleBurst(cx, cy, 18, 0.9, 'museum');
-        }, i * 160);
-      }
-    };
-    const labSpawnMirror = () => {
-      if (comets.filter((comet) => comet.labMirror).length >= 6) return;
-      const ang = Math.random() * Math.PI * 2;
-      comets.push({
-        x: mouse.x,
-        y: mouse.y,
-        vx: Math.cos(ang) * 9,
-        vy: Math.sin(ang) * 9,
-        life: 1,
-        size: 3.4,
-        tint: 1,
-        curve: 0,
-        tintRGB: EMBER_SALTS[Math.floor(Math.random() * EMBER_SALTS.length)],
-        labMirror: true,
-      });
-    };
-    const labSpawnDummies = () => {
-      labDummies.length = 0;
-      for (let i = 0; i < 8; i += 1) {
-        const ang = (i / 8) * Math.PI * 2;
-        labDummies.push({
-          x: mouse.x + Math.cos(ang) * 170,
-          y: mouse.y + Math.sin(ang) * 170,
-          vx: 0,
-          vy: 0,
-        });
-      }
-    };
-    const labSpawnRing = () => {
-      const particles: LabRing['particles'] = [];
-      for (let i = 0; i < 220; i += 1) {
-        const rad = 60 + Math.pow(Math.random(), 0.8) * 90;
-        particles.push({
-          ang: Math.random() * Math.PI * 2,
-          rad,
-          // Kepler: las partículas internas orbitan más rápido
-          speed: 0.25 + 2.4 * Math.pow(70 / rad, 1.5),
-          size: 0.7 + Math.random() * 1.6,
-          tint: Math.random(),
-          kick: 0,
-          kickAng: 0,
-        });
-      }
-      labRings.length = 0;
-      labRings.push({ x: mouse.x, y: mouse.y, born: time, tilt: 0, particles });
-    };
-    const labSpawnBinary = () => {
-      labBinaries.length = 0;
-      labBinaries.push({
-        x: mouse.x,
-        y: mouse.y,
-        born: time,
-        phase: Math.random() * Math.PI * 2,
-        nextFlare: time + 1.6,
-      });
-    };
-    const labSpawnWormhole = () => {
-      const ang = Math.random() * Math.PI * 2;
-      const dist = Math.min(340, Math.hypot(width, height) * 0.22);
-      labWormholes.length = 0;
-      labWormholes.push({
-        ax: mouse.x,
-        ay: mouse.y,
-        bx: Math.max(60, Math.min(width - 60, mouse.x + Math.cos(ang) * dist)),
-        by: Math.max(60, Math.min(height - 60, mouse.y + Math.sin(ang) * dist)),
-        born: time,
-      });
-    };
-    const labScatterSwarm = (x: number, y: number) => {
-      for (const boid of labSwarm) {
-        const dx = boid.x - x;
-        const dy = boid.y - y;
-        const d = Math.hypot(dx, dy) || 1;
-        if (d < 220) {
-          const f = (1 - d / 220) * 9;
-          boid.vx += (dx / d) * f;
-          boid.vy += (dy / d) * f;
-        }
-      }
-      waves.push({ x, y, r: 6, alpha: 0.5, grow: 6, width: 1.4, delay: 0, rgb: [150, 196, 255], layer: 'museum' });
-    };
-
-    const updateLab = () => {
+    labCommandRef.current = command => {
       if (!sandboxActive) return;
-      const step = dt * sandboxTimeScale;
-
-      // Agujeros negros: atracción espiral, consumo de cometas, colapso final
-      for (let i = labHoles.length - 1; i >= 0; i -= 1) {
-        const hole = labHoles[i];
-        const age = time - hole.born;
-        if (sparkles.length < 150 && Math.random() < 0.5) {
-          const ang = Math.random() * Math.PI * 2;
-          const rr = 60 + Math.random() * 50;
-          const flat = LAB_BLACKHOLE_V2;
-          sparkles.push({
-            x: hole.x + Math.cos(ang) * rr,
-            y: hole.y + Math.sin(ang) * rr * (flat ? 0.3 : 1),
-            vx: -Math.sin(ang) * 3.2,
-            vy: Math.cos(ang) * 3.2 * (flat ? 0.3 : 1),
-            life: 0.9,
-            tint: 2,
-            size: 1.4,
-            grav: 0,
-            rgb: flat ? [255, 214, 160] : [186, 214, 255],
-            layer: 'museum',
-          });
-        }
-        for (const comet of comets) {
-          if (comet.labCaptured) continue;
-          const dx = hole.x - comet.x;
-          const dy = hole.y - comet.y;
-          const d = Math.hypot(dx, dy) || 1;
-          if (d > 360) continue;
-          const pull = Math.pow(1 - d / 360, 2) * 2.4;
-          comet.vx += ((dx / d) * pull - (dy / d) * pull * 0.55) * sandboxTimeScale;
-          comet.vy += ((dy / d) * pull + (dx / d) * pull * 0.55) * sandboxTimeScale;
-          if (d < 68 && !comet.labMirror && !comet.labCaptured) {
-            // Captura: el cometa entra en espiral hacia el horizonte
-            comet.labCaptured = { x: hole.x, y: hole.y, t0: time };
-            flashes.push({
-              x: comet.x,
-              y: comet.y,
-              r: 3,
-              alpha: 0.5,
-              rgb: LAB_BLACKHOLE_V2 ? [255, 214, 160] : [186, 214, 255],
-              layer: 'museum',
-            });
-          }
-        }
-        for (const dummy of labDummies) {
-          const dx = hole.x - dummy.x;
-          const dy = hole.y - dummy.y;
-          const d = Math.hypot(dx, dy) || 1;
-          if (d < 480) {
-            const pull = (1 - d / 420) * 42 * step;
-            dummy.vx += (dx / d) * pull;
-            dummy.vy += (dy / d) * pull;
-          }
-        }
-        for (const boid of labSwarm) {
-          const dx = hole.x - boid.x;
-          const dy = hole.y - boid.y;
-          const d = Math.hypot(dx, dy) || 1;
-          if (d < 360) {
-            const pull = (1 - d / 340) * 0.24 * sandboxTimeScale;
-            boid.vx += (dx / d) * pull;
-            boid.vy += (dy / d) * pull;
-          }
-        }
-        if (age > 6) {
-          labHoles.splice(i, 1);
-          flashes.push({ x: hole.x, y: hole.y, r: 14, alpha: 0.95, rgb: [240, 248, 255], layer: 'museum' });
-          waves.push({
-            x: hole.x,
-            y: hole.y,
-            r: 12,
-            alpha: 0.9,
-            grow: 16,
-            width: 2.6,
-            delay: 0,
-            rgb: [200, 224, 255],
-            layer: 'museum',
-          });
-          bubbles.push({
-            x: hole.x,
-            y: hole.y,
-            r: 16,
-            alpha: 0.7,
-            age: 0,
-            tintT: 0.9,
-            grow: 14,
-            layer: 'museum',
-          });
-          spawnSparkleBurst(hole.x, hole.y, 40, 1.2, 'museum', [200, 224, 255]);
-        }
-      }
-
-      // Pozos de gravedad: curvan cometas y blancos
-      for (const well of labWells) {
-        for (const comet of comets) {
-          const dx = well.x - comet.x;
-          const dy = well.y - comet.y;
-          const d = Math.hypot(dx, dy) || 1;
-          if (d > 520) continue;
-          const f = well.strength * 0.1 * sandboxTimeScale * (140 / Math.max(70, d));
-          comet.vx += (dx / d) * f;
-          comet.vy += (dy / d) * f;
-        }
-        for (const dummy of labDummies) {
-          const dx = well.x - dummy.x;
-          const dy = well.y - dummy.y;
-          const d = Math.hypot(dx, dy) || 1;
-          if (d > 520) continue;
-          const f = well.strength * 34 * step * (140 / Math.max(70, d));
-          dummy.vx += (dx / d) * f;
-          dummy.vy += (dy / d) * f;
-        }
-      }
-
-      // Enjambre: boids que persiguen el cursor
-      for (const boid of labSwarm) {
-        const dx = mouse.x - boid.x;
-        const dy = mouse.y - boid.y;
-        const d = Math.hypot(dx, dy) || 1;
-        boid.vx += (dx / d) * 0.22;
-        boid.vy += (dy / d) * 0.22;
-        for (const other of labSwarm) {
-          if (other === boid) continue;
-          const sx = boid.x - other.x;
-          const sy = boid.y - other.y;
-          const sd = Math.hypot(sx, sy);
-          if (sd > 0.01 && sd < 26) {
-            boid.vx += (sx / sd) * 0.5;
-            boid.vy += (sy / sd) * 0.5;
-          }
-        }
-        for (const well of labWells) {
-          const wx = well.x - boid.x;
-          const wy = well.y - boid.y;
-          const wd = Math.hypot(wx, wy) || 1;
-          if (wd < 300) {
-            const f = well.strength * 0.3 * (1 - wd / 300);
-            boid.vx += (wx / wd) * f;
-            boid.vy += (wy / wd) * f;
-          }
-        }
-        boid.vx *= 0.92;
-        boid.vy *= 0.92;
-        const spd = Math.hypot(boid.vx, boid.vy);
-        if (spd > 6) {
-          boid.vx *= 6 / spd;
-          boid.vy *= 6 / spd;
-        }
-        boid.x += boid.vx * sandboxTimeScale;
-        boid.y += boid.vy * sandboxTimeScale;
-      }
-
-      // Emisor de iones: espiral doble de proyectiles
-      for (let i = labEmitters.length - 1; i >= 0; i -= 1) {
-        const emitter = labEmitters[i];
-        emitter.angle += 0.3 * sandboxTimeScale;
-        if (time >= emitter.nextShot) {
-          emitter.nextShot = time + 0.07 / Math.max(0.25, sandboxTimeScale);
-          for (const arm of [0, Math.PI]) {
-            comets.push({
-              x: emitter.x,
-              y: emitter.y,
-              vx: Math.cos(emitter.angle + arm) * 7.5,
-              vy: Math.sin(emitter.angle + arm) * 7.5,
-              life: 0.9,
-              size: 1.9,
-              tint: 2,
-              curve: 0,
-              tintRGB: [150, 196, 255],
-            });
-          }
-        }
-        if (time - emitter.born > 4) labEmitters.splice(i, 1);
-      }
-
-      // Anillo planetario: órbitas keplerianas; los cometas perturban partículas
-      for (let i = labRings.length - 1; i >= 0; i -= 1) {
-        const ring = labRings[i];
-        const age = time - ring.born;
-        for (const particle of ring.particles) {
-          particle.ang += particle.speed * sandboxTimeScale;
-          particle.kick *= 0.93;
-          if (comets.length === 0 || comets.length > 60) continue;
-          const px0 = ring.x + Math.cos(particle.ang) * particle.rad;
-          const py0 = ring.y + Math.sin(particle.ang) * particle.rad * 0.38;
-          for (const comet of comets) {
-            const dx = px0 - comet.x;
-            const dy = py0 - comet.y;
-            const d2 = dx * dx + dy * dy;
-            if (d2 > 676) continue;
-            const d = Math.sqrt(d2) || 1;
-            particle.kick = Math.min(1.2, particle.kick + (1 - d / 26) * 0.5 * sandboxTimeScale);
-            particle.kickAng = Math.atan2(dy, dx);
-          }
-        }
-        if (age > 20) labRings.splice(i, 1);
-      }
-
-      // Estrella binaria: slingshot gravitatorio alternante + fulguraciones
-      for (let i = labBinaries.length - 1; i >= 0; i -= 1) {
-        const binary = labBinaries[i];
-        const age = time - binary.born;
-        binary.phase += 0.9 * sandboxTimeScale;
-        const sep = 46;
-        const ax = binary.x + Math.cos(binary.phase) * sep;
-        const ay = binary.y + Math.sin(binary.phase) * sep * 0.6;
-        const bx = binary.x - Math.cos(binary.phase) * sep;
-        const by = binary.y - Math.sin(binary.phase) * sep * 0.6;
-        for (const comet of comets) {
-          for (const star of [ax, bx]) {
-            const starY = star === ax ? ay : by;
-            const dx = star - comet.x;
-            const dy = starY - comet.y;
-            const d = Math.hypot(dx, dy) || 1;
-            if (d > 260) continue;
-            const pull = (1 - d / 260) * 0.9 * sandboxTimeScale;
-            comet.vx += (dx / d) * pull;
-            comet.vy += (dy / d) * pull;
-          }
-        }
-        for (const dummy of labDummies) {
-          for (const star of [ax, bx]) {
-            const starY = star === ax ? ay : by;
-            const dx = star - dummy.x;
-            const dy = starY - dummy.y;
-            const d = Math.hypot(dx, dy) || 1;
-            if (d > 260) continue;
-            const pull = (1 - d / 260) * 52 * step;
-            dummy.vx += (dx / d) * pull;
-            dummy.vy += (dy / d) * pull;
-          }
-        }
-        if (time >= binary.nextFlare) {
-          binary.nextFlare = time + 2.6;
-          const midX = (ax + bx) / 2;
-          const midY = (ay + by) / 2;
-          waves.push({
-            x: midX,
-            y: midY,
-            r: 8,
-            alpha: 0.55,
-            grow: 5,
-            width: 1.4,
-            delay: 0,
-            rgb: [255, 214, 150],
-            layer: 'museum',
-          });
-          spawnSparkleBurst(midX, midY, 10, 0.5, 'museum', [255, 214, 150]);
-        }
-        if (age > 10) {
-          labBinaries.splice(i, 1);
-          flashes.push({ x: binary.x, y: binary.y, r: 16, alpha: 0.95, rgb: [255, 236, 200], layer: 'museum' });
-          waves.push({
-            x: binary.x,
-            y: binary.y,
-            r: 14,
-            alpha: 0.9,
-            grow: 12,
-            width: 2.4,
-            delay: 0,
-            rgb: [255, 224, 170],
-            layer: 'museum',
-          });
-          spawnSparkleBurst(binary.x, binary.y, 36, 1.1, 'museum', [255, 224, 170]);
-        }
-      }
-
-      // Agujero de gusano: teletransporte conservando velocidad, con cooldown
-      for (let i = labWormholes.length - 1; i >= 0; i -= 1) {
-        const wormhole = labWormholes[i];
-        const age = time - wormhole.born;
-        if (sparkles.length < 150 && Math.random() < 0.6) {
-          const portalX = Math.random() < 0.5 ? wormhole.ax : wormhole.bx;
-          const portalY = Math.random() < 0.5 ? wormhole.ay : wormhole.by;
-          const ang = Math.random() * Math.PI * 2;
-          const rr = 30 + Math.random() * 26;
-          sparkles.push({
-            x: portalX + Math.cos(ang) * rr,
-            y: portalY + Math.sin(ang) * rr,
-            vx: -Math.cos(ang) * 1.8,
-            vy: -Math.sin(ang) * 1.8,
-            life: 0.7,
-            tint: 2,
-            size: 1.2,
-            grav: 0,
-            rgb: [167, 139, 250],
-            layer: 'museum',
-          });
-        }
-        if (Math.random() < 0.12 && sparkles.length < 150) {
-          const t = Math.random();
-          sparkles.push({
-            x: wormhole.ax + (wormhole.bx - wormhole.ax) * t + (Math.random() - 0.5) * 14,
-            y: wormhole.ay + (wormhole.by - wormhole.ay) * t + (Math.random() - 0.5) * 14,
-            vx: (wormhole.bx - wormhole.ax) * 0.004,
-            vy: (wormhole.by - wormhole.ay) * 0.004,
-            life: 0.8,
-            tint: 2,
-            size: 1.1,
-            grav: 0,
-            rgb: [190, 160, 255],
-            layer: 'museum',
-          });
-        }
-        for (const comet of comets) {
-          if (comet.labWarpAt !== undefined && time - comet.labWarpAt < 0.6) continue;
-          const dA = Math.hypot(comet.x - wormhole.ax, comet.y - wormhole.ay);
-          const dB = Math.hypot(comet.x - wormhole.bx, comet.y - wormhole.by);
-          if (dA < 22) {
-            flashes.push({ x: wormhole.ax, y: wormhole.ay, r: 5, alpha: 0.7, rgb: [167, 139, 250], layer: 'museum' });
-            comet.x = wormhole.bx + (comet.x - wormhole.ax);
-            comet.y = wormhole.by + (comet.y - wormhole.ay);
-            comet.labWarpAt = time;
-            flashes.push({ x: comet.x, y: comet.y, r: 5, alpha: 0.7, rgb: [196, 160, 255], layer: 'museum' });
-          } else if (dB < 22) {
-            flashes.push({ x: wormhole.bx, y: wormhole.by, r: 5, alpha: 0.7, rgb: [167, 139, 250], layer: 'museum' });
-            comet.x = wormhole.ax + (comet.x - wormhole.bx);
-            comet.y = wormhole.ay + (comet.y - wormhole.by);
-            comet.labWarpAt = time;
-            flashes.push({ x: comet.x, y: comet.y, r: 5, alpha: 0.7, rgb: [196, 160, 255], layer: 'museum' });
-          }
-        }
-        for (const dummy of labDummies) {
-          if (dummy.warpAt !== undefined && time - dummy.warpAt < 0.8) continue;
-          const dA = Math.hypot(dummy.x - wormhole.ax, dummy.y - wormhole.ay);
-          const dB = Math.hypot(dummy.x - wormhole.bx, dummy.y - wormhole.by);
-          if (dA < 24) {
-            dummy.x = wormhole.bx + (dummy.x - wormhole.ax);
-            dummy.y = wormhole.by + (dummy.y - wormhole.ay);
-            dummy.warpAt = time;
-          } else if (dB < 24) {
-            dummy.x = wormhole.ax + (dummy.x - wormhole.bx);
-            dummy.y = wormhole.ay + (dummy.y - wormhole.by);
-            dummy.warpAt = time;
-          }
-        }
-        if (age > 12) labWormholes.splice(i, 1);
-      }
-
-      // Blancos: muelles, bordes e impacto de cometas
-      for (const dummy of labDummies) {
-        dummy.vx *= 0.965;
-        dummy.vy *= 0.965;
-        dummy.x += dummy.vx * sandboxTimeScale;
-        dummy.y += dummy.vy * sandboxTimeScale;
-        if (dummy.x < 30 || dummy.x > width - 30) {
-          dummy.vx *= -0.7;
-          dummy.x = Math.max(30, Math.min(width - 30, dummy.x));
-        }
-        if (dummy.y < 30 || dummy.y > height - 30) {
-          dummy.vy *= -0.7;
-          dummy.y = Math.max(30, Math.min(height - 30, dummy.y));
-        }
-        for (const comet of comets) {
-          if (comet.labCaptured) continue;
-          if (comet.launchPower === undefined && !comet.labMirror) continue;
-          const dx = dummy.x - comet.x;
-          const dy = dummy.y - comet.y;
-          const d = Math.hypot(dx, dy);
-          if (d < 26 + comet.size * 2) {
-            const dSafe = d || 1;
-            const knock = Math.min(14, Math.hypot(comet.vx, comet.vy) * 1.1);
-            dummy.vx += (dx / dSafe) * knock;
-            dummy.vy += (dy / dSafe) * knock;
-            flashes.push({ x: comet.x, y: comet.y, r: 4, alpha: 0.6, rgb: comet.tintRGB, layer: 'museum' });
-            if (!comet.labMirror) comet.life = 0;
-          }
-        }
-      }
-
-      // Burbujas empujan blancos y enjambre al pasar el frente
-      for (const b of bubbles) {
-        if (b.age > 0.5) continue;
-        for (const dummy of labDummies) {
-          const dx = dummy.x - b.x;
-          const dy = dummy.y - b.y;
-          const d = Math.hypot(dx, dy) || 1;
-          const reach = b.r + 50;
-          if (d > reach) continue;
-          const f = (1 - d / reach) * (b.grow ?? 8) * 0.5;
-          dummy.vx += (dx / d) * f;
-          dummy.vy += (dy / d) * f;
-        }
-        for (const boid of labSwarm) {
-          const dx = boid.x - b.x;
-          const dy = boid.y - b.y;
-          const d = Math.hypot(dx, dy) || 1;
-          const reach = b.r + 40;
-          if (d > reach) continue;
-          const f = (1 - d / reach) * (b.grow ?? 8) * 0.12;
-          boid.vx += (dx / d) * f;
-          boid.vy += (dy / d) * f;
-        }
-      }
-
-      // Cometas espejo: colisiones elásticas entre ellos
-      const mirrors = comets.filter((comet) => comet.labMirror);
-      for (let i = 0; i < mirrors.length; i += 1) {
-        for (let j = i + 1; j < mirrors.length; j += 1) {
-          const a = mirrors[i];
-          const b = mirrors[j];
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          const d = Math.hypot(dx, dy);
-          const minD = a.size + b.size + 6;
-          if (d > 0.01 && d < minD) {
-            const nx = dx / d;
-            const ny = dy / d;
-            const rel = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
-            if (rel > 0) {
-              a.vx -= rel * nx;
-              a.vy -= rel * ny;
-              b.vx += rel * nx;
-              b.vy += rel * ny;
-              flashes.push({
-                x: (a.x + b.x) / 2,
-                y: (a.y + b.y) / 2,
-                r: 4,
-                alpha: 0.6,
-                rgb: [230, 204, 150],
-                layer: 'museum',
-              });
-            }
-            const push = (minD - d) / 2;
-            a.x -= nx * push;
-            a.y -= ny * push;
-            b.x += nx * push;
-            b.y += ny * push;
-          }
-        }
-      }
-    };
-
-    const drawLab = () => {
-      if (!sandboxActive || !fxCtx) return;
-      for (const hole of labHoles) {
-        const grow = Math.min(1, (time - hole.born) / 0.6);
-        if (LAB_BLACKHOLE_V2) {
-          // Gargantua: sombra pura + anillo de fotones con doppler + disco
-          // de acreción térmico + luz lejana doblada por el lente.
-          const coreR = 14 * grow;
-          const spin = time * 1.6;
-          // Resplandor cálido del lente alrededor de todo el horizonte
-          const lensGlow = fxCtx.createRadialGradient(hole.x, hole.y, coreR, hole.x, hole.y, coreR * 2.9);
-          lensGlow.addColorStop(0, `rgba(255,232,196,${0.42 * grow})`);
-          lensGlow.addColorStop(0.4, `rgba(255,190,120,${0.18 * grow})`);
-          lensGlow.addColorStop(1, 'rgba(255,170,90,0)');
-          fxCtx.fillStyle = lensGlow;
-          fxCtx.beginPath();
-          fxCtx.arc(hole.x, hole.y, coreR * 2.9, 0, Math.PI * 2);
-          fxCtx.fill();
-          // Disco de acreción horizontal: gradiente térmico, más caliente adentro
-          fxCtx.save();
-          fxCtx.translate(hole.x, hole.y);
-          for (let ringIndex = 0; ringIndex < 4; ringIndex += 1) {
-            const t = ringIndex / 3;
-            const rr = coreR * (1.4 + t * 2.2);
-            fxCtx.strokeStyle = `rgba(${255 - Math.round(t * 90)},${Math.round(232 - t * 122)},${Math.round(190 - t * 130)},${(0.5 * (1 - t * 0.72) * grow).toFixed(3)})`;
-            fxCtx.lineWidth = 2.6 - t * 1.5;
-            fxCtx.beginPath();
-            fxCtx.ellipse(0, 0, rr, rr * 0.3, spin * 0.1, 0, Math.PI * 2);
-            fxCtx.stroke();
-          }
-          // Luz lejana doblada: anillo vertical que asoma por encima y debajo
-          fxCtx.strokeStyle = `rgba(255,214,160,${(0.42 * grow).toFixed(3)})`;
-          fxCtx.lineWidth = 2;
-          fxCtx.beginPath();
-          fxCtx.ellipse(0, 0, coreR * 0.6, coreR * 2.2, 0, 0, Math.PI * 2);
-          fxCtx.stroke();
-          fxCtx.restore();
-          // Sombra pura: la única cosa del espacio que apaga estrellas
-          fxCtx.fillStyle = 'rgba(2,2,5,0.97)';
-          fxCtx.beginPath();
-          fxCtx.arc(hole.x, hole.y, coreR, 0, Math.PI * 2);
-          fxCtx.fill();
-          // Anillo de fotones con doppler beaming: el lado que se acerca brilla más
-          fxCtx.save();
-          fxCtx.translate(hole.x, hole.y);
-          fxCtx.rotate(0.35);
-          const photon = fxCtx.createLinearGradient(-coreR * 1.3, 0, coreR * 1.3, 0);
-          photon.addColorStop(0, `rgba(255,244,224,${(0.55 * grow).toFixed(3)})`);
-          photon.addColorStop(0.5, `rgba(255,240,210,${(0.95 * grow).toFixed(3)})`);
-          photon.addColorStop(1, `rgba(255,226,180,${(0.4 * grow).toFixed(3)})`);
-          fxCtx.strokeStyle = photon;
-          fxCtx.lineWidth = 1.7;
-          fxCtx.beginPath();
-          fxCtx.arc(0, 0, coreR * 1.1, 0, Math.PI * 2);
-          fxCtx.stroke();
-          fxCtx.restore();
-        } else {
-          const coreR = 13 * grow;
-          const coreGrad = fxCtx.createRadialGradient(hole.x, hole.y, 0, hole.x, hole.y, coreR * 2.6);
-          coreGrad.addColorStop(0, 'rgba(4,4,8,0.96)');
-          coreGrad.addColorStop(0.5, 'rgba(20,24,44,0.8)');
-          coreGrad.addColorStop(1, 'rgba(120,160,255,0)');
-          fxCtx.fillStyle = coreGrad;
-          fxCtx.beginPath();
-          fxCtx.arc(hole.x, hole.y, coreR * 2.6, 0, Math.PI * 2);
-          fxCtx.fill();
-          fxCtx.strokeStyle = `rgba(150,190,255,${(0.5 + 0.2 * Math.sin(time * 7)) * grow})`;
-          fxCtx.lineWidth = 1.3;
-          fxCtx.beginPath();
-          fxCtx.ellipse(hole.x, hole.y, coreR * 1.9, coreR * 0.7, time * 1.4, 0, Math.PI * 2);
-          fxCtx.stroke();
-        }
-      }
-      for (const well of labWells) {
-        const pulse = 0.6 + 0.4 * Math.sin(time * 4 + well.x);
-        const rgb = well.strength > 0 ? [143, 208, 255] : [255, 176, 84];
-        fxCtx.strokeStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(0.35 + pulse * 0.3).toFixed(3)})`;
-        fxCtx.lineWidth = 1.4;
-        fxCtx.beginPath();
-        fxCtx.arc(well.x, well.y, 16 + pulse * 5, 0, Math.PI * 2);
-        fxCtx.stroke();
-        fxCtx.globalAlpha = 0.4;
-        fxCtx.beginPath();
-        fxCtx.arc(well.x, well.y, 30 + pulse * 8, 0, Math.PI * 2);
-        fxCtx.stroke();
-        fxCtx.globalAlpha = 1;
-      }
-      for (const dummy of labDummies) {
-        fxCtx.strokeStyle = 'rgba(245,241,232,0.55)';
-        fxCtx.lineWidth = 1.2;
-        fxCtx.beginPath();
-        fxCtx.arc(dummy.x, dummy.y, 15, 0, Math.PI * 2);
-        fxCtx.stroke();
-        fxCtx.beginPath();
-        fxCtx.moveTo(dummy.x - 5, dummy.y);
-        fxCtx.lineTo(dummy.x + 5, dummy.y);
-        fxCtx.moveTo(dummy.x, dummy.y - 5);
-        fxCtx.lineTo(dummy.x, dummy.y + 5);
-        fxCtx.stroke();
-      }
-      for (const boid of labSwarm) {
-        const [r, g, b] = sampleStops(AURORA, boid.hue * 0.8);
-        const glow = fxCtx.createRadialGradient(boid.x, boid.y, 0, boid.x, boid.y, 5);
-        glow.addColorStop(0, 'rgba(255,240,220,0.9)');
-        glow.addColorStop(0.4, `rgba(${r},${g},${b},0.6)`);
-        glow.addColorStop(1, `rgba(${r},${g},${b},0)`);
-        fxCtx.fillStyle = glow;
-        fxCtx.beginPath();
-        fxCtx.arc(boid.x, boid.y, 5, 0, Math.PI * 2);
-        fxCtx.fill();
-      }
-      for (const emitter of labEmitters) {
-        fxCtx.save();
-        fxCtx.translate(emitter.x, emitter.y);
-        fxCtx.rotate(emitter.angle);
-        fxCtx.strokeStyle = 'rgba(150,196,255,0.8)';
-        fxCtx.lineWidth = 1.3;
-        fxCtx.beginPath();
-        fxCtx.moveTo(-8, 0);
-        fxCtx.lineTo(8, 0);
-        fxCtx.moveTo(0, -8);
-        fxCtx.lineTo(0, 8);
-        fxCtx.stroke();
-        fxCtx.restore();
-      }
-      // Anillo planetario: polvo orbital con brillo titilante
-      for (const ring of labRings) {
-        const age = time - ring.born;
-        const fadeIn = Math.min(1, age / 1.2);
-        const fadeOut = age > 17 ? Math.max(0, (20 - age) / 3) : 1;
-        const global = fadeIn * fadeOut;
-        for (const particle of ring.particles) {
-          const ox = Math.cos(particle.kickAng) * particle.kick * 16;
-          const oy = Math.sin(particle.kickAng) * particle.kick * 16 * 0.38;
-          const px = ring.x + Math.cos(particle.ang) * (particle.rad + particle.kick * 6);
-          const py = ring.y + Math.sin(particle.ang) * (particle.rad * 0.38 + particle.kick * 4);
-          const [r, g, b] = sampleStops(AURORA, 0.15 + particle.tint * 0.6);
-          const twinkle = 0.55 + 0.45 * Math.sin(time * 3 + particle.rad);
-          fxCtx.fillStyle = `rgba(${r},${g},${b},${(global * twinkle * 0.8).toFixed(3)})`;
-          fxCtx.beginPath();
-          fxCtx.arc(px + ox, py + oy, particle.size, 0, Math.PI * 2);
-          fxCtx.fill();
-        }
-      }
-      // Estrella binaria: puente de plasma + dos soles
-      for (const binary of labBinaries) {
-        const age = time - binary.born;
-        const fadeIn = Math.min(1, age / 0.8);
-        const fadeOut = age > 8.5 ? Math.max(0, (10 - age) / 1.5) : 1;
-        const global = fadeIn * fadeOut;
-        const sep = 46;
-        const ax = binary.x + Math.cos(binary.phase) * sep;
-        const ay = binary.y + Math.sin(binary.phase) * sep * 0.6;
-        const bx = binary.x - Math.cos(binary.phase) * sep;
-        const by = binary.y - Math.sin(binary.phase) * sep * 0.6;
-        const midX = (ax + bx) / 2 + Math.sin(time * 2.2) * 10;
-        const midY = (ay + by) / 2 + Math.cos(time * 1.8) * 8;
-        const bridge = fxCtx.createLinearGradient(ax, ay, bx, by);
-        bridge.addColorStop(0, `rgba(150,196,255,${(0.55 * global).toFixed(3)})`);
-        bridge.addColorStop(0.5, `rgba(255,214,150,${(0.6 * global).toFixed(3)})`);
-        bridge.addColorStop(1, `rgba(255,176,120,${(0.55 * global).toFixed(3)})`);
-        fxCtx.strokeStyle = bridge;
-        fxCtx.lineWidth = 2.2;
-        fxCtx.beginPath();
-        fxCtx.moveTo(ax, ay);
-        fxCtx.quadraticCurveTo(midX, midY, bx, by);
-        fxCtx.stroke();
-        for (const star of [
-          [ax, ay, 170, 205, 255],
-          [bx, by, 255, 200, 130],
-        ] as const) {
-          const glow = fxCtx.createRadialGradient(star[0], star[1], 0, star[0], star[1], 22);
-          glow.addColorStop(0, `rgba(255,252,244,${(0.9 * global).toFixed(3)})`);
-          glow.addColorStop(0.3, `rgba(${star[2]},${star[3]},${star[4]},${(0.55 * global).toFixed(3)})`);
-          glow.addColorStop(1, `rgba(${star[2]},${star[3]},${star[4]},0)`);
-          fxCtx.fillStyle = glow;
-          fxCtx.beginPath();
-          fxCtx.arc(star[0], star[1], 22, 0, Math.PI * 2);
-          fxCtx.fill();
-        }
-      }
-      // Agujero de gusano: vórtices gemelos girando
-      for (const wormhole of labWormholes) {
-        const age = time - wormhole.born;
-        const fadeIn = Math.min(1, age / 0.8);
-        const fadeOut = age > 10.5 ? Math.max(0, (12 - age) / 1.5) : 1;
-        const global = fadeIn * fadeOut;
-        for (const portal of [
-          [wormhole.ax, wormhole.ay],
-          [wormhole.bx, wormhole.by],
-        ] as const) {
-          const spin = time * 2.4;
-          for (let ringIndex = 0; ringIndex < 3; ringIndex += 1) {
-            const rr = 8 + ringIndex * 7;
-            fxCtx.strokeStyle = `rgba(${167 + ringIndex * 12},${139 + ringIndex * 8},255,${((0.5 - ringIndex * 0.13) * global).toFixed(3)})`;
-            fxCtx.lineWidth = 1.3;
-            fxCtx.beginPath();
-            fxCtx.ellipse(portal[0], portal[1], rr, rr * 0.42, spin + ringIndex, 0, Math.PI * 2);
-            fxCtx.stroke();
-          }
-          const glow = fxCtx.createRadialGradient(portal[0], portal[1], 0, portal[0], portal[1], 20);
-          glow.addColorStop(0, `rgba(210,180,255,${(0.5 * global).toFixed(3)})`);
-          glow.addColorStop(1, 'rgba(167,139,250,0)');
-          fxCtx.fillStyle = glow;
-          fxCtx.beginPath();
-          fxCtx.arc(portal[0], portal[1], 20, 0, Math.PI * 2);
-          fxCtx.fill();
-        }
-      }
+      clearCharge();
+      if (command === 'clear') clearLab();
+      else if (command === 'exit') exitSandbox();
+      else cosmicLab.select(command);
     };
 
     const frame = () => {
@@ -3158,11 +2308,16 @@ export const StarfieldCanvas = ({
           highFpsSince = null;
         }
       }
-      const labStep = sandboxActive ? sandboxTimeScale : 1;
+      const labDt = Math.min(0.08, cursorDt) * sandboxTimeScale;
+      const labStep = sandboxActive ? Math.min(0.08, labDt) * 60 : 1;
+      if (sandboxActive) {
+        cosmicLab.resize(width, height);
+        cosmicLab.step(labDt, comets);
+      }
       // Entrada al sandbox: Q+E mantenidas 2s en el museo
-      if (!sandboxActive && !playgroundRef.current && labQHeld && labEHeld) {
-        if (sandboxChargeT0 === null) sandboxChargeT0 = time;
-        else if (time - sandboxChargeT0 >= 2) {
+      if (import.meta.env.DEV && !sandboxActive && !playgroundRef.current && labQHeld && labEHeld) {
+        if (sandboxChargeT0 === null) sandboxChargeT0 = nowMs / 1000;
+        else if (nowMs / 1000 - sandboxChargeT0 >= 2) {
           sandboxChargeT0 = null;
           enterSandbox();
         }
@@ -3403,8 +2558,12 @@ export const StarfieldCanvas = ({
           star.oy *= 0.88;
         }
 
-        const px = bx + star.ox + parX * star.z * 16;
-        const py = by + star.oy + parY * star.z * 11;
+        let px = bx + star.ox + parX * star.z * 16;
+        let py = by + star.oy + parY * star.z * 11;
+        if (sandboxActive) {
+          const projected = cosmicLab.project({ x: px, y: py });
+          px = projected.x; py = projected.y;
+        }
 
         const [r, g, b] = TINTS[star.tint];
         const twinkle = 0.55 + 0.45 * Math.sin(time * (0.6 + star.z) + star.phase);
@@ -3656,10 +2815,10 @@ export const StarfieldCanvas = ({
           const tintLite = mixRGB(tint, [250, 244, 224], 0.55);
           fxCtx.lineCap = 'round';
           for (const [a, b] of c.edges) {
-            const ax = anchorX + c.nodes[a].ox * sceneDepthScale;
-            const ay = anchorY + c.nodes[a].oy * sceneDepthScale;
-            const bx = anchorX + c.nodes[b].ox * sceneDepthScale;
-            const by = anchorY + c.nodes[b].oy * sceneDepthScale;
+            const aPoint = { x: anchorX + c.nodes[a].ox * sceneDepthScale, y: anchorY + c.nodes[a].oy * sceneDepthScale };
+            const bPoint = { x: anchorX + c.nodes[b].ox * sceneDepthScale, y: anchorY + c.nodes[b].oy * sceneDepthScale };
+            const { x: ax, y: ay } = sandboxActive ? cosmicLab.project(aPoint) : aPoint;
+            const { x: bx, y: by } = sandboxActive ? cosmicLab.project(bPoint) : bPoint;
             if (
               pointInImage((ax + bx) / 2, (ay + by) / 2) ||
               segmentInVitrineCard(ax, ay, bx, by)
@@ -3678,8 +2837,8 @@ export const StarfieldCanvas = ({
             fxCtx.stroke();
           }
           for (const node of c.nodes) {
-            const nx = anchorX + node.ox * sceneDepthScale;
-            const ny = anchorY + node.oy * sceneDepthScale;
+            const nodePoint = { x: anchorX + node.ox * sceneDepthScale, y: anchorY + node.oy * sceneDepthScale };
+            const { x: nx, y: ny } = sandboxActive ? cosmicLab.project(nodePoint) : nodePoint;
             if (pointInImage(nx, ny) || pointInVitrineCard(nx, ny)) continue;
             const twinkle = 0.7 + 0.3 * Math.sin(time * 1.6 + node.phase);
             const halo = fxCtx.createRadialGradient(nx, ny, 0, nx, ny, 9);
@@ -4342,15 +3501,11 @@ export const StarfieldCanvas = ({
         sparkles = sparkles.filter((sp) => sp.life > 0.02);
         for (const sp of sparkles) {
           if (sandboxActive) {
-            for (const hole of labHoles) {
-              const dx = hole.x - sp.x;
-              const dy = hole.y - sp.y;
-              const d = Math.hypot(dx, dy) || 1;
-              if (d < 300) {
-                const pull = (1 - d / 300) * 1.6;
-                sp.vx += ((dx / d) * pull - (dy / d) * pull * 0.8) * sandboxTimeScale;
-                sp.vy += ((dy / d) * pull + (dx / d) * pull * 0.8) * sandboxTimeScale;
-              }
+            for (const hole of cosmicLab.holes) {
+              const force = holeAcceleration(sp, hole, cosmicLab.gravityRadius());
+              sp.vx += force.x * Math.min(0.08, labDt) / 60;
+              sp.vy += force.y * Math.min(0.08, labDt) / 60;
+              if (Math.hypot(sp.x - hole.x, sp.y - hole.y) < 23) sp.life = 0;
             }
           }
           sp.x += sp.vx * labStep;
@@ -4393,100 +3548,20 @@ export const StarfieldCanvas = ({
           spawnAmbientComet();
           nextComet = time + 6 + Math.random() * 6;
         }
-        updateLab();
         comets = comets.filter((comet) => comet.life > 0);
         for (const comet of comets) {
-          const prevX = comet.x;
-          const prevY = comet.y;
-          comet.x += comet.vx * labStep;
-          comet.y += comet.vy * labStep;
-          comet.vy += comet.curve;
-          comet.life -= (comet.size > 2.4 ? 0.009 : 0.012) * labStep;
+          let prevX = comet.x;
+          let prevY = comet.y;
           if (sandboxActive) {
-            // Capturado por un agujero: espiral hacia el horizonte, encogiéndose
-            if (comet.labCaptured) {
-              const cap = comet.labCaptured;
-              const elapsed = time - cap.t0;
-              const dx0 = comet.x - cap.x;
-              const dy0 = comet.y - cap.y;
-              const ang0 = Math.atan2(dy0, dx0);
-              const rad0 = Math.hypot(dx0, dy0);
-              const prevCapX = comet.x;
-              const prevCapY = comet.y;
-              // Rotación a velocidad angular constante mientras el radio decae:
-              // espiral lenta y legible, sin vueltas frenéticas.
-              const ang = ang0 + 3.6 * labStep;
-              const rad = Math.max(9, rad0 - 78 * labStep);
-              comet.x = cap.x + Math.cos(ang) * rad;
-              comet.y = cap.y + Math.sin(ang) * rad;
-              // La estela sigue la espiral: velocidad = delta real del frame
-              comet.vx = (comet.x - prevCapX) / Math.max(0.0001, labStep);
-              comet.vy = (comet.y - prevCapY) / Math.max(0.0001, labStep);
-              comet.size = Math.max(0.4, comet.size * 0.92);
-              comet.life = Math.max(comet.life, 0.9);
-              const captureRGB: RGB = LAB_BLACKHOLE_V2 ? [255, 214, 160] : [186, 214, 255];
-              if (sparkles.length < 150 && Math.random() < 0.5) {
-                sparkles.push({
-                  x: comet.x + (Math.random() - 0.5) * 6,
-                  y: comet.y + (Math.random() - 0.5) * 6,
-                  vx: (Math.random() - 0.5) * 1.4,
-                  vy: (Math.random() - 0.5) * 1.4,
-                  life: 0.4,
-                  tint: 1,
-                  size: 1,
-                  grav: 0,
-                  rgb: captureRGB,
-                  layer: 'museum',
-                });
-              }
-              if (rad <= 9.5 || elapsed > 0.8) {
-                comet.labCaptured = null;
-                comet.life = 0;
-                flashes.push({ x: cap.x, y: cap.y, r: 4, alpha: 0.85, rgb: captureRGB, layer: 'museum' });
-                waves.push({
-                  x: cap.x,
-                  y: cap.y,
-                  r: 6,
-                  alpha: 0.5,
-                  grow: 2.4,
-                  width: 1.2,
-                  delay: 0,
-                  rgb: captureRGB,
-                  layer: 'museum',
-                });
-              }
-            } else if (comet.labMirror) {
-              if (comet.x < 14 && comet.vx < 0) {
-                comet.vx *= -1;
-                comet.x = 14;
-              }
-              if (comet.x > width - 14 && comet.vx > 0) {
-                comet.vx *= -1;
-                comet.x = width - 14;
-              }
-              if (comet.y < 14 && comet.vy < 0) {
-                comet.vy *= -1;
-                comet.y = 14;
-              }
-              if (comet.y > height - 14 && comet.vy > 0) {
-                comet.vy *= -1;
-                comet.y = height - 14;
-              }
-              comet.life = Math.max(comet.life, 0.85);
-            }
-            // Pozos de gravedad curvan cualquier cometa (los capturados no)
-            if (!comet.labCaptured) {
-              for (const well of labWells) {
-                const dx = well.x - comet.x;
-                const dy = well.y - comet.y;
-                const d = Math.hypot(dx, dy) || 1;
-                if (d > 520) continue;
-                const f = well.strength * 0.1 * sandboxTimeScale * (140 / Math.max(70, d));
-                comet.vx += (dx / d) * f;
-                comet.vy += (dy / d) * f;
-              }
-            }
+            const previous = cosmicLab.moveBody(comet, Math.min(0.08, labDt));
+            prevX = previous.x; prevY = previous.y;
+          } else {
+            comet.x += comet.vx;
+            comet.y += comet.vy;
           }
+          comet.vy += comet.curve * labStep;
+          comet.life -= (comet.size > 2.4 ? 0.009 : 0.012) * labStep;
+          if (sandboxActive && comet.life <= 0) continue;
 
           // Las constelaciones creadas por el visitante son superficies aurora:
           // cada tramo rebota una sola vez por proyectil y aumenta su potencia.
@@ -4496,6 +3571,7 @@ export const StarfieldCanvas = ({
             sketch.layer === (comet.layer ?? 'museum') &&
             time - sketch.lastAdd < 6
           ) {
+            const collisionNodes = sandboxActive ? sketch.nodes.map(node => cosmicLab.project(node)) : sketch.nodes;
             const hitKeys = comet.hitSketchSegments ?? new Set<string>();
             comet.hitSketchSegments = hitKeys;
             const radius = 10 + comet.size;
@@ -4510,8 +3586,8 @@ export const StarfieldCanvas = ({
                   ny: number;
                 }
               | null = null;
-            if (sketch.nodes.length === 1 && comet.projectileKind !== 'rapid') {
-              const node = sketch.nodes[0];
+            if (collisionNodes.length === 1 && comet.projectileKind !== 'rapid') {
+              const node = collisionNodes[0];
               const key = `${sketch.id}:node:0`;
               if (!hitKeys.has(key)) {
                 const hit = sweptSegmentHit(
@@ -4528,11 +3604,11 @@ export const StarfieldCanvas = ({
                 if (hit) best = { key, segmentIndex: null, ...hit };
               }
             } else {
-              for (let index = 1; index < sketch.nodes.length; index += 1) {
+              for (let index = 1; index < collisionNodes.length; index += 1) {
                 const key = `${sketch.id}:segment:${index - 1}`;
                 if (hitKeys.has(key)) continue;
-                const a = sketch.nodes[index - 1];
-                const b = sketch.nodes[index];
+                const a = collisionNodes[index - 1];
+                const b = collisionNodes[index];
                 const hit = sweptSegmentHit(
                   prevX,
                   prevY,
@@ -4878,7 +3954,6 @@ export const StarfieldCanvas = ({
           }
 
           if (
-            !(sandboxActive && comet.labMirror) &&
             (comet.x < -140 || comet.x > width + 140 || comet.y < -140 || comet.y > height + 90)
           ) {
             comet.life = 0;
@@ -4891,13 +3966,14 @@ export const StarfieldCanvas = ({
             comet.tailAge === undefined
               ? fullTailFrames
               : Math.min(fullTailFrames, comet.tailAge);
-          const visibleTailFrames = Math.max(0.12, tailFrames);
+          const visibleTailFrames = sandboxActive ? 0.3 : Math.max(0.12, tailFrames);
           const tailX = comet.x - comet.vx * visibleTailFrames;
           const tailY = comet.y - comet.vy * visibleTailFrames;
           const [tr, tg, tb] = comet.tintRGB ?? TINTS[comet.tint];
           const target = effectContext(comet.layer);
           if (!target) continue;
           const level = effectOpacity(comet.layer);
+          if (sandboxActive) cosmicLab.drawTrail(target, comet, [tr, tg, tb]);
           const isEmber =
             EMBER_METEORITE_DESIGN &&
             comet.seed !== undefined &&
@@ -4907,7 +3983,7 @@ export const StarfieldCanvas = ({
             // estela corta y chispas de ceniza. El fragmento se deshace; no
             // compite con la cinta aurora del cometa madre (el cursor).
             const heat = comet.heat ?? 0;
-            const emberTailFrames = visibleTailFrames * 0.45;
+            const emberTailFrames = sandboxActive ? 0.3 : visibleTailFrames * 0.45;
             const emberTailX = comet.x - comet.vx * emberTailFrames;
             const emberTailY = comet.y - comet.vy * emberTailFrames;
             const gradient = target.createLinearGradient(comet.x, comet.y, emberTailX, emberTailY);
@@ -5307,7 +4383,8 @@ export const StarfieldCanvas = ({
         }
 
         // Constelación dibujada: líneas aurora entre nodos, se desvanece sola
-        if (sketch && sketch.nodes.length > 0) {
+        const drawnNodes = sketch ? (sandboxActive ? sketch.nodes.map(node => cosmicLab.project(node)) : sketch.nodes) : [];
+        if (sketch && drawnNodes.length > 0) {
           const fade = Math.max(0, Math.min(1, 1 - (time - sketch.lastAdd - 4.5) / 1.5));
           if (fade <= 0) {
             clearSketch();
@@ -5318,9 +4395,9 @@ export const StarfieldCanvas = ({
             const flowSLite = mixRGB(flowS, [250, 244, 224], 0.6);
             target.save();
             target.lineCap = 'round';
-            for (let i = 1; i < sketch.nodes.length; i += 1) {
-              const a = sketch.nodes[i - 1];
-              const b = sketch.nodes[i];
+            for (let i = 1; i < drawnNodes.length; i += 1) {
+              const a = drawnNodes[i - 1];
+              const b = drawnNodes[i];
               const segmentIndex = i - 1;
               const chargeCount = sketch.segmentCharges[segmentIndex] ?? 0;
               const chargeLevel = Math.min(
@@ -5378,14 +4455,14 @@ export const StarfieldCanvas = ({
               target.strokeStyle = `rgba(228,199,127,${((0.28 + armPulse * 0.3) * fade * level).toFixed(3)})`;
               target.lineWidth = 1.6;
               target.beginPath();
-              target.moveTo(sketch.nodes[0].x, sketch.nodes[0].y);
-              for (let i = 1; i < sketch.nodes.length; i += 1) {
-                target.lineTo(sketch.nodes[i].x, sketch.nodes[i].y);
+              target.moveTo(drawnNodes[0].x, drawnNodes[0].y);
+              for (let i = 1; i < drawnNodes.length; i += 1) {
+                target.lineTo(drawnNodes[i].x, drawnNodes[i].y);
               }
               target.stroke();
               target.shadowBlur = 0;
             }
-            sketch.nodes.forEach((node, index) => {
+            drawnNodes.forEach((node, index) => {
               const twinkleN = 0.7 + 0.3 * Math.sin(time * 3 + index * 1.3);
               const adjacentCharged =
                 sketch?.chargedSegments.has(index - 1) || sketch?.chargedSegments.has(index);
@@ -5415,26 +4492,16 @@ export const StarfieldCanvas = ({
         }
       }
 
-      drawLab();
-
       if (sandboxActive && fxCtx) {
+        cosmicLab.draw(fxCtx);
         fxCtx.save();
-        fxCtx.font = '500 11px "JetBrains Mono Variable", monospace';
-        fxCtx.textAlign = 'left';
-        fxCtx.textBaseline = 'top';
-        const hudLines = [
-          `LAB · fps ${Math.round(labFps)} · cometas ${comets.length} · chispas ${sparkles.length} · tiempo ×${sandboxTimeScale.toFixed(2)}`,
-          '1 agujero  2 anillo  3 iones  4 binaria  5 cadena  6 gusano  7 blancos  8 limpiar',
-          'Q/E tiempo (dentro del lab) · WASD/flechas mover · ESC salir',
-        ];
-        hudLines.forEach((line, index) => {
-          fxCtx.fillStyle = index === 0 ? 'rgba(143,208,255,0.75)' : 'rgba(245,241,232,0.45)';
-          fxCtx.fillText(line, 18, 14 + index * 17);
-        });
+        fxCtx.font = '500 10px "JetBrains Mono Variable", monospace';
+        fxCtx.fillStyle = 'rgba(186,207,225,0.6)';
+        fxCtx.fillText(`LAB · ${Math.round(labFps)} fps · tiempo ×${sandboxTimeScale.toFixed(2)} · Q/E ajustar`, 20, 78);
         fxCtx.restore();
       }
       if (sandboxChargeT0 !== null && !sandboxActive && fxCtx && mouse.x > -999) {
-        const chargeP = Math.min(1, (time - sandboxChargeT0) / 2);
+        const chargeP = Math.min(1, (nowMs / 1000 - sandboxChargeT0) / 2);
         fxCtx.save();
         fxCtx.strokeStyle = `rgba(143,208,255,${(0.45 + 0.35 * chargeP).toFixed(3)})`;
         fxCtx.lineWidth = 2.4;
@@ -5461,65 +4528,32 @@ export const StarfieldCanvas = ({
       ArrowLeft: 'left',
       ArrowRight: 'right',
     };
+    const clampLabTime = (value: number) => Math.max(0.25, Math.min(2.5, value));
     const onKeyDown = (event: KeyboardEvent) => {
+      if (isKeyboardInput(event.target) || event.ctrlKey || event.metaKey || event.altKey) return;
       if (sandboxActive) {
         if (event.code === 'Escape') {
-          exitSandbox();
+          event.preventDefault();
+          clearCharge();
+          if (!cosmicLab.cancel()) exitSandbox();
           return;
         }
-        if (event.code === 'Digit1') {
-          labSpawnHole();
+        const selected = LAB_TOOLS.find(tool => event.code === `Digit${tool.key}` || event.code === `Numpad${tool.key}`);
+        if (selected) {
+          event.preventDefault();
+          if (!event.repeat) { clearCharge(); cosmicLab.select(selected.id); }
           return;
         }
-        if (SANDBOX_CLASSIC_EXPERIMENTS && event.code === 'Digit2') {
-          labSpawnSwarm();
+        if (event.code === 'Digit8' || event.code === 'Numpad8') {
+          event.preventDefault();
+          if (!event.repeat) clearLab();
           return;
         }
-        if (event.code === 'Digit2') {
-          labSpawnRing();
+        if (event.code === 'KeyQ' || event.code === 'KeyE') {
+          event.preventDefault();
+          if (!event.repeat) sandboxTimeScale = clampLabTime(sandboxTimeScale * (event.code === 'KeyQ' ? 0.8 : 1.25));
           return;
         }
-        if (event.code === 'Digit3') {
-          labSpawnIons();
-          return;
-        }
-        if (SANDBOX_CLASSIC_EXPERIMENTS && event.code === 'Digit4') {
-          labSpawnWell(event.shiftKey);
-          return;
-        }
-        if (event.code === 'Digit4') {
-          labSpawnBinary();
-          return;
-        }
-        if (event.code === 'Digit5') {
-          labSpawnChain();
-          return;
-        }
-        if (SANDBOX_CLASSIC_EXPERIMENTS && event.code === 'Digit6') {
-          labSpawnMirror();
-          return;
-        }
-        if (event.code === 'Digit6') {
-          labSpawnWormhole();
-          return;
-        }
-        if (event.code === 'Digit7') {
-          labSpawnDummies();
-          return;
-        }
-        if (event.code === 'Digit8') {
-          clearLab();
-          return;
-        }
-        if (event.code === 'KeyQ') {
-          sandboxTimeScale = Math.max(0.25, sandboxTimeScale / 1.25);
-          return;
-        }
-        if (event.code === 'KeyE') {
-          sandboxTimeScale = Math.min(2.5, sandboxTimeScale * 1.25);
-          return;
-        }
-        // WASD/flechas/shift caen al pilotaje: el gate de cámara incluye el lab
       }
       if (
         event.code === 'Space' &&
@@ -5634,7 +4668,8 @@ export const StarfieldCanvas = ({
     const onCursorLeave = () => { cursorPresent = false; };
     const onWinBlur = () => {
       onCursorLeave();
-      onUp();
+      onPointerCancel();
+      labQHeld = false; labEHeld = false; sandboxChargeT0 = null;
       heldDirs.clear();
       heldMovementCodes.clear();
       boostedWasdCodes.clear();
@@ -5656,7 +4691,7 @@ export const StarfieldCanvas = ({
     window.addEventListener('pointermove', onMove, { passive: true });
     window.addEventListener('pointerdown', onDown);
     window.addEventListener('pointerup', onUp);
-    window.addEventListener('pointercancel', onUp);
+    window.addEventListener('pointercancel', onPointerCancel);
     window.addEventListener('blur', onWinBlur);
     scrollEl?.addEventListener('scroll', onScroll, { passive: true });
     const structureObserver = new MutationObserver(() => {
@@ -5670,6 +4705,10 @@ export const StarfieldCanvas = ({
 
     return () => {
       clearCharge();
+      sandboxActive = false;
+      cosmicLab.dispose();
+      labCommandRef.current = () => {};
+      museumRoot?.classList.remove('is-cosmic-lab');
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', onResize);
       window.removeEventListener('mo-warp', onWarp);
@@ -5679,7 +4718,7 @@ export const StarfieldCanvas = ({
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerdown', onDown);
       window.removeEventListener('pointerup', onUp);
-      window.removeEventListener('pointercancel', onUp);
+      window.removeEventListener('pointercancel', onPointerCancel);
       window.removeEventListener('blur', onWinBlur);
       scrollEl?.removeEventListener('scroll', onScroll);
       cursorLayer.dispose();
@@ -5699,6 +4738,7 @@ export const StarfieldCanvas = ({
 
   return (
     <>
+      {labUi && <CosmicLabPanel state={labUi} onCommand={command => labCommandRef.current(command)} />}
       <canvas ref={canvasRef} className="mo-starfield" aria-hidden="true" />
       <canvas ref={fxRef} className="mo-starfx" aria-hidden="true" />
       <canvas ref={trailRef} className="mo-trailfx" aria-hidden="true" />

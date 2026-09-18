@@ -16,7 +16,7 @@
     {
       "id": "orbital-ports",
       "title": "Puertos espaciales orbitales",
-      "file": "orbital-ports.webp",
+      "file": "orbital-ports-v02.webp",
       "prompt": "Use case: scientific-educational\nAsset type: 16:9 website hero/card image for a Spanish astroengineering atlas.\nPrimary request: Create a photorealistic cinematic image of the concept Puertos espaciales orbitales.\nMission context: infraestructura espacial. Category: Logística. Scale: orbital. Plausibility: plausible.\nCore idea: El espacio se vuelve habitable cuando existen lugares para llegar, reparar, esperar y partir.\nVisual mental image: Un puerto iluminado donde naves pequeñas se acoplan alrededor de astilleros y depósitos.\nMechanism to imply visually: Concentran atraques, brazos robóticos, almacenes, talleres, energía, comunicaciones y control de tráfico.\nStyle: realistic scientific aerospace photography, dark premium SpaceX-inspired visual language, black dominant frame, sober high contrast, physically plausible materials, no poster look, no neon excess.\nComposition: wide 16:9, clear readable subject, immersive and contemplative, room for dark overlay text on one side when possible.\nAvoid: text, typography, labels, logos, watermarks, flags, brand marks, anime, cartoon, vector art, SVG look, infographic style.",
       "credit": "OpenAI image generation via Codex built-in image_gen."
     },
