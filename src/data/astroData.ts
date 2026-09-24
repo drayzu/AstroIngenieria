@@ -68,6 +68,9 @@ const sources = {
 const assetBase = import.meta.env.BASE_URL;
 
 const studyRoomImageRevisionIds = new Set([
+  'asteroid-habitat',
+  'exoplanets',
+  'space-based-solar',
   'venus-terraforming',
   'life-support',
   'artificial-gravity',
@@ -117,6 +120,13 @@ const studyRoomImageRevisionIds = new Set([
   'civilizaciones-silenciosas',
   'berserker',
 ]);
+
+const studyRoomImageAssetOverrides: Record<string, string> = {
+  radiators: 'radiators-v01.webp',
+  worldship: 'worldship-v01.webp',
+  'zoo-hypothesis': 'zoo-hypothesis-v01.webp',
+  'dark-forest': 'dark-forest-v01.webp',
+};
 
 export const chapterVisuals = {
   intro: {
@@ -724,10 +734,13 @@ const getConceptIllustration = (
   mechanism: string,
 ): AstroConcept['illustration'] => {
   const habitatPrompt = habitatConceptVisualPrompts[id];
-  const hasUpdatedStudyRoomImage = studyRoomImageRevisionIds.has(id);
-  const conceptPath = hasUpdatedStudyRoomImage
-    ? `${assetBase}illustrations/ai/concepts/${chapterId}/${id}-v02.webp`
-    : `${assetBase}illustrations/ai/concepts/${chapterId}/${id}.webp`;
+  const selectedAsset = studyRoomImageAssetOverrides[id];
+  const hasUpdatedStudyRoomImage = Boolean(selectedAsset) || studyRoomImageRevisionIds.has(id);
+  const conceptPath = selectedAsset
+    ? `${assetBase}illustrations/ai/concepts/${chapterId}/${selectedAsset}`
+    : hasUpdatedStudyRoomImage
+      ? `${assetBase}illustrations/ai/concepts/${chapterId}/${id}-v02.webp`
+      : `${assetBase}illustrations/ai/concepts/${chapterId}/${id}.webp`;
   const gallery = hasUpdatedStudyRoomImage
     ? [{
         label: 'Versión anterior',
