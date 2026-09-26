@@ -16,14 +16,13 @@ import {
   AnimatePresence,
   motion,
   useInView,
-  useMotionValueEvent,
   useReducedMotion,
   useScroll,
-  useSpring,
   useTransform,
 } from 'framer-motion';
 import { Aperture, Volume2, VolumeX } from 'lucide-react';
 import { chapters, conceptById, plausibilityLabels, scaleLabels } from '../../data/astroData';
+import { selectedStudyImages } from '../../data/selectedStudyImages';
 import { refs } from '../../data/articles/sources';
 import { metricRows, metricValueLabel } from '../../data/metricProfile';
 import { readingSequence, type ReadingContext } from '../../data/readingJourney';
@@ -45,6 +44,7 @@ import { DistortOverlay } from './DistortOverlay';
 import './museoOrbital.css';
 
 const totalWorks = chapters.reduce((sum, chapter) => sum + chapter.concepts.length, 0);
+const HOME_HERO_IMAGE = `${import.meta.env.BASE_URL}illustrations/ai/main-hero-cinematic-v03.webp`;
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 const VITRINE_CAP = 9;
 const VITRINE_KEY = 'mo-vitrine';
@@ -333,29 +333,6 @@ const usePageTextPhysics = (disabled: boolean) => {
       states.clear();
     };
   }, [disabled]);
-};
-
-/* ---------------- Contador animado ---------------- */
-
-const Counter = ({ to }: { to: number }) => {
-  const [value, setValue] = useState(0);
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setValue(to);
-      return;
-    }
-    let raf = 0;
-    const start = performance.now();
-    const duration = 650;
-    const step = (now: number) => {
-      const p = Math.min(1, (now - start) / duration);
-      setValue(Math.round(to * (1 - Math.pow(1 - p, 3))));
-      if (p < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [to]);
-  return <b className="mo-counter">{value}</b>;
 };
 
 /* ---------------- Hero con título magnético ---------------- */
@@ -1238,7 +1215,7 @@ const Hero = memo(({
       )}
       <motion.div
         className="mo-hero-bg mo-hero-bg-static"
-        style={{ backgroundImage: `url(${chapters[1].visual?.heroImage})` }}
+        style={{ backgroundImage: `url(${HOME_HERO_IMAGE})` }}
         initial={{ scale: 1.12, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: reduced ? 0 : 2.2, ease: EASE_OUT }}
@@ -1361,15 +1338,14 @@ const Hero = memo(({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: reduced ? 0 : 1.6, duration: 1, ease: EASE_OUT }}
         >
-          Nueve salas convertidas en <Counter to={chapters.length} /> puertas. <Counter to={totalWorks} /> obras
-          esperando. Un recorrido para comprender mundos artificiales, civilizaciones capaces
-          de mover estrellas y las huellas que podrían dejar.
+          De los hábitats orbitales a las estrellas, exploramos qué podríamos construir,
+          qué haría falta para lograrlo y dónde aparecen los límites físicos.
         </motion.p>
 
         <motion.button
           type="button"
           className="mo-hero-cta mo-orbital"
-          data-cursor-label="Descender"
+          data-cursor-label="Explorar"
           onClick={() => scrollToId('sala-intro')}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -1377,7 +1353,7 @@ const Hero = memo(({
         >
           <i className="mo-orbit a" aria-hidden="true" />
           <i className="mo-orbit b" aria-hidden="true" />
-          Iniciar recorrido
+          Explorar el atlas
           <span aria-hidden="true">↓</span>
         </motion.button>
 
@@ -1409,7 +1385,7 @@ const Hero = memo(({
 });
 
 const Marquee = memo(() => {
-  const phrase = `COLECCIÓN PERMANENTE · ${chapters.length} SALAS · ${totalWorks} OBRAS · ENTRADA LIBRE · `;
+  const phrase = `${chapters.length} CAPÍTULOS · ${totalWorks} TEMAS · MATERIA · ENERGÍA · CALOR · GRAVEDAD · TIEMPO · DISTANCIA · VIDA · `;
   return (
     <div className="mo-marquee mo-layer" aria-hidden="true">
       <div className="mo-marquee-track">
@@ -1423,7 +1399,7 @@ const Marquee = memo(() => {
 /* ---------------- Índice de salas ---------------- */
 
 const HallIndex = memo(({ activeId }: { activeId: string | null }) => (
-  <nav className="mo-halls mo-layer" aria-label="Salas de la exposición">
+  <nav className="mo-halls mo-layer" aria-label="Capítulos de la exposición">
     {chapters.map((chapter) => (
       <button
         key={chapter.id}
@@ -1536,8 +1512,42 @@ const Obra = memo(({
   onSelect: (concept: AstroConcept) => void;
 }) => {
   const [hovered, setHovered] = useState(false);
+  const [hoverImageIndex, setHoverImageIndex] = useState(0);
+  const images = selectedStudyImages[concept.id];
+  const approvedImage = images?.[0];
   const imgRef = useRef<HTMLImageElement>(null);
   const shouldLoadImage = useNearViewportImage(imgRef);
+  const reduced = useReducedMotion();
+
+  useEffect(() => {
+    if (!hovered || !shouldLoadImage || !images || images.length < 2 || reduced ||
+      !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    let cancelled = false;
+    let imageReady = false;
+    let delayElapsed = false;
+    const nextIndex = (hoverImageIndex + 1) % images.length;
+    const showNext = () => {
+      if (!cancelled && imageReady && delayElapsed) setHoverImageIndex(nextIndex);
+    };
+    const preload = new Image();
+    preload.decoding = 'async';
+    preload.onload = () => {
+      imageReady = true;
+      showNext();
+    };
+    preload.src = images[nextIndex];
+    const timer = window.setTimeout(() => {
+      delayElapsed = true;
+      showNext();
+    }, hoverImageIndex === 0 ? 2000 : 3200);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      preload.onload = null;
+    };
+  }, [hovered, hoverImageIndex, images, reduced, shouldLoadImage]);
 
   const tilt = (event: ReactMouseEvent<HTMLElement>) => {
     const target = event.currentTarget;
@@ -1546,12 +1556,14 @@ const Obra = memo(({
     const py = (event.clientY - rect.top) / rect.height - 0.5;
     target.style.setProperty('--rx', `${(-py * 4.5).toFixed(2)}deg`);
     target.style.setProperty('--ry', `${(px * 5.5).toFixed(2)}deg`);
-    imgRef.current?.style.setProperty('translate', `${(-px * 10).toFixed(1)}px, ${(-py * 10).toFixed(1)}px`);
+    target.style.setProperty('--img-x', `${(-px * 10).toFixed(1)}px`);
+    target.style.setProperty('--img-y', `${(-py * 10).toFixed(1)}px`);
   };
   const untilt = (event: ReactMouseEvent<HTMLElement>) => {
     event.currentTarget.style.setProperty('--rx', '0deg');
     event.currentTarget.style.setProperty('--ry', '0deg');
-    imgRef.current?.style.setProperty('translate', '0px, 0px');
+    event.currentTarget.style.setProperty('--img-x', '0px');
+    event.currentTarget.style.setProperty('--img-y', '0px');
   };
 
   return (
@@ -1572,20 +1584,37 @@ const Obra = memo(({
         onMouseLeave={(event) => {
           untilt(event);
           setHovered(false);
+          setHoverImageIndex(0);
         }}
         onClick={() => onSelect(concept)}
       >
         <figure className="mo-frame">
           <div className="mo-frame-mask">
-            <motion.img
+            {approvedImage ? <motion.img
               ref={imgRef}
               layoutId={enableFlight ? `obra-${concept.id}` : undefined}
-              src={shouldLoadImage ? concept.illustration.src : TRANSPARENT_IMAGE}
+              src={shouldLoadImage ? approvedImage : TRANSPARENT_IMAGE}
               alt={concept.illustration.alt}
               loading="lazy"
               decoding="async"
-            />
-            {featured && shouldLoadImage && <DistortOverlay imageRef={imgRef} active={hovered} />}
+            /> : <span className="mo-image-pending" role="img" aria-label={`Imagen de ${concept.title} pendiente de selección`}>Imagen pendiente de selección</span>}
+            <AnimatePresence initial={false}>
+              {shouldLoadImage && images && hoverImageIndex > 0 && (
+                <motion.img
+                  key={`${concept.id}-${hoverImageIndex}`}
+                  className="mo-frame-alternate"
+                  src={images[hoverImageIndex]}
+                  alt=""
+                  aria-hidden="true"
+                  decoding="async"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.6, ease: EASE_OUT }}
+                />
+              )}
+            </AnimatePresence>
+            {approvedImage && featured && shouldLoadImage && <DistortOverlay imageRef={imgRef} active={hovered && hoverImageIndex === 0} />}
           </div>
           <span className="mo-frame-glow" aria-hidden="true" />
         </figure>
@@ -1649,7 +1678,7 @@ const ChapterIntro = memo(({ chapter }: { chapter: AstroChapter }) => {
         <motion.img
           src={chapter.visual?.sectionImage ?? chapter.visual?.heroImage}
           alt={chapter.visual?.visualFocus ?? chapter.title}
-          loading={chapter.number === '0' ? 'eager' : 'lazy'}
+          loading={chapter.id === 'intro' ? 'eager' : 'lazy'}
           decoding="async"
           style={reduced ? undefined : { y: imageY }}
         />
@@ -1670,7 +1699,7 @@ const ChapterIntro = memo(({ chapter }: { chapter: AstroChapter }) => {
 
       <div className="mo-chapter-content">
         <p className="mo-chapter-kicker">
-          Sala {chapter.number.padStart(2, '0')} · {chapter.concepts.length} piezas
+          Capítulo {chapter.number.padStart(2, '0')} · {chapter.concepts.length} {chapter.concepts.length === 1 ? 'tema' : 'temas'}
         </p>
         <div className="mo-chapter-heading">
           <span aria-hidden="true">{chapter.number}</span>
@@ -2003,7 +2032,7 @@ const MenuOverlay = memo(({
                 type="button"
                 style={{ '--accent': chapter.color } as CSSProperties}
                 onClick={() => onGo(`sala-${chapter.id}`)}
-                data-cursor-label={`Sala ${chapter.number}`}
+                data-cursor-label={`Capítulo ${chapter.number.padStart(2, '0')}`}
               >
                 <b>{chapter.number}</b>
                 <span>{chapter.title}</span>
@@ -2061,7 +2090,6 @@ export default function MuseoOrbital() {
   const [activeHallId, setActiveHallId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [flight, setFlight] = useState(false);
-  const [eclipsedChapterId, setEclipsedChapterId] = useState<string | null>(null);
   const [playground, setPlayground] = useState(false);
   const [playgroundEntryState, setPlaygroundEntryState] = useState<PlaygroundEntryState>('idle');
   const [playgroundMusicMuted, setPlaygroundMusicMuted] = useState(loadPlaygroundMusicMuted);
@@ -2089,67 +2117,11 @@ export default function MuseoOrbital() {
   const playgroundAudioRequestId = useRef(0);
   const playgroundAudioTrackIndex = useRef(0);
   const playgroundAudioPreloaderRef = useRef<HTMLAudioElement | null>(null);
-  const railRef = useRef<HTMLElement>(null);
-  const railStarRef = useRef<HTMLElement>(null);
-  const railNodeRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const railFillRef = useRef<HTMLSpanElement>(null);
   const museumKeyboardVelocityRef = useRef(0);
 
   useScrollLock(Boolean(active));
   useScrollLock(playground);
-
-  const { scrollYProgress } = useScroll({ container: rootRef });
-  const railScale = useSpring(scrollYProgress, { stiffness: 90, damping: 24, mass: 0.4 });
-  const railStarTop = useTransform(railScale, [0, 1], ['2%', '98%']);
-
-  const syncRailEclipse = useCallback((progress: number) => {
-    const rail = railRef.current;
-    const star = railStarRef.current;
-    if (!rail || !star || rail.offsetHeight === 0) {
-      setEclipsedChapterId(null);
-      return;
-    }
-
-    const starCenter = rail.offsetHeight * (0.02 + clamp(progress, 0, 1) * 0.96);
-    const starDiameter = star.offsetHeight || 15;
-    let nextChapterId: string | null = null;
-    let nearestDistance = Number.POSITIVE_INFINITY;
-
-    railNodeRefs.current.forEach((node, index) => {
-      if (!node) return;
-      const nodeCenter = node.offsetTop + node.offsetHeight / 2;
-      const distance = Math.abs(starCenter - nodeCenter);
-      // El eclipse comienza cuando el centro del disco menor entra en el mayor:
-      // evita encender la corona con una sala activa pero todavía distante.
-      const collisionRadius = Math.min(starDiameter, node.offsetHeight) / 2;
-      if (distance <= collisionRadius && distance < nearestDistance) {
-        nearestDistance = distance;
-        nextChapterId = chapters[index]?.id ?? null;
-      }
-    });
-
-    setEclipsedChapterId((current) => (current === nextChapterId ? current : nextChapterId));
-  }, []);
-
-  useMotionValueEvent(railScale, 'change', syncRailEclipse);
-
-  useEffect(() => {
-    const rail = railRef.current;
-    if (!rail) return;
-
-    const sync = () => syncRailEclipse(railScale.get());
-    const resizeObserver = new ResizeObserver(sync);
-    resizeObserver.observe(rail);
-    railNodeRefs.current.forEach((node) => {
-      if (node) resizeObserver.observe(node);
-    });
-    const frame = requestAnimationFrame(sync);
-    window.addEventListener('resize', sync);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener('resize', sync);
-      resizeObserver.disconnect();
-    };
-  }, [railScale, syncRailEclipse]);
 
   const archiveSources = useMemo(buildArchive, []);
 
@@ -2971,19 +2943,55 @@ export default function MuseoOrbital() {
 
   useEffect(() => {
     const root = rootRef.current;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) setActiveHallId(entry.target.id.replace(/^sala-/, ''));
-        });
-      },
-      { root, rootMargin: '-42% 0px -42% 0px' },
-    );
-    [...chapters.map((chapter) => `sala-${chapter.id}`), 'vitrina', 'archivo'].forEach((id) => {
-      const element = document.getElementById(id);
-      if (element) observer.observe(element);
-    });
-    return () => observer.disconnect();
+    if (!root) return;
+
+    const sections = [...chapters.map((chapter) => ({ id: chapter.id, element: document.getElementById(`sala-${chapter.id}`) })),
+      { id: 'vitrina', element: document.getElementById('vitrina') },
+      { id: 'archivo', element: document.getElementById('archivo') }];
+    let frame = 0;
+    const syncActiveHall = () => {
+      frame = 0;
+      const readingLine = root.getBoundingClientRect().top + root.clientHeight * 0.45;
+      const sectionTops = sections.map(({ element }) => element?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY);
+      let nextId: string | null = null;
+      let activeIndex = -1;
+      for (let index = 0; index < sections.length; index += 1) {
+        if (sectionTops[index] > readingLine) break;
+        nextId = sections[index].id;
+        activeIndex = index;
+      }
+
+      const fill = railFillRef.current;
+      if (fill) {
+        let progress = 0;
+        if (activeIndex >= chapters.length) {
+          progress = 1;
+        } else if (activeIndex >= 0) {
+          const start = sectionTops[activeIndex];
+          const end = sectionTops[activeIndex + 1];
+          const chapterFraction = end > start
+            ? clamp((readingLine - start) / (end - start), 0, 1)
+            : 0;
+          const lastChapter = activeIndex === chapters.length - 1;
+          const segmentLength = lastChapter ? 0.5 : 1;
+          progress = (activeIndex + chapterFraction * segmentLength) / (chapters.length - 0.5);
+        }
+        fill.style.transform = `scaleY(${progress})`;
+      }
+      setActiveHallId((current) => current === nextId ? current : nextId);
+    };
+    const requestSync = () => {
+      if (!frame) frame = window.requestAnimationFrame(syncActiveHall);
+    };
+
+    requestSync();
+    root.addEventListener('scroll', requestSync, { passive: true });
+    window.addEventListener('resize', requestSync);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      root.removeEventListener('scroll', requestSync);
+      window.removeEventListener('resize', requestSync);
+    };
   }, []);
 
   const openJourneyConcept = useCallback((concept: AstroConcept) => {
@@ -3032,7 +3040,6 @@ export default function MuseoOrbital() {
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   let plateOffset = 0;
-  const activeHall = chapters.find((chapter) => chapter.id === activeHallId);
   const vitrineConcepts = getVitrineConcepts(vitrineIds);
   const activeUsesVitrineNavigation = readingContext === 'vitrine';
   const activeSiblings = activeUsesVitrineNavigation
@@ -3333,33 +3340,27 @@ export default function MuseoOrbital() {
         </p>
       </footer>
 
-      <aside ref={railRef} className="mo-rail" aria-label="Progreso del recorrido">
-        <div className="mo-rail-track">
-          <motion.div className="mo-rail-fill" style={{ scaleY: railScale }} />
-          <motion.i
-            ref={railStarRef}
-            className="mo-rail-star"
-            style={{ top: railStarTop }}
-            aria-hidden="true"
-          />
+      <nav className="mo-rail" aria-label="Navegación por capítulos">
+        <div className="mo-rail-track" aria-hidden="true">
+          <span ref={railFillRef} className="mo-rail-fill" />
         </div>
-        {chapters.map((chapter, index) => (
+        {chapters.map((chapter) => (
           <button
-            ref={(node) => {
-              railNodeRefs.current[index] = node;
-            }}
             key={chapter.id}
             type="button"
-            title={chapter.title}
-            className={eclipsedChapterId === chapter.id ? 'is-eclipsed' : ''}
-            aria-current={activeHallId === chapter.id ? 'step' : undefined}
+            className={activeHallId === chapter.id ? 'is-eclipsed' : ''}
+            aria-label={`Capítulo ${chapter.number.padStart(2, '0')}: ${chapter.title}`}
+            aria-current={activeHallId === chapter.id ? 'location' : undefined}
             onClick={() => scrollToId(`sala-${chapter.id}`)}
-          />
+          >
+            <span className="mo-rail-disc" aria-hidden="true" />
+            <span className="mo-rail-tooltip" aria-hidden="true">
+              <span>Capítulo {chapter.number.padStart(2, '0')}</span>
+              <strong>{chapter.title}</strong>
+            </span>
+          </button>
         ))}
-        <span className="mo-rail-label">
-          {activeHall ? `Sala ${activeHall.number} — ${activeHall.title}` : ''}
-        </span>
-      </aside>
+      </nav>
 
       <AnimatePresence>
         {menuOpen && (

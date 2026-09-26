@@ -8,10 +8,10 @@ import {
 } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { plausibilityLabels, scaleLabels } from '../../data/astroData';
+import { selectedStudyImage, selectedStudyImages } from '../../data/selectedStudyImages';
 import type { AstroChapter, AstroConcept } from '../../types';
 import { metricRows, metricValueLabel } from '../../data/metricProfile';
 import { getReadingConnections, type ReadingContext } from '../../data/readingJourney';
-import { getConceptImageVariants } from '../shared/conceptImages';
 import { ArticleReader } from '../shared/ArticleReader';
 import { ImageLightbox, type ImageLightboxImage } from '../shared/ImageLightbox';
 import './museoOrbital.css';
@@ -52,7 +52,16 @@ export const StudioRoom = ({
     setArticleLightboxOpen(open);
   }, []);
 
-  const variants = useMemo(() => getConceptImageVariants(concept), [concept]);
+  const variants = useMemo(() => {
+    const approved = selectedStudyImages[concept.id];
+    return approved?.map((src, index) => ({
+      id: `seleccion-${index}`,
+      label: index === 0 ? 'Principal' : `Adicional ${index}`,
+      src,
+      caption: index === 0 ? `${concept.title} · imagen principal` : `${concept.title} · imagen adicional`,
+    })) ?? [];
+  }, [concept]);
+  const approvedImage = selectedStudyImage(concept.id);
   const [variantIndex, setVariantIndex] = useState(0);
 
   const navigation = getReadingConnections(concept.id, siblings, navigationContext);
@@ -244,7 +253,7 @@ export const StudioRoom = ({
                   event.currentTarget.style.setProperty('--fry', '0deg');
                 }}
               >
-                <button
+                {approvedImage ? <button
                   type="button"
                   className="mo-studio-image-open"
                   onClick={() => setLightboxImage({
@@ -276,9 +285,9 @@ export const StudioRoom = ({
                       </div>
                     </div>
                   </motion.div>
-                </button>
+                </button> : <span className="mo-image-pending" role="img" aria-label={`Imagen de ${concept.title} pendiente de selección`}>Imagen pendiente de selección</span>}
 
-                {variants.length > 1 && (
+                {approvedImage && variants.length > 1 && (
                   <>
                     <button
                       type="button"
@@ -301,10 +310,10 @@ export const StudioRoom = ({
                   </>
                 )}
 
-                <figcaption>{variant.caption}</figcaption>
+                {approvedImage && <figcaption>{variant.caption}</figcaption>}
               </div>
 
-              {variants.length > 1 && (
+              {approvedImage && variants.length > 1 && (
                 <div className="mo-filmstrip" role="group" aria-label="Capas visuales de la obra">
                   {variants.map((item, itemIndex) => (
                     <button
@@ -325,7 +334,7 @@ export const StudioRoom = ({
 
             <div className="mo-studio-brief">
               <p className="mo-kicker">
-                Sala de estudio — Sala {chapter.number}, {chapter.title}
+                Sala de estudio · Capítulo {chapter.number.padStart(2, '0')}, {chapter.title}
               </p>
               <h2>{concept.title}</h2>
               <div className="mo-chip-row">

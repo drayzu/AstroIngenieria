@@ -128,12 +128,72 @@ const studyRoomImageAssetOverrides: Record<string, string> = {
   'dark-forest': 'dark-forest-v01.webp',
 };
 
+const studyRoomAdditionalImageVersions: Record<string, readonly string[]> = {
+  astroingenieria: ['v05', 'v06', 'v07', 'v08'],
+  'artificial-gravity': ['v05', 'v06', 'v07', 'v08'],
+  ringworld: ['v06', 'v07', 'v08', 'v09'],
+  'reusable-launch': ['v03', 'v04', 'v05', 'v06'],
+  'space-elevator': ['v05', 'v06', 'v07', 'v08'],
+  skyhook: ['v04', 'v05', 'v06', 'v07'],
+  'orbital-ring': ['v05', 'v06', 'v07', 'v08'],
+  'launch-loop': ['v04', 'v05', 'v06', 'v07'],
+  'mass-driver': ['v04', 'v05', 'v06', 'v07'],
+  astrobiology: ['v06', 'v07', 'v08', 'v09'],
+  'habitable-zone': ['v05', 'v06', 'v07', 'v08'],
+  habitability: ['v04', 'v05', 'v06', 'v07'],
+  paraterraforming: ['v05', 'v06', 'v07', 'v08'],
+  worldhouse: ['v04', 'v05', 'v06', 'v07'],
+  'mars-terraforming': ['v05', 'v06', 'v07', 'v08'],
+  'asteroid-habitat': ['v03', 'v04', 'v05', 'v06', 'v07'],
+  worldship: ['v02'],
+  iss: ['v03', 'v04', 'v05', 'v06', 'v07'],
+  'life-support': ['v03', 'v04', 'v05', 'v06', 'v07'],
+  'bernal-sphere': ['v09', 'v10', 'v11', 'v12', 'v13'],
+  'stanford-torus': ['v06', 'v07', 'v08', 'v09', 'v10'],
+  'oneill-cylinder': ['v05', 'v06', 'v07', 'v08', 'v09'],
+  'bishop-ring': ['v05', 'v06', 'v07', 'v08', 'v09'],
+  'mckendree-cylinder': ['v09', 'v10', 'v11', 'v12', 'v13'],
+  'orbital-ports': ['v03', 'v04', 'v05', 'v06', 'v07'],
+  'fuel-depots': ['v03', 'v04', 'v05', 'v06', 'v07'],
+  'lunar-bases': ['v03', 'v04', 'v05', 'v06', 'v07'],
+  isru: ['v03', 'v04', 'v05', 'v06', 'v07'],
+  'asteroid-mining': ['v03', 'v04', 'v05', 'v06', 'v07'],
+  shipyards: ['v03', 'v04', 'v05', 'v06', 'v07'],
+  tethers: ['v03', 'v04', 'v05', 'v06', 'v07'],
+  'domed-cities': ['v03', 'v04', 'v05', 'v06', 'v07'],
+  terraforming: ['v03', 'v04', 'v05', 'v06', 'v07'],
+  'venus-terraforming': ['v03', 'v04', 'v05', 'v06', 'v07'],
+  'orbital-mirrors': ['v03'],
+  'space-law': ['v03', 'v04', 'v05', 'v06', 'v07', 'v08'],
+  exoplanets: ['v04', 'v05', 'v06', 'v07', 'v08', 'v09'],
+  caplan: ['v03', 'v04'],
+  'stellar-navigation': ['v03', 'v04'],
+  'plasma-processing': ['v03', 'v04'],
+  'stellar-husbandry': ['v03', 'v04'],
+  'black-hole-engineering': ['v03', 'v04'],
+  'tipo-i': ['v03', 'v04'],
+  'civilizaciones-digitales': ['v03', 'v04'],
+  postbiological: ['v03', 'v04'],
+  'von-neumann': ['v03', 'v04'],
+  'civilizaciones-y-luz': ['v03', 'v04'],
+  'deep-time': ['v03', 'v04'],
+  'future-universe': ['v03', 'v04'],
+  seti: ['v03', 'v04'],
+  'radio-seti': ['v03', 'v04'],
+  'optical-seti': ['v03', 'v04'],
+  'zoo-hypothesis': ['v02', 'v03'],
+  'dark-forest': ['v02', 'v03'],
+  'grabby-aliens': ['v03', 'v04'],
+  'civilizaciones-silenciosas': ['v03', 'v04'],
+  berserker: ['v03', 'v04'],
+};
+
 export const chapterVisuals = {
   intro: {
-    heroImage: `${assetBase}illustrations/ai/intro.webp`,
+    heroImage: `${assetBase}illustrations/ai/intro-keyframe-v01.webp`,
     missionLabel: 'Mission 00 / Astroengineering',
     cta: 'Iniciar recorrido',
-    visualFocus: 'Infraestructura orbital en construcción como símbolo de ingeniería a escala civilizatoria.',
+    visualFocus: 'Un módulo de carga despega de la Luna, con la Tierra y un hábitat orbital en el horizonte.',
     aiPrompt:
       'Realistic cinematic aerospace image of orbital construction yard and rotating habitat above Earth at sunrise, dark SpaceX-inspired unbranded style, no text, no logos.',
   },
@@ -155,18 +215,18 @@ export const chapterVisuals = {
       'Photorealistic orbital shipyard and logistics hub over Earth with fuel depots, docking ports, cargo tugs and tether elements, dark cinematic aerospace style.',
   },
   energy: {
-    heroImage: `${assetBase}illustrations/ai/energy.webp`,
+    heroImage: `${assetBase}illustrations/ai/stellar-a-v02.webp`,
     missionLabel: 'Mission 03 / Stellar Energy',
     cta: 'Capturar energía',
-    visualFocus: 'Enjambres Dyson, colectores solares, radiadores y transmisión energética a escala estelar.',
+    visualFocus: 'Paneles reflectantes de escala estelar bajo la luz de una estrella, con un robot de mantenimiento en primer plano.',
     aiPrompt:
       'Photorealistic Dyson swarm around a star, realistic solar collectors, radiators and relay satellites, high contrast dark scientific aerospace look.',
   },
   propulsion: {
-    heroImage: `${assetBase}illustrations/ai/propulsion.webp`,
+    heroImage: `${assetBase}illustrations/ai/viaje-interestelar-panorama-a-v01.webp`,
     missionLabel: 'Mission 04 / Advanced Propulsion',
     cta: 'Ver propulsión',
-    visualFocus: 'Naves de espacio profundo, radiadores, plasma y sistemas de propulsión de frontera.',
+    visualFocus: 'Nave interestelar sobre un paisaje helado ante un gigante anillado y un cielo estrellado.',
     aiPrompt:
       'Photorealistic deep-space vehicle near Earth with nuclear electric propulsion, radiators, plasma exhaust and laser sail test craft, dark unbranded style.',
   },
@@ -741,16 +801,25 @@ const getConceptIllustration = (
     : hasUpdatedStudyRoomImage
       ? `${assetBase}illustrations/ai/concepts/${chapterId}/${id}-v02.webp`
       : `${assetBase}illustrations/ai/concepts/${chapterId}/${id}.webp`;
-  const gallery = hasUpdatedStudyRoomImage
-    ? [{
+  const additionalVersions = studyRoomAdditionalImageVersions[id] ?? [];
+  const gallery = [
+    ...(hasUpdatedStudyRoomImage ? [{
         label: 'Versión anterior',
         src: `${assetBase}illustrations/ai/concepts/${chapterId}/${id}.webp`,
         alt: `Versión anterior de la imagen de ${title}`,
         prompt: 'Imagen principal anterior, conservada como alternativa en la sala de estudio.',
         style: 'Realismo científico cinematográfico.',
         credit: 'Imagen original del atlas, conservada como versión anterior.',
-      }]
-    : undefined;
+      }] : []),
+    ...additionalVersions.map((version, index) => ({
+      label: `Escena alternativa ${index + 1}`,
+      src: `${assetBase}illustrations/ai/concepts/${chapterId}/${id}-${version}.webp`,
+      alt: `Escena cinematográfica adicional ${index + 1} de ${title}`,
+      prompt: 'Render cinematográfico adicional del concepto.',
+      style: 'Render cinematográfico realista.',
+      credit: 'Imagen generada con la herramienta integrada imagegen para el atlas.',
+    })),
+  ];
 
   if (habitatPrompt) {
     return {
@@ -761,7 +830,7 @@ const getConceptIllustration = (
         'Realismo científico cinematográfico, negro dominante, iluminación aeroespacial sobria, continuidad visual con las imágenes IA de la portada.',
       credit:
         'Imagen IA WebP generada para el atlas con composicion cinematografica y realismo cientifico especifico del concepto.',
-      ...(gallery ? { gallery } : {}),
+      ...(gallery.length ? { gallery } : {}),
       ...(habitatInteriorAssets.has(id)
         ? {
             interior: {
@@ -792,7 +861,7 @@ const getConceptIllustration = (
     style:
       'Realismo cientifico cinematografico, negro dominante, iluminacion aeroespacial sobria, sin texto incrustado.',
     credit: 'Imagen IA WebP generada para el atlas con realismo cientifico especifico del concepto.',
-    ...(gallery ? { gallery } : {}),
+    ...(gallery.length ? { gallery } : {}),
   };
 };
 

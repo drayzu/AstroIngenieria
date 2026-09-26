@@ -182,6 +182,12 @@ body:has(.mo-root) {
   background-position: center 30%;
 }
 
+@media (max-width: 720px) {
+  .mo-hero-bg-static {
+    background-position: 25% 30%;
+  }
+}
+
 .mo-hero-depth-original,
 .mo-hero-depth-plates,
 .mo-hero-depth-layer {
@@ -569,25 +575,14 @@ body:has(.mo-root) {
 
 .mo-wall {
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  /* Bandas de cielo entre filas: las constelaciones respiran */
-  gap: 140px 52px;
-  width: min(1280px, 100%);
+  grid-template-columns: minmax(0, 1fr);
+  gap: 92px;
+  width: min(960px, 100%);
   margin: 0 auto;
 }
 
 .mo-obra {
-  grid-column: span 6;
-}
-
-/* Ritmo vertical suave, sin rotaciones: las piezas pares bajan un respiro.
-   Va en .mo-obra-hit porque motion.article deja transform inline en .mo-obra */
-.mo-obra:not(.is-featured):nth-child(even) .mo-obra-hit {
-  transform: translateY(48px);
-}
-
-.mo-obra.is-featured {
-  grid-column: span 12;
+  min-width: 0;
 }
 
 .mo-obra-hit {
@@ -612,19 +607,46 @@ body:has(.mo-root) {
 }
 
 .mo-frame-mask {
+  position: relative;
+  aspect-ratio: 21 / 9;
   overflow: hidden;
 }
 
 .mo-frame img {
+  display: block;
   width: 100%;
-  aspect-ratio: 16 / 10;
+  height: 100%;
   object-fit: cover;
+  translate: var(--img-x, 0px) var(--img-y, 0px);
   filter: saturate(0.85);
   transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s ease;
 }
 
-.mo-obra.is-featured .mo-frame img {
-  aspect-ratio: 16 / 7.2;
+.mo-frame .mo-frame-alternate {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.mo-image-pending {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  color: rgba(245, 241, 232, 0.54);
+  background: linear-gradient(135deg, #121517, #090b0c 55%, #16181a);
+  font-family: var(--mo-mono);
+  font-size: clamp(10px, 1vw, 13px);
+  letter-spacing: 0.16em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.mo-studio-figure > .mo-image-pending {
+  position: absolute;
+  inset: 0;
 }
 
 .mo-frame-glow {
@@ -682,81 +704,139 @@ body:has(.mo-root) {
 /* ---------- RAIL ---------- */
 
 .mo-rail {
+  --rail-node-height: clamp(32px, 4.4vh, 40px);
   position: fixed;
-  right: 20px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
   z-index: 35;
-  padding: 10px 0;
+  padding: 7px 0;
 }
 
 .mo-rail-track {
   position: absolute;
-  top: 0;
-  bottom: 0;
+  top: calc(7px + var(--rail-node-height) / 2);
+  bottom: 7px;
+  left: 50%;
   width: 2px;
+  transform: translateX(-50%);
   background: rgba(245, 241, 232, 0.14);
+  pointer-events: none;
 }
 
 .mo-rail-fill {
+  display: block;
   width: 100%;
   height: 100%;
-  background: linear-gradient(180deg, rgba(245, 241, 232, 0.18), rgba(245, 241, 232, 0.52));
+  background: linear-gradient(180deg, rgba(201, 168, 106, 0.35), #c9a86a);
+  transform: scaleY(0);
   transform-origin: top center;
+  will-change: transform;
 }
 
 .mo-rail button {
   position: relative;
   z-index: 1;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  border: 1px solid rgba(245, 241, 232, 0.4);
-  background: var(--mo-bg);
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: var(--rail-node-height);
   padding: 0;
-  transition: background 0.25s ease, transform 0.25s ease, border-color 0.25s ease,
-    box-shadow 0.25s ease;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
 }
 
-.mo-rail button:hover {
-  border-color: var(--mo-ink);
+.mo-rail button:hover,
+.mo-rail button:focus-visible {
+  z-index: 2;
 }
 
-.mo-rail button.is-eclipsed {
+.mo-rail button:focus-visible {
+  outline: 2px solid #f3dfac;
+  outline-offset: -2px;
+}
+
+.mo-rail-disc {
+  position: relative;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(245, 241, 232, 0.6);
+  border-radius: 50%;
   background: var(--mo-bg);
-  border-color: rgba(245, 241, 232, 0.96);
-  transform: scale(1.28);
-  box-shadow:
-    inset 0 0 0 2px rgba(7, 7, 7, 0.9),
-    0 0 0 3px rgba(201, 168, 106, 0.3),
-    0 0 15px rgba(201, 168, 106, 0.42);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.mo-rail-label {
+.mo-rail button:hover .mo-rail-disc,
+.mo-rail button:focus-visible .mo-rail-disc {
+  border-color: var(--mo-ink);
+  transform: scale(1.18);
+}
+
+.mo-rail button.is-eclipsed .mo-rail-disc {
+  border-color: #f3dfac;
+  box-shadow:
+    0 0 0 3px rgba(201, 168, 106, 0.25),
+    0 0 14px rgba(201, 168, 106, 0.55);
+  transform: scale(1.12);
+}
+
+.mo-rail button.is-eclipsed .mo-rail-disc::after {
+  content: '';
   position: absolute;
-  right: 30px;
+  inset: 4px;
+  border-radius: 50%;
+  background: #c9a86a;
+}
+
+.mo-rail-tooltip {
+  position: absolute;
+  right: calc(100% + 13px);
   top: 50%;
-  transform: translateY(-50%);
-  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 155px;
+  max-width: 220px;
+  padding: 9px 12px;
+  border: 1px solid rgba(201, 168, 106, 0.35);
+  border-radius: 7px;
+  background: rgba(7, 7, 7, 0.96);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  color: var(--mo-ink);
+  text-align: left;
+  transform: translate(5px, -50%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+}
+
+.mo-rail-tooltip span {
   font-family: var(--mo-mono);
   font-size: 9px;
-  letter-spacing: 0.24em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(245, 241, 232, 0.75);
-  background: rgba(7, 7, 7, 0.9);
-  border: 1px solid var(--mo-line);
-  padding: 6px 10px;
-  opacity: 0;
-  transition: opacity 0.25s ease;
-  pointer-events: none;
+  color: #c9a86a;
 }
 
-.mo-rail:hover .mo-rail-label {
+.mo-rail-tooltip strong {
+  font-family: var(--mo-sans);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.mo-rail button:hover .mo-rail-tooltip,
+.mo-rail button:focus-visible .mo-rail-tooltip {
   opacity: 1;
+  visibility: visible;
+  transform: translate(0, -50%);
 }
 
 /* ---------- SALA DE ESTUDIO ---------- */
@@ -941,7 +1021,8 @@ body:has(.mo-root) {
 
 .mo-studio-figure {
   position: relative;
-  min-height: clamp(380px, 62vh, 700px);
+  width: 100%;
+  aspect-ratio: 21 / 9;
   background: #060606;
   overflow: hidden;
 }
@@ -959,7 +1040,7 @@ body:has(.mo-root) {
 .mo-studio-zoomer img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .mo-studio-image-open {
@@ -1235,8 +1316,7 @@ body:has(.mo-root) {
 }
 
 .mo-studio-figure-col .mo-studio-figure {
-  flex: 1;
-  min-height: 380px;
+  flex: 0 0 auto;
 }
 
 .mo-filmstrip {
@@ -1311,7 +1391,7 @@ body:has(.mo-root) {
 
 .mo-reader-figure-frame img {
   width: 100%;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 21 / 9;
   object-fit: cover;
   display: block;
   filter: saturate(0.85) contrast(1.04);
@@ -2959,10 +3039,6 @@ body:has(.mo-root) {
 /* ---------- RESPONSIVE ---------- */
 
 @media (max-width: 1180px) {
-  .mo-studio-figure {
-    height: min(46vh, 380px);
-  }
-
   .mo-studio-brief {
     border-left: none;
     border-top: 1px solid var(--mo-line);
@@ -2975,22 +3051,8 @@ body:has(.mo-root) {
 }
 
 @media (max-width: 1080px) {
-  .mo-obra,
-  .mo-obra.is-featured {
-    grid-column: span 12;
-  }
-
-  /* Apila limpio: sin canal central ni scatter flotante en pantallas estrechas */
   .mo-wall {
-    gap: 48px 28px;
-  }
-
-  .mo-obra:not(.is-featured):nth-child(n) {
-    grid-column: span 12;
-  }
-
-  .mo-obra:not(.is-featured):nth-child(n) .mo-obra-hit {
-    transform: none;
+    gap: 64px;
   }
 
   .mo-rail {
@@ -3256,7 +3318,7 @@ body:has(.mo-root) {
 .mo-kb img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 @keyframes mo-kenburns {
@@ -3276,27 +3338,6 @@ body:has(.mo-root) {
   background: linear-gradient(90deg, var(--accent), #f5f1e8);
   transform-origin: left center;
   pointer-events: none;
-}
-
-/* Pulso del rail activo */
-
-@keyframes mo-rail-pulse {
-  0%, 100% {
-    box-shadow:
-      inset 0 0 0 2px rgba(7, 7, 7, 0.9),
-      0 0 0 3px rgba(201, 168, 106, 0.24),
-      0 0 10px rgba(201, 168, 106, 0.28);
-  }
-  50% {
-    box-shadow:
-      inset 0 0 0 2px rgba(7, 7, 7, 0.9),
-      0 0 0 4px rgba(201, 168, 106, 0.4),
-      0 0 18px rgba(201, 168, 106, 0.5);
-  }
-}
-
-.mo-rail button.is-eclipsed {
-  animation: mo-rail-pulse 2.4s ease-in-out infinite;
 }
 
 /* Marquee dinamico */
@@ -3365,14 +3406,6 @@ body:has(.mo-root) {
   z-index: 128;
   pointer-events: none;
   mix-blend-mode: screen;
-}
-
-/* Contadores del hero */
-
-.mo-counter {
-  font-family: var(--mo-mono);
-  font-weight: 400;
-  color: color-mix(in srgb, var(--accent, #c9a86a) 80%, white);
 }
 
 /* Parallax interno del marco */
@@ -3456,12 +3489,15 @@ body:has(.mo-root) {
 }
 
 @media (max-width: 720px) {
+  .mo-hero-copy {
+    padding-bottom: 20px;
+  }
+
   .mo-sky-hint {
     box-sizing: border-box;
-    width: calc(100vw - 32px);
-    right: auto;
-    left: 16px;
-    bottom: 10px;
+    position: static;
+    width: calc(100vw - 48px);
+    margin-top: 24px;
     justify-content: center;
     flex-wrap: wrap;
     gap: 8px 12px;
@@ -3619,21 +3655,4 @@ body:has(.mo-root) {
 
 @keyframes mo-spin-flat {
   to { transform: rotate(360deg); }
-}
-
-/* Estrella cabeza del rail */
-
-.mo-rail-star {
-  position: absolute;
-  left: 50%;
-  box-sizing: border-box;
-  width: 15px;
-  height: 15px;
-  margin: -7.5px 0 0 -7.5px;
-  border-radius: 50%;
-  background: #c9a86a;
-  border: 1px solid #f3dfac;
-  box-shadow:
-    0 0 10px 2px rgba(201, 168, 106, 0.78),
-    0 0 22px 6px rgba(201, 168, 106, 0.38);
 }

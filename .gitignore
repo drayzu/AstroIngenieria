@@ -16,6 +16,7 @@ dist-ssr
 # Generated review and working artifacts
 output/
 tmp/
+deliverables/
 
 # Editor directories and files
 .vscode/*
