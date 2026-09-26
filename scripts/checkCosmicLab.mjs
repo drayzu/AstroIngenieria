@@ -2,10 +2,20 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
 
-// Load the actual standalone engine without generating files in the source tree.
-const source = await readFile(new URL('../src/designs/museo-orbital/CosmicLab.ts', import.meta.url), 'utf8');
-const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.ESNext } }).outputText;
-const { CosmicLab, circleEntry, holeAcceleration } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
+// Transpile the actual module graph; type-only imports disappear before recursion.
+const modules = new Map();
+async function load(url) {
+  if (modules.has(url.href)) return modules.get(url.href);
+  const source = await readFile(url, 'utf8');
+  let compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.ESNext } }).outputText;
+  for (const match of [...compiled.matchAll(/from ['"](\.[^'"]+)['"]/g)]) {
+    const dependency = await load(new URL(match[1] + '.ts', url));
+    compiled = compiled.replace(match[0], `from '${dependency}'`);
+  }
+  const result = `data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`;
+  modules.set(url.href, result); return result;
+}
+const { CosmicLab, circleEntry, holeAcceleration, LAB_TOOLS } = await import(await load(new URL('../src/designs/museo-orbital/CosmicLab.ts', import.meta.url)));
 let checks = 0;
 function check(label, fn) { fn(); checks++; console.log(`✓ ${label}`); }
 function engine() {
@@ -150,5 +160,106 @@ check('Clear, resize, limits and expiration leave finite, bounded state', () => 
   lab.resize(400, 600); assert.ok(lab.portal.a.x > 0 && lab.portal.b.x < 400);
   advance(lab, 95); assert.equal(lab.holes.length + lab.clouds.length + lab.plasmas.length, 0); assert.equal(lab.portal, null);
   lab.clear(); assert.equal(lab.tool, 'hand'); assert.equal(lab.pending, null);
+});
+check('Registry exposes 24 unique new experiments and preserves all eight shortcuts', () => {
+  assert.equal(LAB_TOOLS.length, 33);
+  assert.equal(new Set(LAB_TOOLS.map(t => t.id)).size, 33);
+  assert.equal(LAB_TOOLS.filter(t => t.fresh).length, 24);
+  assert.deepEqual(LAB_TOOLS.filter(t => t.key).map(t => t.key), ['0', '1', '2', '3', '4', '5', '6', '7', '9']);
+});
+for (const tool of LAB_TOOLS.filter(t => t.fresh)) check(`${tool.name}: creation, manipulation, rollback, resize, cleanup`, () => {
+  const { lab } = engine();
+  place(lab, tool.id, 500, 300);
+  const f = lab.collection.effects[0]; assert.equal(f.id, tool.id); assert.equal(lab.tool, 'hand');
+  lab.step(1 / 60, []);
+  const handle = { ...f.handles[0] };
+  const before = JSON.stringify(f);
+  assert.ok(lab.down(handle)); lab.move({ x: handle.x + 37, y: handle.y + 29 });
+  assert.notEqual(JSON.stringify(f), before, 'Gesture changes actual phenomenon state');
+  assert.ok(lab.cancel()); assert.equal(JSON.stringify(f), before, 'Escape rolls back manipulation');
+  lab.down(handle); lab.move({ x: handle.x + 37, y: handle.y + 29 }); lab.up(); lab.step(1 / 60, []);
+  assert.notEqual(JSON.stringify(f), before);
+  lab.resize(390, 844); assert.ok(Number.isFinite(f.x + f.y));
+  lab.clear(); assert.equal(lab.collection.effects.length, 0); assert.equal(lab.collection.beams.length, 0);
+});
+check('Drag creation cancels cleanly, and repeat retains the chosen tool', () => {
+  const { lab } = engine(); lab.select('asteroids'); lab.down({ x: 300, y: 300 }); lab.move({ x: 600, y: 350 });
+  assert.ok(lab.collection.effects.length); lab.cancel(); assert.equal(lab.collection.effects.length, 0); assert.equal(lab.lastTool, 'asteroids');
+});
+check('Asteroids and meteors share fast portal transport and broad gravity', () => {
+  for (const tool of ['asteroids', 'meteors']) {
+    const { lab } = engine(); place(lab, tool, 180, 300); lab.select('portal'); lab.down({ x: 300, y: 300 }); lab.down({ x: 900, y: 300 });
+    const g = lab.collection.effects[0].grains[0]; Object.assign(g, projectile(200, 300, 90));
+    lab.step(1 / 30, []); assert.ok(g.x > 950, `${tool} crosses a portal during a fast step`);
+    lab.clear(); place(lab, tool, 180, 300); place(lab, 'hole', 700, 400);
+    const rock = lab.collection.effects[0].grains[0]; Object.assign(rock, projectile(190, 250, 0));
+    lab.step(1 / 30, []); assert.ok(rock.vx > 0 && rock.vy > 0, `${tool} feels distant gravity`);
+  }
+});
+check('Split and reflected light accelerate sails, with bounded ray paths', () => {
+  const { lab } = engine(); place(lab, 'prism', 300, 300); lab.step(1 / 60, []);
+  assert.equal(lab.collection.beams.length, 6);
+  const ray = lab.collection.beams[2], p = { x: (ray.a.x + ray.b.x) / 2, y: (ray.a.y + ray.b.y) / 2 };
+  const sail = projectile(p.x, p.y, 0); lab.collection.pressure(sail, 1); assert.ok(Math.hypot(sail.vx, sail.vy) > 0);
+  lab.clear(); place(lab, 'mirrors', 300, 300); lab.step(1 / 60, []);
+  assert.ok(lab.collection.beams.length > 1); assert.ok(lab.collection.beams.length <= 5);
+  const reflected = lab.collection.beams[1]; assert.ok(Math.abs(reflected.b.y - reflected.a.y) > 100);
+});
+check('Impacts illuminate auroras, excite networks, open ring gaps and feed quasars', () => {
+  for (const tool of ['aurora', 'web', 'rings', 'quasar']) {
+    const { lab } = engine(); place(lab, tool, 500, 300);
+    lab.step(1 / 30, [projectile(300, 300, 150)]);
+    const f = lab.collection.effects[0]; assert.ok(f.energy > 0 || f.pulses.length > 0, tool);
+  }
+});
+check('Plasma arcs light auroras and bow shocks transfer momentum to existing gas', () => {
+  const { lab } = engine(); place(lab, 'aurora', 500, 300); place(lab, 'plasma', 500, 400); lab.step(1 / 60, []);
+  assert.ok(lab.collection.effects[0].energy > 0);
+  lab.clear(); place(lab, 'nebula', 500, 300); place(lab, 'bow', 500, 300);
+  lab.down({ x: 500, y: 300 }); lab.move({ x: 535, y: 300 }); lab.up();
+  const momentum = () => lab.clouds[0].particles.reduce((s, p) => s + p.vx, 0);
+  const before = momentum(); lab.step(.05, []); assert.ok(momentum() > before + 100);
+});
+check('Kilonova merges, tidal moon breaks, accretion grows and a pinched vortex releases bounded jets', () => {
+  const { lab, jets } = engine(); place(lab, 'kilonova', 500, 300);
+  let f = lab.collection.effects[0]; lab.down(f.handles[0]); lab.move(f.handles[1]); lab.up(); lab.step(.05, []); assert.equal(f.values[0], 1);
+  lab.clear(); place(lab, 'tidal', 500, 300); f = lab.collection.effects[0]; lab.down(f.handles[0]); lab.move({ x: 550, y: 300 }); lab.up(); lab.step(.05, []); assert.equal(f.values[1], 1);
+  lab.clear(); place(lab, 'accretion', 500, 300); f = lab.collection.effects[0]; lab.down(f); lab.move(f.grains[0]); lab.up(); lab.step(.05, []); assert.ok(f.values[1] > 0);
+  lab.clear(); place(lab, 'vortex', 500, 300); f = lab.collection.effects[0]; lab.down(f.handles[0]); lab.move({ x: 527, y: 300 }); lab.up(); lab.step(.05, []); assert.ok(jets.length > 0 && jets.length <= 12);
+  advance(lab, 2); assert.ok(jets.length <= 12, 'Release emits once');
+});
+check('Ten simulated minutes keep allocation, ray paths and coordinates bounded', () => {
+  const { lab } = engine(); const tools = LAB_TOOLS.filter(t => t.fresh);
+  for (let frame = 0; frame < 7500; frame++) {
+    if (frame % 80 === 0) place(lab, tools[(frame / 80 | 0) % tools.length].id, 300 + frame % 500, 300);
+    lab.step(.08, []);
+    assert.ok(lab.collection.particleCount <= 1600); assert.ok(lab.collection.effects.length <= 12); assert.ok(lab.collection.beams.length <= 200);
+    for (const f of lab.collection.effects) for (const p of [f, ...f.grains, ...f.handles]) assert.ok(Number.isFinite(p.x + p.y));
+  }
+  advance(lab, 95); assert.equal(lab.collection.effects.length, 0);
+});
+check('Asteroid impacts split into recycled fragments without increasing allocation', () => {
+  const { lab } = engine(); place(lab, 'asteroids', 500, 300);
+  const f = lab.collection.effects[0], rock = f.grains[0]; rock.size = 3;
+  const slots = f.grains.length, live = f.grains.filter(g => g.life > 0).length;
+  lab.step(.02, [projectile(rock.x, rock.y, 5)]);
+  assert.equal(f.grains.length, slots); assert.ok(f.grains.filter(g => g.life > 0).length > live); assert.ok(rock.size < 2);
+});
+check('A captured meteor slot can emit again without retaining the old capture', () => {
+  const { lab } = engine(); place(lab, 'meteors', 200, 300); place(lab, 'hole', 700, 300);
+  const f = lab.collection.effects[0], g = f.grains[0]; Object.assign(g, projectile(700, 300, 0));
+  lab.step(.05, []); advance(lab, 1);
+  let escaped = false;
+  for (let i = 0; i < 200; i++) { lab.step(.02, []); if (g.life > 0 && g.x < 400 && g.size > 1) escaped = true; }
+  assert.ok(escaped, 'Recycled meteor leaves its emitter again');
+});
+check('Adaptive detail follows real frame duration, not the simulation speed control', () => {
+  const { lab } = engine(); place(lab, 'vortex', 500, 300);
+  for (let i = 0; i < 100; i++) lab.step(.08, [], 1 / 60);
+  assert.equal(lab.collection.quality, 1);
+  for (let i = 0; i < 60; i++) lab.step(.02, [], .06);
+  assert.equal(lab.collection.quality, .5);
+  for (let i = 0; i < 240; i++) lab.step(.02, [], 1 / 60);
+  assert.equal(lab.collection.quality, 1);
 });
 console.log(`\n${checks} cosmic laboratory checks passed.`);

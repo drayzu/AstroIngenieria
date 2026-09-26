@@ -3,7 +3,6 @@ import { AnimatePresence } from 'framer-motion';
 import { loadArticle } from '../../data/articles/loadArticle';
 import type { ConceptArticle } from '../../data/articles/model';
 import type { AstroConcept } from '../../types';
-import { getConceptImageVariants } from './conceptImages';
 import { ImageLightbox, type ImageLightboxImage } from './ImageLightbox';
 import './articleReader.css';
 
@@ -36,7 +35,8 @@ export function ArticleReader({ concept, onLightboxOpenChange }: ArticleReaderPr
     window.location.reload();
   }}>Recargar lectura</button></div>;
   if (!content || content.id !== concept.id) return <div className="ar-status" role="status" aria-live="polite">Preparando la lectura…</div>;
-  const variants = getConceptImageVariants(concept);
+  // Las imágenes del artículo se incorporarán solo cuando se seleccionen para esa sección.
+  const variants: { id: string; src: string; caption?: string }[] = [];
   const openLightbox = (image: ImageLightboxImage) => {
     onLightboxOpenChange?.(true);
     setLightboxImage(image);

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { CosmicLab, LAB_TOOLS, holeAcceleration, type LabState, type LabTool } from './CosmicLab';
+import { CosmicLab, LAB_TOOLS, holeAcceleration, type LabState, type LabCommand } from './CosmicLab';
 import { CosmicLabPanel } from './CosmicLabPanel';
 import { CursorConstellationLayer } from './CursorConstellationLayer';
 import {
@@ -553,7 +553,7 @@ export const StarfieldCanvas = ({
 }: StarfieldProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [labUi, setLabUi] = useState<LabState | null>(null);
-  const labCommandRef = useRef<(command: LabTool | 'clear' | 'exit') => void>(() => {});
+  const labCommandRef = useRef<(command: LabCommand) => void>(() => {});
   const fxRef = useRef<HTMLCanvasElement>(null);
   const trailRef = useRef<HTMLCanvasElement>(null);
   const dimRef = useRef(dim);
@@ -2261,6 +2261,8 @@ export const StarfieldCanvas = ({
       clearCharge();
       if (command === 'clear') clearLab();
       else if (command === 'exit') exitSandbox();
+      else if (command === 'repeat') { if (cosmicLab.lastTool) cosmicLab.select(cosmicLab.lastTool); }
+      else if (typeof command === 'object') { clearLab(); cosmicLab.select(command.solo); }
       else cosmicLab.select(command);
     };
 
@@ -2312,7 +2314,7 @@ export const StarfieldCanvas = ({
       const labStep = sandboxActive ? Math.min(0.08, labDt) * 60 : 1;
       if (sandboxActive) {
         cosmicLab.resize(width, height);
-        cosmicLab.step(labDt, comets);
+        cosmicLab.step(labDt, comets, cursorDt);
       }
       // Entrada al sandbox: Q+E mantenidas 2s en el museo
       if (import.meta.env.DEV && !sandboxActive && !playgroundRef.current && labQHeld && labEHeld) {

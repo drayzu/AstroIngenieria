@@ -75,16 +75,12 @@ try {
         assert(mainWordCount >= editorialMinimums[editorial.category], `Insufficient editorial content: ${item.id} (${mainWordCount}/${editorialMinimums[editorial.category]} main words)`);
         editoriallyReviewed++;
       }
-      if (concept.sourceChapterId === 'intro' || concept.sourceChapterId === 'habitats') {
-        const expectedVariants = variants
-          .filter(variant => !['exterior', 'versión anterior'].includes(variant.id))
-          .map(variant => variant.id);
-        const imageBlocks = item.blocks.filter(block => block.kind === 'image');
-        assert.equal(imageBlocks.length, expectedVariants.length, `Image coverage count: ${item.id}`);
-        for (const variant of expectedVariants) {
-          assert.equal(imageBlocks.filter(block => block.variant === variant).length, 1, `Image coverage ${variant}: ${item.id}`);
-        }
-      }
+      const imageBlocks = item.blocks.filter(block => block.kind === 'image');
+      assert.equal(
+        new Set(imageBlocks.map(block => block.variant)).size,
+        imageBlocks.length,
+        `Repeated image variant: ${item.id}`,
+      );
       words += count;
     }
     console.log(`${chapter.id}: ${chapter.concepts.length} lecturas verificadas`);

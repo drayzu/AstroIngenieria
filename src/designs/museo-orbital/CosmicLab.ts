@@ -1,8 +1,12 @@
 /** Interactive, bounded experiments. Positions are CSS pixels; time is seconds.
  * Comet velocities use the museum's legacy pixels-per-60Hz-frame convention.
  * Everything else remains local to this laboratory, including its clock. */
-export type LabTool = 'hand' | 'hole' | 'nebula' | 'plasma' | 'galaxy' | 'echo' | 'portal' | 'wave' | 'sail';
-export const LAB_TOOLS: { id: LabTool; key: string; name: string; hint: string }[] = [
+import { NEW_TOOLS, type LabTool, type Tool, type Family } from './lab/registry';
+import { Collection } from './lab/collection';
+import { segmentDistance } from './lab/shared';
+export type { LabTool } from './lab/registry';
+export type LabCommand = LabTool | 'clear' | 'exit' | 'repeat' | { solo: LabTool };
+const BASE_TOOLS = [
   { id: 'hand', key: '0', name: 'Explorar', hint: 'Clic mantenido: supernova · arrastra desde el cielo: cometa · Shift + clic: constelación.' },
   { id: 'hole', key: '1', name: 'Agujero negro', hint: 'Coloca una singularidad. Lanza un cometa cerca para curvar su trayectoria.' },
   { id: 'nebula', key: '2', name: 'Nebulosa', hint: 'Coloca una nube. Arrástrala en círculos para condensar estrellas; un gesto rápido dispersa el gas.' },
@@ -13,7 +17,8 @@ export const LAB_TOOLS: { id: LabTool; key: string; name: string; hint: string }
   { id: 'wave', key: '7', name: 'Onda gravitacional', hint: 'Arrastra para orientar y dar amplitud a una onda. Al soltar, el cielo se estira y se comprime.' },
   { id: 'sail', key: '9', name: 'Velas solares', hint: 'Coloca una flota. Mueve su sol y arrastra su guía para orientar la luz; gira cada vela arrastrándola.' },
 ];
-export interface LabState { tool: LabTool; hint: string; pendingPortal: boolean }
+export const LAB_TOOLS: Tool[] = [...BASE_TOOLS.map(t => ({ ...t, id: t.id as LabTool, category: ({ hole: 'Estrellas', nebula: 'Materia', plasma: 'Estrellas', galaxy: 'Estructuras', portal: 'Estructuras', wave: 'Estructuras', sail: 'Estructuras' } as Record<string, Family>)[t.id] ?? 'Luz', icon: ({ hand: '✥', hole: '◉', nebula: '☁', plasma: 'ϟ', galaxy: '✺', echo: '◌', portal: '◎', wave: '≋', sail: '◇' } as Record<string, string>)[t.id], color: '#bdcbe5', creation: (t.id === 'portal' ? 'pair' : t.id === 'wave' ? 'drag' : 'point') as Tool['creation'] })), ...NEW_TOOLS];
+export interface LabState { tool: LabTool; hint: string; pendingPortal: boolean; lastTool: LabTool | null }
 export interface Point { x: number; y: number }
 export interface LabBody extends Point {
   vx: number; vy: number; size: number; life: number;
@@ -81,6 +86,8 @@ function crossing(a: Point, b: Point, c: Point, d: Point): Point | null {
 
 export class CosmicLab {
   tool: LabTool = 'hand';
+  lastTool: LabTool | null = null;
+  readonly collection = new Collection();
   hint = LAB_TOOLS[0].hint;
   time = 0;
   width = 1280;
@@ -116,17 +123,19 @@ export class CosmicLab {
 
   private emit(hint = this.hint) {
     this.hint = hint;
-    this.changed({ tool: this.tool, hint, pendingPortal: Boolean(this.pending) });
+    this.changed({ tool: this.tool, hint, pendingPortal: Boolean(this.pending), lastTool: this.lastTool });
   }
 
   select(tool: LabTool) {
     this.cancel();
     this.tool = tool;
+    if (tool !== 'hand') this.lastTool = tool;
     this.emit(LAB_TOOLS.find(t => t.id === tool)!.hint);
   }
 
   clear() {
     this.cancel();
+    this.collection.clear();
     this.holes.length = this.clouds.length = this.babyStars.length = this.plasmas.length = 0;
     this.galaxies.length = this.echoes.length = this.strains.length = this.sails.length = 0;
     this.portal = null;
@@ -140,7 +149,8 @@ export class CosmicLab {
   }
 
   cancel(): boolean {
-    const hadGesture = Boolean(this.drag || this.pending || this.tool !== 'hand');
+    const collectionGesture = this.collection.cancel();
+    const hadGesture = Boolean(collectionGesture || this.drag || this.pending || this.tool !== 'hand');
     if (this.drag?.kind === 'portal' && this.portal) Object.assign(this.portal[this.drag.end], this.drag.start);
     if (this.drag?.kind === 'core') { this.drag.core.vx = 0; this.drag.core.vy = 0; }
     this.drag = null;
@@ -153,6 +163,7 @@ export class CosmicLab {
   resize(width: number, height: number) {
     if (this.width === width && this.height === height) return;
     const sx = width / this.width, sy = height / this.height;
+    this.collection.resize(sx, sy);
     const scale = (p: Point) => { p.x *= sx; p.y *= sy; };
     for (const p of [...this.holes, ...this.babyStars, ...this.echoes, ...this.strains, ...this.sails]) scale(p);
     for (const cloud of this.clouds) { scale(cloud); cloud.particles.forEach(scale); }
@@ -180,6 +191,11 @@ export class CosmicLab {
     this.pointer = { ...p };
     const at = this.inside(p);
     const born = this.time;
+    if (this.collection.create(this.tool, at, born, this.random)) {
+      const selected = LAB_TOOLS.find(t => t.id === this.tool)!;
+      this.tool = 'hand'; this.emit(selected.hint); return true;
+    }
+    if (this.tool === 'hand') { const hint = this.collection.down(p); if (hint) { this.emit(hint); return true; } }
     if (this.tool === 'portal') {
       if (!this.pending) { this.pending = at; this.emit('Primera boca lista. Coloca la segunda · Esc cancela.'); }
       else if (!this.validPair(this.pending, at)) this.emit('Separa un poco más las bocas para que la salida quede libre.');
@@ -240,6 +256,7 @@ export class CosmicLab {
     const vy = clamp((p.y - this.pointer.y) / elapsed, -1400, 1400);
     this.pointerTime = this.time;
     this.pointer = { ...p };
+    this.collection.move(p);
     const drag = this.drag;
     if (!drag) return;
     if (drag.kind === 'portal' && this.portal) {
@@ -285,6 +302,7 @@ export class CosmicLab {
   }
 
   up(): boolean {
+    if (this.collection.up()) return true;
     const drag = this.drag;
     this.drag = null;
     if (!drag) return false;
@@ -361,10 +379,10 @@ export class CosmicLab {
       const u = dx * cos + dy * sin, v = -dx * sin + dy * cos;
       x += strain * (u * cos + v * sin); y += strain * (u * sin - v * cos);
     }
-    return point(x, y);
+    return this.collection.project(point(x, y));
   }
 
-  step(dt: number, bodies: LabBody[]) {
+  step(dt: number, bodies: LabBody[], frameDuration = dt) {
     dt = clamp(dt, 0, 0.08);
     this.time += dt;
     const expire = <T extends { born: number }>(items: T[], life: number) => {
@@ -375,6 +393,17 @@ export class CosmicLab {
     expire(this.strains, 7); expire(this.sails, 90);
     if (this.portal && this.time - this.portal.born > 90 && this.drag?.kind !== 'portal') this.portal = null;
     if (this.sails.length === 0) this.lamp = null;
+    this.collection.update({ time: this.time, dt, frameDuration, quality: 1, width: this.width, height: this.height,
+      bodies: bodies.slice(0, 48), plasma: this.plasmas.flatMap(p => [...this.arcPoints(p, 0), ...this.arcPoints(p, 1)]), beams: [], random: this.random,
+      moveBody: (body, delta) => this.moveBody(body, delta), jet: this.jet,
+      recycleBody: body => { this.captures.delete(body); this.traces.delete(body); this.warpLocks.delete(body); },
+      gas: (p, velocity, radius) => {
+        for (const cloud of this.clouds) for (const gas of cloud.particles) {
+          const weight = Math.max(0, 1 - distance(gas, p) / radius);
+          gas.vx += velocity.x * weight * dt * 3; gas.vy += velocity.y * weight * dt * 3;
+        }
+      },
+    });
     const nearbyBodies = bodies.slice(0, 48);
     for (const cloud of this.clouds) {
       cloud.compression *= Math.exp(-dt * 0.025);
@@ -465,6 +494,7 @@ export class CosmicLab {
       }
     }
     for (const sail of this.sails) {
+      this.collection.pressure(sail, dt);
       if (this.lamp) {
         const dx = sail.x - this.lamp.x, dy = sail.y - this.lamp.y, d = Math.hypot(dx, dy) || 1;
         const beam = Math.exp(-((angleDelta(Math.atan2(dy, dx), this.lamp.angle) / 0.5) ** 2));
@@ -596,6 +626,7 @@ export class CosmicLab {
   }
 
   draw(ctx: CanvasRenderingContext2D) {
+    this.collection.draw(ctx, this.pointer);
     ctx.save(); ctx.globalCompositeOperation = 'screen';
     if (this.echoes.length && !this.dust.length) {
       // Stable filaments: repeated flashes illuminate the same landscape.
@@ -606,16 +637,22 @@ export class CosmicLab {
       }
     }
     for (const gas of this.dust) {
-      const light = this.echoAt(gas);
+      const light = Math.min(1, this.echoAt(gas) + this.collection.beams.slice(0, 40).reduce((sum, beam) => sum + Math.max(0, 1 - segmentDistance(gas, beam.a, beam.b) / 35) * beam.power * .35, 0));
       if (light > 0.015) this.glow(ctx, gas, gas.size, gas.seed > 0 ? '153,190,232' : '225,175,131', light * 0.3);
     }
     for (const cloud of this.clouds) {
       const fade = smooth((this.time - cloud.born) / 1.1) * smooth((70 - this.time + cloud.born) / 4);
+      // Density, rather than the gesture accumulator, also covers the moment after
+      // star formation resets compression while the gas is still concentrated.
+      const density = new Map<string, number>();
+      const cell = (p: Point) => `${Math.floor(p.x / 36)},${Math.floor(p.y / 36)}`;
+      for (const gas of cloud.particles) { const key = cell(gas); density.set(key, (density.get(key) ?? 0) + 1); }
       for (const gas of cloud.particles) {
         let starlight = 0;
         for (const star of this.babyStars) starlight += Math.max(0, 1 - distance(gas, star) / 200) * 0.25;
         const pulse = 0.85 + 0.15 * Math.sin(this.time * 0.8 + gas.seed * 15);
-        this.glow(ctx, gas, gas.size, gas.seed > 0.65 ? '93,168,203' : gas.seed > 0.3 ? '124,92,172' : '224,151,159', fade * pulse * (0.11 + this.echoAt(gas) * 0.35 + starlight));
+        const overlap = Math.max(1, (density.get(cell(gas)) ?? 1) / 10);
+        this.glow(ctx, gas, gas.size, gas.seed > 0.65 ? '93,168,203' : gas.seed > 0.3 ? '124,92,172' : '224,151,159', fade * pulse * Math.min(.16, (0.09 + this.echoAt(gas) * 0.18 + starlight)) / ((1 + cloud.compression * .8) * overlap));
       }
       // Wisps provide structure inside the translucent gas.
       ctx.lineWidth = 0.65;
@@ -768,5 +805,5 @@ export class CosmicLab {
     ctx.restore();
   }
 
-  dispose() { this.sprites.clear(); this.clear(); }
+  dispose() { this.collection.dispose(); this.sprites.clear(); this.clear(); }
 }
