@@ -198,11 +198,11 @@ export const chapterVisuals = {
       'Realistic cinematic aerospace image of orbital construction yard and rotating habitat above Earth at sunrise, dark SpaceX-inspired unbranded style, no text, no logos.',
   },
   habitats: {
-    heroImage: `${assetBase}illustrations/ai/habitats-hero.webp`,
-    sectionImage: `${assetBase}illustrations/ai/habitats.webp`,
+    heroImage: `${assetBase}illustrations/ai/habitats-hero-v02.webp`,
+    sectionImage: `${assetBase}illustrations/ai/habitats-hero-v02.webp`,
     missionLabel: 'Mission 01 / Space Habitats',
     cta: 'Explorar hábitats',
-    visualFocus: 'Hábitats rotatorios, ensamblaje orbital, ventanas, radiadores y escala humana frente a mundos artificiales.',
+    visualFocus: 'Un hábitat orbital monumental de anillos habitables y módulos conectados a un eje central.',
     aiPrompt:
       'Photorealistic massive O’Neill cylinder and Stanford torus under construction in low orbit, realistic aerospace lighting, dark unbranded premium style.',
   },
@@ -239,10 +239,10 @@ export const chapterVisuals = {
       'Photorealistic Mars terraforming research outpost at dawn with domed habitats, atmospheric processors, orbital mirrors and rover tracks.',
   },
   stellar: {
-    heroImage: `${assetBase}illustrations/ai/stellar.webp`,
+    heroImage: `${assetBase}illustrations/ai/stellar-hero.webp`,
     missionLabel: 'Mission 06 / Stellar Engineering',
     cta: 'Mover estrellas',
-    visualFocus: 'Espejos estelares, plataformas colosales, plasma, star lifting y energía extrema.',
+    visualFocus: 'Una estructura colosal junto a una estrella, con planetas y una base de ingeniería sobre la superficie lunar.',
     aiPrompt:
       'Photorealistic colossal stellar engineering platform near a star with Shkadov mirror segment, plasma collectors and radiators, dark cinematic style.',
   },
