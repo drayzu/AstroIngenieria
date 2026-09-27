@@ -179,12 +179,12 @@ body:has(.mo-root) {
 
 .mo-hero-bg-static {
   background-size: cover;
-  background-position: center 30%;
+  background-position: var(--hero-position, center 30%);
 }
 
 @media (max-width: 720px) {
   .mo-hero-bg-static {
-    background-position: 25% 30%;
+    background-position: var(--hero-mobile-position, 50% 30%);
   }
 }
 
@@ -232,6 +232,55 @@ body:has(.mo-root) {
   will-change: transform;
   opacity: 0;
   transition: opacity 0.5s ease;
+}
+
+.mo-hero-carousel {
+  position: absolute;
+  right: 16px;
+  top: 14px;
+  z-index: 38;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  color: rgba(245, 241, 232, 0.82);
+  background: rgba(7, 9, 13, 0.58);
+  border: 1px solid rgba(245, 241, 232, 0.18);
+  backdrop-filter: blur(12px);
+}
+
+.mo-hero-carousel button {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.mo-hero-carousel button:hover,
+.mo-hero-carousel button:focus-visible {
+  background: rgba(245, 241, 232, 0.13);
+  color: #fff;
+}
+
+.mo-hero-carousel button:focus-visible {
+  outline: 1px solid rgba(245, 241, 232, 0.7);
+  outline-offset: 1px;
+}
+
+.mo-hero-carousel .mo-hero-carousel-view {
+  margin-left: 3px;
+  border-left: 1px solid rgba(245, 241, 232, 0.16);
+}
+
+.mo-hero-carousel-view.is-active {
+  background: rgba(245, 241, 232, 0.15);
+  color: #fff;
 }
 
 .mo-hero:hover .mo-hero-spot {
@@ -3423,9 +3472,12 @@ body:has(.mo-root) {
   bottom: clamp(28px, 5vh, 48px);
   display: flex;
   align-items: center;
-  gap: 13px;
-  max-width: min(760px, calc(100vw - 40px));
-  padding: 12px 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  box-sizing: border-box;
+  max-width: calc(100% - 40px);
+  padding: 12px;
   font-family: var(--mo-mono);
   font-size: clamp(10px, 0.78vw, 12px);
   line-height: 1.45;
@@ -3459,11 +3511,15 @@ body:has(.mo-root) {
 }
 
 .mo-sky-key.is-pulse {
-  animation: mo-key-breathe 3s ease-in-out infinite;
+  animation: mo-key-breathe 4.5s ease-in-out infinite;
 }
 
-.mo-sky-key.is-delayed {
+.mo-sky-key.is-step-2 {
   animation-delay: 1.5s;
+}
+
+.mo-sky-key.is-step-3 {
+  animation-delay: 3s;
 }
 
 .mo-sky-sep {
@@ -3475,11 +3531,12 @@ body:has(.mo-root) {
 
 @keyframes mo-key-breathe {
   0%,
+  33.33%,
   100% {
     border-color: rgba(245, 241, 232, 0.32);
     box-shadow: 0 0 0 rgba(226, 204, 158, 0);
   }
-  50% {
+  16.67% {
     border-color: rgba(226, 204, 158, 0.85);
     box-shadow:
       0 0 14px rgba(226, 204, 158, 0.35),
@@ -3496,13 +3553,13 @@ body:has(.mo-root) {
   .mo-sky-hint {
     box-sizing: border-box;
     position: static;
-    width: calc(100vw - 48px);
+    width: max-content;
+    max-width: calc(100vw - 48px);
     margin-top: 24px;
     justify-content: center;
     flex-wrap: wrap;
     gap: 8px 12px;
-    max-width: none;
-    padding: 10px 12px;
+    padding: 12px;
     font-size: 9.5px;
   }
 
