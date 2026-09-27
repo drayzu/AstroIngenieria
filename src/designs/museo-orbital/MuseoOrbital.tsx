@@ -49,10 +49,10 @@ const HOME_HERO_IMAGES = [
   { file: 'hero-01-habitat-tormenta.webp', name: 'Tormenta en el hábitat', position: '50% 30%', mobilePosition: '43% 30%' },
   { file: 'hero-02-antena-asteroide.webp', name: 'Antena en el asteroide', position: '70% 30%', mobilePosition: '60% 30%' },
   { file: 'hero-03-obra-helada.webp', name: 'Construcción helada', position: '50% 30%', mobilePosition: '56% 30%' },
-  { file: 'hero-04-costa-alienigena.webp', name: 'Costa alienígena', position: '50% 30%', mobilePosition: '48% 30%' },
+  { file: 'hero-04-costa-alienigena.webp', name: 'Costa alienígena', position: '39% 30%', mobilePosition: '44% 30%' },
   { file: 'hero-05-planeta-oscuro.webp', name: 'Planeta oscuro', position: '50% 30%', mobilePosition: '66% 30%' },
-  { file: 'hero-06-estacion-orbital.webp', name: 'Estación orbital', position: '50% 30%', mobilePosition: '50% 30%' },
-  { file: 'hero-07-muestra-hielo.webp', name: 'Muestra de hielo', position: '50% 30%', mobilePosition: '51% 30%' },
+  { file: 'hero-06-estacion-orbital.webp', name: 'Estación orbital', position: '46% 30%', mobilePosition: '48% 30%' },
+  { file: 'hero-07-muestra-hielo.webp', name: 'Muestra de hielo', position: '26% 30%', mobilePosition: '40% 30%' },
 ].map((image) => ({
   ...image,
   src: `${import.meta.env.BASE_URL}illustrations/hero-rotation/${image.file}`,
@@ -1320,32 +1320,36 @@ const Hero = memo(({
       <div className="mo-hero-scrim" />
       <div className="mo-hero-spot" aria-hidden="true" />
       {playgroundEntryState !== 'entering' && playgroundEntryState !== 'leaving' && (
-        <div className="mo-hero-carousel" role="group" aria-label="Imágenes de portada">
-          <button
-            type="button"
-            onClick={() => showHeroAt((heroPosition - 1 + heroOrder.length) % heroOrder.length)}
-            aria-label="Ver imagen anterior"
-            title="Imagen anterior"
-          >
-            <ChevronLeft size={16} strokeWidth={1.5} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            onClick={() => showHeroAt((heroPosition + 1) % heroOrder.length)}
-            aria-label="Ver imagen siguiente"
-            title="Imagen siguiente"
-          >
-            <ChevronRight size={16} strokeWidth={1.5} aria-hidden="true" />
-          </button>
+        <div className={`mo-hero-carousel${imageFocus ? ' is-expanded' : ''}`} role="group" aria-label="Imágenes de portada">
+          {imageFocus && (
+            <>
+              <button
+                type="button"
+                onClick={() => showHeroAt((heroPosition - 1 + heroOrder.length) % heroOrder.length)}
+                aria-label="Ver imagen anterior"
+                title="Imagen anterior"
+              >
+                <ChevronLeft size={16} strokeWidth={1.5} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={() => showHeroAt((heroPosition + 1) % heroOrder.length)}
+                aria-label="Ver imagen siguiente"
+                title="Imagen siguiente"
+              >
+                <ChevronRight size={16} strokeWidth={1.5} aria-hidden="true" />
+              </button>
+            </>
+          )}
           <button
             type="button"
             className={`mo-hero-carousel-view${imageFocus ? ' is-active' : ''}`}
             onClick={() => setImageFocus((current) => !current)}
-            aria-pressed={imageFocus}
-            aria-label={imageFocus ? 'Mostrar textos del hero' : 'Ocultar textos del hero'}
-            title={imageFocus ? 'Mostrar textos' : 'Ocultar textos'}
+            aria-expanded={imageFocus}
+            aria-label={imageFocus ? 'Mostrar textos y ocultar controles de imágenes' : 'Ver imagen y mostrar controles de imágenes'}
+            title={imageFocus ? 'Mostrar textos' : 'Ver imagen'}
           >
-            <Aperture size={15} strokeWidth={1.2} aria-hidden="true" />
+            <Aperture size={18} strokeWidth={1.2} aria-hidden="true" />
           </button>
         </div>
       )}
@@ -1468,21 +1472,6 @@ const Hero = memo(({
           De los hábitats orbitales a las estrellas, exploramos qué podríamos construir,
           qué haría falta para lograrlo y dónde aparecen los límites físicos.
         </motion.p>
-
-        <motion.button
-          type="button"
-          className="mo-hero-cta mo-orbital"
-          data-cursor-label="Explorar"
-          onClick={() => scrollToId('sala-intro')}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: reduced ? 0 : 2.1, duration: 1 }}
-        >
-          <i className="mo-orbit a" aria-hidden="true" />
-          <i className="mo-orbit b" aria-hidden="true" />
-          Explorar el atlas
-          <span aria-hidden="true">↓</span>
-        </motion.button>
 
         <motion.span
           ref={hintRef}
