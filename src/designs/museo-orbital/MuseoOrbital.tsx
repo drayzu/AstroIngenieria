@@ -20,7 +20,7 @@ import {
   useScroll,
   useTransform,
 } from 'framer-motion';
-import { Aperture, Volume2, VolumeX } from 'lucide-react';
+import { Aperture, ChevronLeft, ChevronRight, Volume2, VolumeX } from 'lucide-react';
 import { chapters, conceptById, plausibilityLabels, scaleLabels } from '../../data/astroData';
 import { selectedStudyImages } from '../../data/selectedStudyImages';
 import { refs } from '../../data/articles/sources';
@@ -44,7 +44,28 @@ import { DistortOverlay } from './DistortOverlay';
 import './museoOrbital.css';
 
 const totalWorks = chapters.reduce((sum, chapter) => sum + chapter.concepts.length, 0);
-const HOME_HERO_IMAGE = `${import.meta.env.BASE_URL}illustrations/ai/main-hero-cinematic-v03.webp`;
+const HOME_HERO_IMAGES = [
+  { file: 'hero-00-estrella-roja.webp', name: 'Estrella roja', position: '50% 50%', mobilePosition: '50% 50%' },
+  { file: 'hero-01-habitat-tormenta.webp', name: 'Tormenta en el hábitat', position: '50% 30%', mobilePosition: '43% 30%' },
+  { file: 'hero-02-antena-asteroide.webp', name: 'Antena en el asteroide', position: '70% 30%', mobilePosition: '60% 30%' },
+  { file: 'hero-03-obra-helada.webp', name: 'Construcción helada', position: '50% 30%', mobilePosition: '56% 30%' },
+  { file: 'hero-04-costa-alienigena.webp', name: 'Costa alienígena', position: '50% 30%', mobilePosition: '48% 30%' },
+  { file: 'hero-05-planeta-oscuro.webp', name: 'Planeta oscuro', position: '50% 30%', mobilePosition: '66% 30%' },
+  { file: 'hero-06-estacion-orbital.webp', name: 'Estación orbital', position: '50% 30%', mobilePosition: '50% 30%' },
+  { file: 'hero-07-muestra-hielo.webp', name: 'Muestra de hielo', position: '50% 30%', mobilePosition: '51% 30%' },
+].map((image) => ({
+  ...image,
+  src: `${import.meta.env.BASE_URL}illustrations/hero-rotation/${image.file}`,
+}));
+const HERO_ROTATION_MS = 5_000;
+const shuffledHeroOrder = () => {
+  const rest = HOME_HERO_IMAGES.slice(1).map((_, index) => index + 1);
+  for (let index = rest.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(Math.random() * (index + 1));
+    [rest[index], rest[swap]] = [rest[swap], rest[index]];
+  }
+  return [0, ...rest];
+};
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 const VITRINE_CAP = 9;
 const VITRINE_KEY = 'mo-vitrine';
@@ -368,6 +389,87 @@ const Hero = memo(({
   const kickerRef = useRef<HTMLParagraphElement>(null);
   const subRef = useRef<HTMLParagraphElement>(null);
   const hintRef = useRef<HTMLSpanElement>(null);
+  const heroOrder = useMemo(shuffledHeroOrder, []);
+  const [heroPosition, setHeroPosition] = useState(0);
+  const [heroVisible, setHeroVisible] = useState(true);
+  const [pageVisible, setPageVisible] = useState(!document.hidden);
+  const imageLoadsRef = useRef(new Map<number, Promise<boolean>>());
+  const imageRequestRef = useRef(0);
+  const activeHeroIndex = heroOrder[heroPosition];
+  const activeHero = HOME_HERO_IMAGES[activeHeroIndex];
+
+  const preloadHero = useCallback((index: number) => {
+    const cached = imageLoadsRef.current.get(index);
+    if (cached) return cached;
+    const image = new Image();
+    image.decoding = 'async';
+    image.src = HOME_HERO_IMAGES[index].src;
+    const loaded = image.decode().then(
+      () => true,
+      () => {
+        imageLoadsRef.current.delete(index);
+        return false;
+      },
+    );
+    imageLoadsRef.current.set(index, loaded);
+    return loaded;
+  }, []);
+
+  const showHeroAt = useCallback((position: number) => {
+    if (position === heroPosition) return;
+    const request = ++imageRequestRef.current;
+    void preloadHero(heroOrder[position]).then((loaded) => {
+      if (loaded && request === imageRequestRef.current) setHeroPosition(position);
+    });
+  }, [heroOrder, heroPosition, preloadHero]);
+
+  useEffect(() => {
+    const onArrowKey = (event: KeyboardEvent) => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+      const root = heroRef.current?.closest<HTMLElement>('.mo-root');
+      if (!root || root.scrollTop > 2 || playgroundEntryState !== 'idle') return;
+      event.preventDefault();
+      const direction = event.key === 'ArrowRight' ? 1 : -1;
+      showHeroAt((heroPosition + direction + heroOrder.length) % heroOrder.length);
+    };
+    window.addEventListener('keydown', onArrowKey);
+    return () => window.removeEventListener('keydown', onArrowKey);
+  }, [heroOrder.length, heroPosition, heroRef, playgroundEntryState, showHeroAt]);
+
+  useEffect(() => {
+    const hero = heroRef.current;
+    if (!hero) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setHeroVisible(Boolean(entry?.isIntersecting)),
+      { root: hero.closest<HTMLElement>('.mo-root'), threshold: 0.08 },
+    );
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, [heroRef]);
+
+  useEffect(() => {
+    const onVisibilityChange = () => setPageVisible(!document.hidden);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, []);
+
+  useEffect(() => {
+    if (!heroVisible || !pageVisible) return;
+    const timeout = window.setTimeout(() => {
+      void preloadHero(heroOrder[(heroPosition + 1) % heroOrder.length]);
+    }, 1_000);
+    return () => window.clearTimeout(timeout);
+  }, [heroOrder, heroPosition, heroVisible, pageVisible, preloadHero]);
+
+  useEffect(() => {
+    if (reduced || !heroVisible || !pageVisible || playgroundEntryState !== 'idle') return;
+    const timeout = window.setTimeout(() => {
+      showHeroAt((heroPosition + 1) % heroOrder.length);
+    }, HERO_ROTATION_MS);
+    return () => window.clearTimeout(timeout);
+  }, [heroOrder, heroPosition, heroVisible, pageVisible, playgroundEntryState, reduced, showHeroAt]);
 
   useEffect(() => {
     if (!imageFocus) return;
@@ -1200,28 +1302,53 @@ const Hero = memo(({
           Índice
         </button>
       )}
-      {playgroundEntryState !== 'entering' && playgroundEntryState !== 'leaving' && (
-        <button
-          type="button"
-          className={`mo-index-button mo-hero-view${imageFocus ? ' is-active' : ''}`}
-          onClick={() => setImageFocus((current) => !current)}
-          aria-pressed={imageFocus}
-          aria-label={imageFocus ? 'Mostrar textos del hero' : 'Ver imagen del hero'}
-          data-cursor-label={imageFocus ? 'Mostrar textos' : 'Ver imagen'}
-          title={imageFocus ? 'Mostrar textos' : 'Ver imagen'}
-        >
-          <Aperture size={15} strokeWidth={1.2} aria-hidden="true" />
-        </button>
-      )}
-      <motion.div
-        className="mo-hero-bg mo-hero-bg-static"
-        style={{ backgroundImage: `url(${HOME_HERO_IMAGE})` }}
-        initial={{ scale: 1.12, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: reduced ? 0 : 2.2, ease: EASE_OUT }}
-      />
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={activeHeroIndex}
+          className="mo-hero-bg mo-hero-bg-static"
+          style={{
+            backgroundImage: `url(${activeHero.src})`,
+            '--hero-position': activeHero.position,
+            '--hero-mobile-position': activeHero.mobilePosition,
+          } as CSSProperties}
+          initial={{ opacity: 0, scale: 1.025 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: reduced ? 0 : 1.2, ease: EASE_OUT }}
+        />
+      </AnimatePresence>
       <div className="mo-hero-scrim" />
       <div className="mo-hero-spot" aria-hidden="true" />
+      {playgroundEntryState !== 'entering' && playgroundEntryState !== 'leaving' && (
+        <div className="mo-hero-carousel" role="group" aria-label="Imágenes de portada">
+          <button
+            type="button"
+            onClick={() => showHeroAt((heroPosition - 1 + heroOrder.length) % heroOrder.length)}
+            aria-label="Ver imagen anterior"
+            title="Imagen anterior"
+          >
+            <ChevronLeft size={16} strokeWidth={1.5} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => showHeroAt((heroPosition + 1) % heroOrder.length)}
+            aria-label="Ver imagen siguiente"
+            title="Imagen siguiente"
+          >
+            <ChevronRight size={16} strokeWidth={1.5} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className={`mo-hero-carousel-view${imageFocus ? ' is-active' : ''}`}
+            onClick={() => setImageFocus((current) => !current)}
+            aria-pressed={imageFocus}
+            aria-label={imageFocus ? 'Mostrar textos del hero' : 'Ocultar textos del hero'}
+            title={imageFocus ? 'Mostrar textos' : 'Ocultar textos'}
+          >
+            <Aperture size={15} strokeWidth={1.2} aria-hidden="true" />
+          </button>
+        </div>
+      )}
 
       <motion.div
         className="mo-hero-playground-veil"
@@ -1370,12 +1497,12 @@ const Hero = memo(({
           </span>
           <i className="mo-sky-sep" aria-hidden="true" />
           <span className="mo-sky-action">
-            <kbd className="mo-sky-key is-pulse is-delayed">clic + arrastre</kbd>
-            <span>cometa</span>
+            <kbd className="mo-sky-key is-pulse is-step-2">clic + arrastre</kbd>
+            <span>meteorito</span>
           </span>
           <i className="mo-sky-sep" aria-hidden="true" />
           <span className="mo-sky-action">
-            <kbd className="mo-sky-key is-pulse">shift + clic</kbd>
+            <kbd className="mo-sky-key is-pulse is-step-3">shift + clic</kbd>
             <span>constelación</span>
           </span>
         </motion.span>
