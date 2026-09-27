@@ -52,7 +52,7 @@ const HOME_HERO_IMAGES = [
   { file: 'hero-04-costa-alienigena.webp', name: 'Costa alienígena', position: '39% 30%', mobilePosition: '44% 30%' },
   { file: 'hero-05-planeta-oscuro.webp', name: 'Planeta oscuro', position: '50% 30%', mobilePosition: '66% 30%' },
   { file: 'hero-06-estacion-orbital.webp', name: 'Estación orbital', position: '46% 30%', mobilePosition: '48% 30%' },
-  { file: 'hero-07-muestra-hielo.webp', name: 'Muestra de hielo', position: '26% 30%', mobilePosition: '40% 30%' },
+  { file: 'hero-07-muestra-hielo.webp', name: 'Muestra de hielo', position: '31% 30%', mobilePosition: '43% 30%' },
 ].map((image) => ({
   ...image,
   src: `${import.meta.env.BASE_URL}illustrations/hero-rotation/${image.file}`,
