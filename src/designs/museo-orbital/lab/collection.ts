@@ -1,4 +1,5 @@
 import { NEW_TOOLS, type LabTool, type NewTool } from './registry';
+import { translate, type Locale } from '../../../i18n/messages';
 import { light, reflectBeams } from './light';
 import { matter } from './matter';
 import { stars } from './stars';
@@ -87,7 +88,7 @@ export class Collection {
     }
     return { x, y };
   }
-  draw(c: CanvasRenderingContext2D, pointer: Point) {
+  draw(c: CanvasRenderingContext2D, pointer: Point, locale: Locale = 'es') {
     c.save(); c.globalCompositeOperation = 'screen';
     for (const beam of this.beams) { line(c, [beam.a, beam.b], beam.color, 8, beam.power * .018); line(c, [beam.a, beam.b], beam.color, 1, beam.power * .23); }
     for (const f of this.effects) {
@@ -100,7 +101,7 @@ export class Collection {
       if (f.id !== 'eclipse' && f.id !== 'accretion') { ring(c, f, 4, f.color, 1, 0, alpha * .6); }
       if (this.creating && f === this.active) line(c, [f, f.handles[0]], f.color, 1, .5);
       if (near) {
-        const title = NEW_TOOLS.find(t => t.id === f.id)!.name;
+        const title = translate(NEW_TOOLS.find(t => t.id === f.id)!.name, locale);
         c.font = '10px sans-serif'; c.globalCompositeOperation = 'source-over'; c.strokeStyle = '#101929'; c.lineWidth = 3; c.lineJoin = 'round';
         c.globalAlpha *= .8; c.strokeText(title, f.x + 12, f.y + 23); c.fillStyle = f.color; c.fillText(title, f.x + 12, f.y + 23);
       }

@@ -1,0 +1,1278 @@
+import type { ConceptArticle } from '../../../data/articles/model';
+
+export default [
+  {
+    "id": "stellar-physics",
+    "title": "A star holds from within",
+    "lead": "Before imagining machines around a sun, it is best to see the balance that keeps the star itself on.",
+    "blocks": [
+      {
+        "kind": "paragraph",
+        "text": "The solar surface seems to boil. Bright zones change shape, spots appear and plasma arches follow magnetic configurations. You are not looking at a solid crust on a bonfire: the star is hot matter, largely ionized, whose structure depends on gravity, pressure and energy transport. [1]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Gravity tends to compress it. The pressure gradient holds its layers in front of that weight. In a main sequence star, the fusion reactions of the nucleus bring energy that ends up coming out into space, although its route crosses regions with different processes."
+      },
+      {
+        "kind": "heading",
+        "text": "Each layer holds the weight on top"
+      },
+      {
+        "kind": "paragraph",
+        "text": "In hydrostatic equilibrium, the pressure increases towards the center because each layer supports external matter. If a region is compressed, it usually warms up and changes the speed of its reactions. The star responds to disturbances by rearranging density and temperature; it is not a rigid container filled with fuel."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The pressure comes from the movement of particles and, in certain stars or stages, from additional contributions such as radiation or degenerated matter. Gravity depends on how much mass remains within each radius. Solving structure requires combining both relationships with energy composition, generation and transport."
+      },
+      {
+        "kind": "paragraph",
+        "text": "An extraction from outer layers reduces mass and slowly modifies that balance. Adding matter does the opposite, but the material does not go directly to the core. This is why intervening on a star requires calculating its overall response and the time it takes to adjust."
+      },
+      {
+        "kind": "heading",
+        "text": "What shines is not the place where all the energy is made."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The visible light we receive comes mainly from the photosphere. The solar core is much warmer and hidden under huge amounts of matter. Between the two, energy is transported by radiation and material movements depending on the region. [1]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "In a radiative zone, photons repeatedly interact with matter and energy advances through a very different process of traveling freely through the void. In a convective area, hot plots ascend and colder ones descend. What mechanism dominates depends on opacity, temperature and gradients."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The photosphere marks the region from which light escapes with greater freedom, not a solid surface. Above continue atmosphere, crown, fields and wind. An outside sensor finds radiation and particles that have already crossed that story; it cannot select energy from the core as if it were connecting a wire."
+      },
+      {
+        "kind": "paragraph",
+        "text": "This matters for engineering: intercepting light outside the star, collecting part of the solar wind and intervening inside it are very different physical operations. An external structure does not gain direct access to the nucleus because it approaches the visible surface."
+      },
+      {
+        "kind": "note",
+        "title": "Hydrostatic balance",
+        "paragraphs": [
+          "In a spherical description, dP/dr = −Gm(r)ρ(r)/r². Pressure decreases outward at a rate related to the enclosed mass and density. This equation combines with others describing energy and composition to describe a star; on its own it does not determine the star’s evolution."
+        ]
+      },
+      {
+        "kind": "heading",
+        "text": "The composition changes the clock speed"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The initial mass conditions luminosity, temperature and duration. A more massive star tends to spend its fuel much faster, even if it has more. Stars are not fuel reservoirs whose lifetime is obtained by dividing fuel by a fixed consumption and independent of its structure. [2]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Fusion transforms nuclei and changes the central composition. This modifies how many particles bring pressure, how energy is transported, and what temperature the next stage needs. The core can contract while outer layers expand. Evolution arises from that feedback between fuel, structure and gravity."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Metals, in astronomical language, include elements heavier than helium. Although they are minority, they affect opacity, spectrum and training processes. Two stars of similar mass do not need to have exactly the same luminosity or evolutionary trajectory if their composition and age differ."
+      },
+      {
+        "kind": "heading",
+        "text": "To observe is to rebuild a hidden interior"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Lightness, color, spectrum and oscillations offer restrictions. Spectral lines report composition and movement of accessible layers; periodical changes allow internal properties to be inferred. Models should explain several observations at once and retain margins of uncertainty. [2]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "For an intervention, these data form the initial state. The observed evolution is then compared with the expected one. A brightness change can come from magnetic activity, dust or calibration before the project. Controlling a star requires distinguishing its natural variability from the desired response."
+      },
+      {
+        "kind": "heading",
+        "text": "A machine would have to live with activity"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The environment includes intense radiation, charged particles and magnetic variability. A nearby facility needs to control its temperature and understand disturbances. The luminous filaments of an image are not stable roads on which a load can circulate at will."
+      },
+      {
+        "kind": "paragraph",
+        "text": "A rash can increase particle flow and deform fields. A catchment plant reduces operation, diverts material or enters safe mode. Radiators need to look away from the star, while shields and distance limit what they absorb. Even a machine that uses stellar energy can receive more heat than it can process."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The star also changes slowly. When its internal composition is modified, it finds new conditions of equilibrium and can enter other stages. Altering its mass would have consequences on that evolution, in addition to its gravity."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The central distinction remains this way: natural properties describe a system that already exchanges energy and matter; an intervention adds flows with its own direction and rate. The project can only be attributed one effect after modeling and measuring both."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The image of a sun like a lit lamp is insufficient. It is a system that has been reorganized for millions of years. Any stellar astroengineering would have to work with that response, just as building on a coast requires understanding a sea that never stands completely still."
+      }
+    ],
+    "sources": [
+      {
+        "title": "Sun Facts",
+        "publisher": "NASA Science",
+        "url": "https://science.nasa.gov/sun/facts/"
+      },
+      {
+        "title": "Stars",
+        "publisher": "NASA Science",
+        "url": "https://science.nasa.gov/universe/stars/"
+      }
+    ],
+    "readingMinutes": 5
+  },
+  {
+    "id": "stellar-engines",
+    "title": "The star can also be the vehicle",
+    "lead": "A star engine would attempt to modify the movement of a star, and with it the future journey of bodies that remain linked to it.",
+    "blocks": [
+      {
+        "kind": "paragraph",
+        "text": "From a planet, dawn could continue with a familiar appearance. The change would be too slow to feel in a human life: the entire star would be following a slightly different trajectory through the galaxy."
+      },
+      {
+        "kind": "paragraph",
+        "text": "A stellar engine seeks to produce this acceleration by asymmetry in radiation or matter expelled. Caplan compared passive and active designs to study their acceleration possibilities. They are extreme engineering models, not available technologies. [1]"
+      },
+      {
+        "kind": "heading",
+        "text": "The reaction must leave the system"
+      },
+      {
+        "kind": "paragraph",
+        "text": "A star emits light and wind in all directions. If the outputs are symmetrical, their amounts of movement are cancelled on average and no net thrust appears. A star motor breaks that symmetry: redirect photons or accelerate matter preferably to one side. The rest of the system receives movement in the opposite direction."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The border used to balance matters. The force between a star and a nearby structure only changes movement within the set. To accelerate both as a unit, something must escape with unequal distribution. In a Shkadov reflector radiation comes out; in an active engine material and radiative jets come out. A tugboat that just walks away doesn't drag the star."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Management is also not chosen without consequences. A reflector blocks or returns light to specific regions; a jet passes through the planetary system if it is not oriented outside its orbits. The engine geometry includes the worlds it intends to transport."
+      },
+      {
+        "kind": "heading",
+        "text": "A huge force can give a tiny acceleration"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The relationship a = F/M remains revealing. A star’s mass means that a force impressive in human terms produces a very small change per second. The interest lies in sustaining it over astronomical timescales."
+      },
+      {
+        "kind": "paragraph",
+        "text": "As a purely kinematic example, a constant acceleration of 10⁻¹² m/s² would accumulate about thirty meters per second of velocity change in a million years. The deviation from an idealized initial trajectory would be hundreds of astronomical units. The example uses a·t and a·t²/2; an actual galactic trajectory must include the gravitational field and the changing direction of thrust."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The figure shows why distance can grow long before speed seems impressive. A correction applied millions of years in advance displaces the meeting point with another star or cloud. Switching off the engine does not return the system to the previous path: it retains accumulated speed and continues from a different position."
+      },
+      {
+        "kind": "heading",
+        "text": "Sailing is predicting a changing galaxy"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The star is already moving in the galaxy. The engine is not part of a universal rest: it modifies an existing orbit. Choosing a route would require learning about future encounters and accepting uncertainties that grow over time."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Neighboring stars also move. One encounter that seems dangerous today can change by refining positions and speeds; another may arise from unmodeled disturbances. Navigation would require repeated observations and a corrective trajectory, not a determined momentum once for a remote future."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The aim could be to avoid a region, to approach resources slowly or to reorganize meetings between systems. No one demands to cross the galaxy like a fast ship. The new capacity consists in choosing between future orbitals that without intervention would be inaccessible."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Intergenerational communications must preserve why the course was chosen, what uncertainties remain and how the maneuver stops. A small acceleration may seem irrelevant for centuries and even accumulate a deviation that descendants cannot ignore."
+      },
+      {
+        "kind": "heading",
+        "text": "Carrying the system requires softness"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Planets are gravitationally bound, not wired. If the disturbance is sufficiently slow and small in relation to its orbital dynamics, it could accompany the displacement, but stability must be checked. The direction of acceleration and mass changes matter."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Each planet orbits with its own period and orientation. An external acceleration introduces a disturbance that can change eccentricity or inclination if it is too fast, variable, or misdirected. Moons, asteroids and comet clouds have weaker links; “moving the system” does not guarantee preserving each body."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The engine also exerts gravity and radiation on its environment. Its mass can disturb nearby orbits, while structures that intercept light alter climates. Designing a stellar trajectory requires simulating simultaneously the major vehicle and local architecture that makes their worlds habitable."
+      },
+      {
+        "kind": "paragraph",
+        "text": "It also matters not to alter the light they receive inconsistently. The Sun sustains the energy balance of the planetary system, and a structure that redirects part of its emission can affect nearby worlds. [2]"
+      },
+      {
+        "kind": "heading",
+        "text": "On during eras demands visible maintenance"
+      },
+      {
+        "kind": "paragraph",
+        "text": "An active engine needs to capture energy or matter, replace components and evacuate heat. A passive one needs to retain a geometry against radiation, gravity and disturbances. In both cases, the integrated acceleration depends on the actual operating time. Decades of failure can import little into a millennial program, but losing industrial knowledge may end it."
+      },
+      {
+        "kind": "paragraph",
+        "text": "External observers wouldn't see a star accelerating for one night. They could measure an abnormal distribution of radiation, jets or movement by comparing accurate data and natural models. For the inhabitants, the daily sign would be another: maintenance calendars and galactic maps where the future point of the system changes slowly."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The main uncertainty is not the arithmetic of force divided by mass. It is to build an asymmetric exchange that survives, keep the accompanying orbits habitable and decide a route with information that will age during the journey. [1]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "To check the course, observatories would measure radial velocity, position relative to distant sources and movement of neighboring stars. The engine effect must be separated from the galactic orbit and from natural disturbances. A sustained acceleration would first appear as a statistical difference between expected and observed trajectory; only many measurements would convert that difference into navigation."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The time scale does not eliminate the need for precision; it causes each small bias to have more time to accumulate."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The shutdown is also a maneuver. A reflector can gradually be redirected and a material motor reduce its flows while maintaining the coupling. Cutting one part before another could disturb the star or planets. The system needs to arrive at a stable configuration that no longer pushes and leaves its structures secure."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The idea requires imagining a society that plans for very distant descendants. His great maneuver would not be a sharp turn in the face of a visible danger. It would be a small correction maintained when still missing you were to get to the place where that correction will make sense."
+      }
+    ],
+    "sources": [
+      {
+        "title": "Stellar engines: Design considerations for maximizing acceleration",
+        "publisher": "Matthew E. Caplan, Acta Astronautica, 2019",
+        "url": "https://doi.org/10.1016/j.actaastro.2019.08.027"
+      },
+      {
+        "title": "Sun Facts",
+        "publisher": "NASA Science",
+        "url": "https://science.nasa.gov/sun/facts/"
+      }
+    ],
+    "readingMinutes": 6
+  },
+  {
+    "id": "shkadov",
+    "title": "A mirror to unbalance light",
+    "lead": "Shkadov's propellant uses a simple idea on an disproportionate scale: if the radiation comes out asymmetrically, the whole can receive a net thrust.",
+    "blocks": [
+      {
+        "kind": "paragraph",
+        "text": "A huge curved surface occupies part of the star's sky. It reflects radiation and lets the rest escape with another angular distribution. It is not a closed shell around the Sun; its asymmetry is precisely what gives it interest as an engine."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The Shkadov concept belongs to passive star engines. The radiation balance of the star and reflector set allows to study a net force. Caplan's comparative analysis treats this family against active designs. [1]"
+      },
+      {
+        "kind": "heading",
+        "text": "You have to count the light that finally goes"
+      },
+      {
+        "kind": "paragraph",
+        "text": "A mirror receives strength by changing the amount of movement of photons. But calculating only that force and attributing it simply to the star would be incomplete. We must follow the exchanges within the system and the radiation that escapes out. The preservation of the movement continues to rule. [2]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "A part of the light that was to escape into the reflector returns in another direction. The mirror receives momentum by reversing photons and the star attracts it gravitationally. In the ideal configuration, both parts retain a separation and the set accelerates because the final radiation no longer leaves the system symmetrically."
+      },
+      {
+        "kind": "paragraph",
+        "text": "If a box is drawn around the star and reflector, mutual forces are cancelled by adding up the set. Only the net flow of photons through the box explains their change of movement. That accounting avoids imagining that the mirror leans against a star like a material shovel."
+      },
+      {
+        "kind": "heading",
+        "text": "Suspending the mirror requires precise distance"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The idealized configuration also needs a balance between gravitational attraction and luminous pressure on the structure. That two forces are equal in a drawing does not demonstrate stability against displacements, oscillations and deformations."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Closer to the star increase gravity and luminous flux, but not necessarily with the same effect on a sail of given properties. Area by mass, reflectivity and orientation determine where the ideal balance might exist. A segmented structure needs each part to retain its place without small differences scattering it."
+      },
+      {
+        "kind": "paragraph",
+        "text": "A lateral shift may not generate a force that automatically returns it. Active control, orbital elements or a carefully studied geometry would have to correct drift. The word “stationary” describes a relationship maintained, not absence of movement or maneuvers."
+      },
+      {
+        "kind": "note",
+        "title": "The Scale of a Photonic Force",
+        "paragraphs": [
+          "A P power carries amount of movement at a rate of P/c. Geometry and reflections determine the exact factor and direction. By dividing by a stellar mass small accelerations are obtained, even working with an important fraction of the brightness of a star."
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "text": "The reflector would absorb some energy and I'd have to radiate it. Its shape, material and temperature are linked; it cannot be assumed a perfect mirror of despicable mass and unlimited resistance. [3]"
+      },
+      {
+        "kind": "heading",
+        "text": "A Hemisphere Receives a Different Star"
+      },
+      {
+        "kind": "paragraph",
+        "text": "By intercepting a fraction of the light, the reflector creates an anisotropy around the star. A planet can cross regions with less direct radiation or receive light reflected from another angle. Climate, panels and astronomical observation would depend on the orbital phase with respect to the structure."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The design could orient the reflector outside the main plane of planets, but the star and its worlds do not form an empty diagram. Dust, asteroids and installations also cross the environment. A safe path should consider the huge physical front and concentrated or redirected light."
+      },
+      {
+        "kind": "heading",
+        "text": "Repair a sail the size of an orbit"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The structure could be composed of many coordinated elements rather than a continuous foil. Segmentation allows replacing parts and tolerating perforations; it also requires maintaining shape, geometric phase and mass distribution. A degraded sector changes both the thrust and lighting pattern."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The materials receive radiation, particles and thermal cycles. Your back face should emit absorbed heat into a sky that is not dominated by the star. Thickening the foil improves resistance and increases mass, displacing balance and reducing acceleration."
+      },
+      {
+        "kind": "paragraph",
+        "text": "A civilization would measure reflector position, luminosity in different directions and stellar trajectory. Control would adjust active areas slowly. If the structure is removed, the star retains the accumulated speed; the engine can shut down, but its orbital history remains."
+      },
+      {
+        "kind": "paragraph",
+        "text": "During a repair, neighboring segments may temporarily compensate for the missing area to preserve the radiation balance. That correction changes where light comes out and must respect the thermal limits of planets. Maintaining the thrust would have no automatic priority over keeping the system that travels with it habitable."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Locating it with respect to planetary orbits would also be decisive. Darkening inhabited regions or returning more radiation to them could be incompatible with life that the engine intended to transport."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The Shkadov offers unextracted thrust and processing large flows of matter, but is limited for the time being transported by intercepted light. This modesty defines its mission: corrections sustained during immense times, with an infrastructure whose main operation is to continue reflecting in the right direction. [1]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The vision is almost ceremonial: a mirror that seems immobile and yet slowly changes the path of a sun. The work would be better understood by comparing maps separated for millions of years than by observing it during an afternoon."
+      }
+    ],
+    "sources": [
+      {
+        "title": "Stellar engines: Design considerations for maximizing acceleration",
+        "publisher": "Matthew E. Caplan, Acta Astronautica, 2019",
+        "url": "https://doi.org/10.1016/j.actaastro.2019.08.027"
+      },
+      {
+        "title": "Far-out Pathways to Space: Solar Sails",
+        "publisher": "NASA Goddard",
+        "url": "https://pwg.gsfc.nasa.gov/stargaze/Solsail.htm"
+      },
+      {
+        "title": "Thermal Control: Small Spacecraft Technology State of the Art",
+        "publisher": "NASA",
+        "url": "https://www.nasa.gov/smallsat-institute/sst-soa/thermal-control/"
+      }
+    ],
+    "readingMinutes": 5
+  },
+  {
+    "id": "caplan",
+    "title": "Towing a sun with its own matter",
+    "lead": "The engine proposed by Caplan incorporates material flows to aspire to greater accelerations than those of a passive reflector.",
+    "blocks": [
+      {
+        "kind": "paragraph",
+        "text": "The illustration might show a small device next to a star, but small here only means comparatively small. The facility would have to handle material and energy flows far higher than those of any human industry."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Caplan studied an active engine that takes advantage of stellar material and requires additional extraction beyond the natural wind. The proposal combines propulsion and coupling with the star; it is not about lighting a nearby rocket and waiting for the Sun to follow. [1]"
+      },
+      {
+        "kind": "heading",
+        "text": "Matter must come first from the star"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The accessible material is hot plasma bound by gravity. An installation could use fields and energy to increase a flow from outer layers; calling it capture does not eliminate the work of lifting mass from the stellar well. The engine depends on a sufficiently stable and directed star lift operation."
+      },
+      {
+        "kind": "paragraph",
+        "text": "That flow comes mixed and ionized. Magnetic fields can guide charged particles to processing regions, while radiation and stellar variations disturb capture. The rate should be large to produce appreciable and small or controlled thrust against the star's response. Extracting mass also slowly changes its evolution."
+      },
+      {
+        "kind": "paragraph",
+        "text": "One part of the material would feed the engine and another part would participate in a different jet within Caplan's scheme. The complete balance follows mass and momentum from the star, through the installation, to what escapes. There is no impulse for the simple fact of having abundant fuel."
+      },
+      {
+        "kind": "heading",
+        "text": "Pushing the tugboat is not enough"
+      },
+      {
+        "kind": "paragraph",
+        "text": "To modify the motion of the star there must be an exchange that transmits the effect to it. A useful separation between installation and star must also be maintained. If the vehicle simply accelerates and moves away, it has built a ship, not a star engine."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Material jets allow carrying amount of movement in other ways than photons. In return, you need to collect, process and accelerate mass. Increasing the flow improves certain ideal performance, but increases the infrastructure required to handle it."
+      },
+      {
+        "kind": "heading",
+        "text": "Two jets hold the trailer together"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The proposed architecture uses oriented flows with different functions. A high-speed jet contributes to the thrust, while another is directed so that it transmits strength to the star and helps preserve the relationship between engine and source. Geometry looks for installation and star to accelerate together rather than separate. [1]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Every jet has a reaction. Fields that accelerate plasma feel an opposite force, and that force crosses the structure. If a current fluctuates, position and orientation change. The control must adjust catchment and ejection before the engine falls towards the star or escapes from useful configuration."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The material ejected does not disappear. It forms energy flows across long distances and must avoid worlds and infrastructure. Particles that are not well collimated place energy in the environment. The route of the star system and the exclusion zone of its jets are the same navigation problem."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The merger appears as part of this kind of ambitious architecture. Fusion propulsion studies illustrate the difference between an energetically attractive reaction and a complete machine that controls it. Climbing that machine to a stellar intervention introduces additional difficulties. [2]"
+      },
+      {
+        "kind": "heading",
+        "text": "Processing plasma does not amount to burning fuel"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Before a useful reaction, the flow needs adequate composition, density and temperature. Isotopes and coming elements are not interchangeable. Separation, containment and fuel production add stages; neutrons or other outputs that do not comply with fields deposit heat and damage materials."
+      },
+      {
+        "kind": "paragraph",
+        "text": "A magnetic nozzle tries to orient loaded products without placing a solid wall in the hottest plasma. Their coils receive strength and radiation. Efficiency depends on what fraction of energy ends in a directed jet; the rest appears as heat, radiation, or particles useless for thrust."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The proposal explores an engineering limit with ideal assumptions. There is no operational chain today capable of extracting stellar matter, feeding a fusion facility on that scale and maintaining jets for ages. Explaining each link allows you to appreciate the idea without turning the diagram into an available machine."
+      },
+      {
+        "kind": "note",
+        "title": "From an ideal limit to an installation",
+        "paragraphs": [
+          "An acceleration calculated under ideal efficiencies should be interpreted as an exploration of possibilities. A realizable design would have to account for capture, loss, structural mass, jet control and thermal dissipation. None of those terms disappear because the source is a star."
+        ]
+      },
+      {
+        "kind": "paragraph",
+        "text": "The energy absorbed by components must come out. The bright environment does not necessarily make it easy to cool the installation: its radiators need a balance compatible with the radiation they receive. [3]"
+      },
+      {
+        "kind": "heading",
+        "text": "The radiator looks away from the star"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Captators, separators and fields produce heat in addition to receiving stellar irradiation. Thermal rejection surfaces need a cold view of the space and protection against jets. Increasing power can require more radiator area, which adds mass and changes tug dynamics."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The complete installation would be extensive: capture towards the star, processing in an intermediate region, oriented nozzles and remote radiators. Repair involves moving parts through a plasma environment and intense fields. Modularity would allow a line to be disconnected without losing all geometry, provided that the remaining thrust does not unbalance the set."
+      },
+      {
+        "kind": "heading",
+        "text": "The advantage appears on the future map"
+      },
+      {
+        "kind": "paragraph",
+        "text": "In front of a Shkadov, ejecting matter more quickly can produce greater ideal accelerations. The price is an active industry, extracted matter and a more direct influence on the star. The comparison is not between a “weak” and a “strong” engine, but between a passive surface and a material chain with many more failure states. [1]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The mission would have to begin long before a galactic encounter. Year after year, observatories would measure jet and stellar velocity; generations would adjust a scarcely perceptible deviation. The visible result would be that, millions of years later, the system crosses a different region of the galaxy."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Each extracted kilogram is divided between fuel, directed jet, products and losses. Recording that inventory would allow to relate acceleration measured with changes in the star. If a fraction is deposited in the system instead of escaping, it does not provide the expected external momentum and can create risks for orbits and installations."
+      },
+      {
+        "kind": "paragraph",
+        "text": "A prolonged operation also changes the source that feeds the engine. Mass, external composition and activity do not remain exactly constant. The control must update its models, because maintaining the same flow or power during eras does not guarantee to maintain the same stellar effect."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Imagine the scene on overlapping scales: field-guided particles, jets that cross great distances and, behind everything, the orbit of a changing star. The appeal of the engine is to connect those scales. Their speculative character is that we still do not know how to build the chain that would unite them."
+      }
+    ],
+    "sources": [
+      {
+        "title": "Stellar engines: Design considerations for maximizing acceleration",
+        "publisher": "Matthew E. Caplan, Acta Astronautica, 2019",
+        "url": "https://doi.org/10.1016/j.actaastro.2019.08.027"
+      },
+      {
+        "title": "The Fusion Driven Rocket",
+        "publisher": "John Slough / NASA NIAC",
+        "url": "https://www.nasa.gov/general/the-fusion-driven-rocket-nuclear-propulsion-through-direct-conversion-of-fusion-energy/"
+      },
+      {
+        "title": "Thermal Control: Small Spacecraft Technology State of the Art",
+        "publisher": "NASA",
+        "url": "https://www.nasa.gov/smallsat-institute/sst-soa/thermal-control/"
+      }
+    ],
+    "readingMinutes": 6
+  },
+  {
+    "id": "stellar-navigation",
+    "title": "Choosing where a solar system will pass",
+    "lead": "Navigating with a star means planning within a galaxy that also moves. Destinations do not wait still on a map.",
+    "blocks": [
+      {
+        "kind": "paragraph",
+        "text": "A frozen galactic map leads to error. Stars orbit, separations change and future encounters depend on three-dimensional trajectories. A stellar motor would act within that collective movement."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The proposals for stellar propulsion make it possible to ask how much a trajectory could be diverted under certain forces. The navigation adds another layer: choose when and in which direction to apply that disturbance. A maximum acceleration value does not itself provide a useful path. [1]"
+      },
+      {
+        "kind": "heading",
+        "text": "Map starts with six coordinates"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Projecting a meeting requires three-dimensional position and velocity of each star. Radial distance, apparent motion in the sky and the velocity obtained from spectra are combined with uncertainties. Today's small mistakes become large possible regions after millions of years."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The light we observe is also old. A star a hundred light years away is seen as it was a century ago; a model updates its trajectory to the estimated present and then into the future. The destination appears as a distribution narrowed by new measurements, rather than an exact point."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The navigated system orbits within galactic potential. Stars, gas and distributed matter bend their path. Integrate a route requires models of that field and close encounters; a straight line on an image of the galaxy serves only as initial orientation."
+      },
+      {
+        "kind": "heading",
+        "text": "The destination has to make the appointment."
+      },
+      {
+        "kind": "paragraph",
+        "text": "If you want to approximate two systems, it matters your future position, not the one we see now. The observation is already delayed by the journey of light. Position and velocity measurements have uncertainties that are amplified by projecting them forward."
+      },
+      {
+        "kind": "paragraph",
+        "text": "A tiny push motor begins to act when the encounter still seems abstract. The citation is recalculated from time to time and the observed deviation is compared. Correcting soon requires less subsequent acceleration, but is decided with more uncertain data; waiting for improved knowledge and reduced room for manoeuvre."
+      },
+      {
+        "kind": "heading",
+        "text": "Approaching doesn't mean colliding"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The objective distance depends on the purpose. Moving to light year fractions can facilitate travel between systems without strongly disturbing planets; approaching much more changes clouds of comets and outer orbits. The plan looks for a separation window and relative velocity, not to occupy the same point."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Two stars passing by continue to move. A low relative speed prolongs the exchange window; a high produces a brief encounter even if the minimum distance is small. Navigating includes choosing when both arrive and how they leave later."
+      },
+      {
+        "kind": "paragraph",
+        "text": "In addition, the mass of the system is distributed. The planets follow their own orbits and can respond differently to a sustained acceleration of the star. The project would need to check stability, resonances and disturbances by other bodies."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The most distant bodies are bound with less force and can be lost or altered before inner planets. The direction of the thrust changes which orbits receive the disturbance. Simulations would follow planets, moons, asteroids and comet reservoirs, not just the center of the star."
+      },
+      {
+        "kind": "note",
+        "title": "A useful but local approach",
+        "paragraphs": [
+          "For constant acceleration and times where that approximation is valid, the speed change is Δv = at. In the galaxy, the direction of thrust and gravitational field evolve. Adding a straight deviation over millions of years does not replace integrating the trajectory."
+        ]
+      },
+      {
+        "kind": "heading",
+        "text": "Route is corrected while changing vehicle"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Nor does the star necessarily retain all its properties during the tour. Its evolution and any mass extraction can modify both the worlds that accompany it and the operation of the engine. [2]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "If the engine extracts matter, the stellar mass and available power evolve. Maintaining the same setting does not necessarily produce the same acceleration. The browser updates thrust limits, planetary stability and time remaining along with the outside map."
+      },
+      {
+        "kind": "paragraph",
+        "text": "A prolonged failure displaces the region of arrival. The mission can accept a more distant encounter, extend operation or choose another future goal. Having alternative routes prevents a society from forcing a star to fulfill a decision you were before."
+      },
+      {
+        "kind": "heading",
+        "text": "No one sees the whole curve."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Files keep original observations, models, decisions and reasons for future generations to review. A map showing only the approved route hides uncertainty; a useful one retains ranges of possibilities and thresholds to correct or stop."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The decisive scene could be modest: two points whose regions of probability begin to overlap at a distant date. Star navigation turns this chart into current tasks of observation, maintenance and prudence. Their achievement is not to move a sun quickly, but to ensure that a future encounter remains a choice and not an accident."
+      },
+      {
+        "kind": "paragraph",
+        "text": "A society that plans so would have to decide how close it is desirable and what risks introduce encounters with other systems. Distance allows exchange, but also new disturbances. Bringing two suns closer does not amount to connecting two train stations."
+      },
+      {
+        "kind": "paragraph",
+        "text": "From a house, the journey could be imperceptible for generations. The test would be in archives and maps: one future encounter becomes more likely, another is avoided. Navigation would acquire a peculiar meaning, that of taking care of a trajectory whose complete curve no person will ever see."
+      }
+    ],
+    "sources": [
+      {
+        "title": "Stellar engines: Design considerations for maximizing acceleration",
+        "publisher": "Matthew E. Caplan, Acta Astronautica, 2019",
+        "url": "https://doi.org/10.1016/j.actaastro.2019.08.027"
+      },
+      {
+        "title": "Stars",
+        "publisher": "NASA Science",
+        "url": "https://science.nasa.gov/universe/stars/"
+      }
+    ],
+    "readingMinutes": 5
+  },
+  {
+    "id": "star-lifting",
+    "title": "Extract matter from a star",
+    "lead": "The star lift imagines turning part of the stellar material into a resource. Before we store it, we'd have to get it out of a huge gravity pit.",
+    "blocks": [
+      {
+        "kind": "paragraph",
+        "text": "There wouldn't be an excavator lying on the ground. A star lacks that solid surface where we place the mines. Its external material is hot and dynamic; an installation would have to act remotely, using energy and fields, or collect flows that get out."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The stellar wind already transports matter out naturally. Star lift adds the speculative idea of increasing or directing an extraction to obtain resources or alter the evolution of the star. Studies of stellar motors and life extension explore different objectives for this extraction. [2][3]"
+      },
+      {
+        "kind": "heading",
+        "text": "Choose from which flow is part"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The least interventionist option would be to pick up some of the wind that already escapes. Its flow, composition and velocity are given by stellar activity; capturing a fraction requires a large region of interaction. Increasing production means depositing energy or modifying fields near the outer layers so that more material reaches output paths."
+      },
+      {
+        "kind": "paragraph",
+        "text": "A conceptual family proposes to heat regions of the star atmosphere to intensify escape. Another imagines using magnetic fields to channel plasma to collection points. Both need to specify where the energy enters, how the flow is prevented from falling back and what reaction the infrastructure receives. “Rise” summarizes different operations, not a single machine."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The star changes continuously. Magnetic arcs, eruptions and density variations disturb any sensor. A plant cannot assume a uniform river: it measures composition and speed, reduces operation during dangerous events, and accepts that part of the matter will never reach the intended conduit. [1]"
+      },
+      {
+        "kind": "heading",
+        "text": "Lifting also means giving energy"
+      },
+      {
+        "kind": "paragraph",
+        "text": "In a Newtonian estimate, removing one kilogram from a distance R from an M mass to far away requires a gravitational energy of the order GM/R, not counting other processes. The material can already have movement and thermal energy, but the gravitational well does not cease to exist."
+      },
+      {
+        "kind": "paragraph",
+        "text": "After leaving, it would still have to be captured, cooled and separated. A plasma flow is not a metal bar ready for a factory. The total abundance of a star can be enormous as long as the processing chain remains the bottleneck."
+      },
+      {
+        "kind": "heading",
+        "text": "Capture means yielding movement and heat"
+      },
+      {
+        "kind": "paragraph",
+        "text": "A field can bend charged particles into a processing region, but the installation receives strength and plasma retains energy. Braking it produces radiation, currents and heat that must come out. A material structure placed directly in the flow would erode; intermediate plasma fields and regions try to keep solid parts away from higher temperatures."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Capture can be incomplete and selective. Particles with different load, mass and speed follow different paths. Neuters cross magnetic fields to ionize or collide. The inventory must compare what came out of the star with what really remained contained, because the rest forms jets or clouds in the system."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Once decelerated, the matter needs to be recombined, cooled and separated. Hydrogen and helium dominate the outer layers; heavier elements appear in smaller proportions. Getting a ton of rare material can involve processing a much larger mass of components that also need destination."
+      },
+      {
+        "kind": "note",
+        "title": "Change mass changes to the star",
+        "paragraphs": [
+          "Mass influences gravity, internal pressure and luminosity. Extracting it for long periods modifies evolution, so it is not enough to treat the star as a deposit of constant composition. The numerical models of star lifting study precisely this response under prescribed assumptions. [2]"
+        ]
+      },
+      {
+        "kind": "heading",
+        "text": "The factory decides what resource means"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The composition of the accessible material is also not equivalent to that of all inner layers. Reaching products from deep regions is another difficulty; the star does not necessarily mix all its contents evenly. [1]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Separate hydrogen could serve as propellant, hypothetical fusion fuel or chemical raw material. Helium and isotopes require their own processes. Keeping them involves tanks, temperatures and pressure; transporting them to another point of the system requires additional energy. The extraction ends when there is a deliverable product, not when the plasma crosses a magnetic line."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The value of a product must be compared with the energy and infrastructure used to obtain it. A star contains an immense mass, but asteroids and planets can offer cooler and more concentrated elements. Star lifting makes sense for evolutionary materials, rates or objectives that these reserves do not satisfy, not because all star material is automatically cheap."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The energy recovered by cooling or recombining plasma could feed part of the process, although no recovery is complete. Bombs, fields, separation and radiators close a budget. If maintaining the flow consumes more useful resources than it delivers, the plant can continue to function as a stellar intervention, but not as a profitable mine under the same criteria."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Part of the flow can directly feed an installation, avoiding storing everything. Another part can be ejected as a reaction mass from a star engine. These uses compete: maximizing thrust, manufacturing materials and modifying evolution do not necessarily require the same flow or composition."
+      },
+      {
+        "kind": "heading",
+        "text": "Remove mass slowly rewrites the star"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Scoggins and Kipping models prescribe extraction rates and calculate how stellar evolution responds. Change mass modifies pressure, central temperature, luminosity and stage duration. The effect cannot be inferred assuming that the star retains structure while it is empty. [2]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The rate matters compared to the internal adjustment times. A slow intervention allows the star to find new configurations; a localized disturbance can trigger different magnetic or thermal responses. Observatories would measure luminosity, oscillations and composition to update the model before increasing flow."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Planets get the consequences. Changes in luminosity alter climate; loss of mass slowly changes gravitational potential and orbits. An industry that seeks resources must account for those effects, even if the fraction withdrawn during a human life seems despicable."
+      },
+      {
+        "kind": "heading",
+        "text": "A landless mine has emergency routes"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The facility would be distributed among nearby pickers, colder processing stations, radiators and distant jet tanks. A field failure can release hot material; therefore natural escape paths should not traverse habitats. Modules are isolated and replaced without suddenly shutting down the entire network."
+      },
+      {
+        "kind": "paragraph",
+        "text": "From a distant workshop, the final product would seem ordinary. Records would show his path: he came out as a particle from a star atmosphere, gave up movement to a field, lost heat, was separated and crossed the system into a tank. That particular chain is what makes an abundant star an industrial source."
+      },
+      {
+        "kind": "paragraph",
+        "text": "As an industrial landscape, the concept would be very different from a landmine: installations away from a bright sphere, guided flows and large cooling zones. The wealth would arrive hot, dispersed and charged electrically."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The suggestive question is not just how many things could be built with a star. It is how much of it could withdraw without losing sight that also provides light, gravity and a shared history to the worlds around it."
+      }
+    ],
+    "sources": [
+      {
+        "title": "Sun Facts",
+        "publisher": "NASA Science",
+        "url": "https://science.nasa.gov/sun/facts/"
+      },
+      {
+        "title": "Lazarus Stars: Numerical investigations of stellar evolution with star-lifting as a life extension strategy",
+        "publisher": "Matthew T. Scoggins y David Kipping, 2022; revisión de 2023",
+        "url": "https://arxiv.org/abs/2210.02338"
+      },
+      {
+        "title": "Stellar engines: Design considerations for maximizing acceleration",
+        "publisher": "Matthew E. Caplan, Acta Astronautica, 2019",
+        "url": "https://doi.org/10.1016/j.actaastro.2019.08.027"
+      }
+    ],
+    "readingMinutes": 6
+  },
+  {
+    "id": "plasma-processing",
+    "title": "Matter comes loaded and burning",
+    "lead": "A stellar industry would need to convert plasma flows into manageable materials. Collecting energy and manufacturing a product are different jobs.",
+    "blocks": [
+      {
+        "kind": "paragraph",
+        "text": "Before the warehouse there would be a region of fields and conduits. Incoming matter would contain charged particles, electrons and a distribution of velocities. I couldn't touch any wall without transferring energy and damaging it."
+      },
+      {
+        "kind": "paragraph",
+        "text": "A plasma is a medium with charged free particles that collectively responds to electromagnetic fields. The star and its surroundings offer natural examples; a processing plant on that scale would remain speculative. [1]"
+      },
+      {
+        "kind": "heading",
+        "text": "First you have to measure the flow"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The entrance does not have a single temperature or speed. Instruments estimate density, composition, load and direction before guidance fields change path. If a stellar disturbance occurs, the plant reduces opening or diverts the flow to a route that does not hit equipment."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Loaded particles generate currents and own fields. On a large scale, plasma can form waves and instabilities that displace the effective conduit. The control does not move each individual ion; it modifies collective conditions and checks the result with distributed sensors."
+      },
+      {
+        "kind": "paragraph",
+        "text": "A neutral fraction does not respond directly to the magnetic field. It can be ionized by collisions, light or discharges before entering the same path, or separated as a different flow. Name the load of each species defines which operation can act on it."
+      },
+      {
+        "kind": "heading",
+        "text": "To guide is not to cool"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Fields can change load paths. An ideal magnetic field deflects its movement without reducing kinetic energy alone. In order to cool, energy must be transferred elsewhere through specific processes. Drawing a magnetic funnel does not solve that stage."
+      },
+      {
+        "kind": "paragraph",
+        "text": "An electric field can accelerate or slow loads, transferring energy between particles and circuits. Collisions redistribute movement and can increase radiation. A controlled expansion converts part of thermal energy into directed motion; an exchanger receives heat and must carry it to radiators. Each option leaves a measurable output."
+      },
+      {
+        "kind": "heading",
+        "text": "Separate takes advantage of different paths"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Ions with different load-mass ratios curve differently under the same fields. Electromagnetic stages can enrich a component, but states of ionization and velocity distribution widen each current. Perfect separation in a single pass would be an assumption, not an automatic consequence."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The dominant material can be removed first and recirculated, while scarce species go through more stages. Mass and spectrum sensors measure purity before deciding on another cycle. Each recirculation consumes energy and increases residence time and contact with components."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Electrons and ions must end up in electrically manageable states. Accumulating separate load produces fields that oppose the process. Recombination releases energy, possibly as light and heat, and requires surfaces or regions prepared to receive it."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Ion thrusters demonstrate that we can produce and accelerate charged particles in space systems. An industry that captures large flows would need additional operations and very different scales; the shared electromagnetic principle does not convert one technology into the other. [2]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The separation of species depends on load, mass and state of the plasma. The material may have to be recombined and passed through thermal stages before being stored. Each transformation adds equipment and losses."
+      },
+      {
+        "kind": "heading",
+        "text": "Cooling ends in a radiator"
+      },
+      {
+        "kind": "paragraph",
+        "text": "One stage can recover energy from the flow as electricity, but generators and converters have finite efficiencies. The rest heats fluids and structures. These fluids carry energy to surfaces with a view of cold space; there infrared radiation is emitted. Radiator area and temperature limit the processable flow rate. [3]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Closer to the star there is more energy available and also a more intense radiative background. Thermal screens can protect a face while radiators look in the opposite direction. Its geometry should avoid captured plasma and areas where failure would send hot particles."
+      },
+      {
+        "kind": "paragraph",
+        "text": "When the material lowers temperature, it can be recombined, form neutral gas and maybe condensed if pressure and species allow. Hydrogen, helium and heavy elements require different tanks. “Cold matter” remains a set of products with specific chemistry and phases."
+      },
+      {
+        "kind": "note",
+        "title": "The heat needs a physical exit",
+        "paragraphs": [
+          "The energy removed from the material does not disappear. It can partially recover or become a thermal charge to be radiated. Working temperatures determine cooling materials and surfaces. [3]"
+        ]
+      },
+      {
+        "kind": "heading",
+        "text": "The container is proof that the process is over"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The facility would have to tolerate flow variations, component contamination and erosion. A failure not only interrupts production: it can deliver too much energy to a piece that stopped guiding the particles correctly."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Erosion releases atoms from walls and can contaminate precisely the species that was intended to be purified. Replaceable coatings, traps and product analysis make it possible to distinguish stellar matter from material from the factory. An out-of-specific batch returns to the circuit or is intended for less demanding use."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Valves and tanks isolate the product from the plasma region. To store it, pressure, temperature and leakage are controlled; a mechanical interface is added to transport it. Only then can a ship collect a cargo without entering the fields and radiation from the plant."
+      },
+      {
+        "kind": "heading",
+        "text": "A modular factory survives the next event"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Capture, braking, separation, cooling and storage would form modules with diversion routes. If a separator fails, the system reduces input before saturating. If a radiator loses capacity, lower the flow rate. Controlling plasma means coordinating those responses and maintaining energy and matter within known limits."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The plant could deliver fuel, propellant or building elements, but each product requires a different purity. Producing useful mass does not show that the operation is energetically favorable compared to obtaining it on planets or asteroids. Their interest appears when the stellar scale and target justify an extreme chain."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Imagine the result at the end of the chain: a container with cold, seemingly ordinary matter. Its appearance would conceal an extraordinary journey from a stellar environment. Astroengineering becomes tangible when something that began as plasma ends up being a piece that a person can sustain."
+      }
+    ],
+    "sources": [
+      {
+        "title": "Sun Facts",
+        "publisher": "NASA Science",
+        "url": "https://science.nasa.gov/sun/facts/"
+      },
+      {
+        "title": "Dawn: Ion Propulsion",
+        "publisher": "NASA / JPL",
+        "url": "https://science.nasa.gov/mission/dawn/technology/ion-propulsion/"
+      },
+      {
+        "title": "Thermal Control: Small Spacecraft Technology State of the Art",
+        "publisher": "NASA",
+        "url": "https://www.nasa.gov/smallsat-institute/sst-soa/thermal-control/"
+      }
+    ],
+    "readingMinutes": 5
+  },
+  {
+    "id": "stellar-husbandry",
+    "title": "Watching the rhythm of a star",
+    "lead": "Some models ask whether a civilization could prolong favorable stellar conditions. The goal would be to buy time, not to light an eternal source.",
+    "blocks": [
+      {
+        "kind": "paragraph",
+        "text": "A community keeps records of its star's brightness during immensely long periods. The change from one year to another is irrelevant to a person, but the trend threatens the climate of their worlds. Your project would be to intervene before the everyday landscape is no longer possible."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Star evolution transforms luminosity, structure and composition. The star doesn't maintain the same power output until it shuts down. That variation can displace favorable conditions for planets long before the star end. [2][3]"
+      },
+      {
+        "kind": "heading",
+        "text": "Caring begins by choosing what is conserved"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The objective can be to maintain surface water-compatible irradiation on a planet, prolong a stable stage of the star, or preserve access to energy for artificial habitats. Those goals are not equivalent. A constant luminosity may require moving orbits or removing mass; a longer stellar life can produce another spectrum or different planetary conditions."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Inhabitability also depends on atmosphere, albedo and geology. Adjusting the star does not guarantee that a world retains oceans, and a planet can adapt through smaller local interventions. Before operating it compares which variable threatens the inhabitants and where it is more controllable. [3]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "A community could choose an acceptable corridor of luminosity instead of an immobile value. That allows for pauses, uncertainty and natural changes. “Taking care” does not mean freezing the star; it means managing a trajectory with explicit limits."
+      },
+      {
+        "kind": "heading",
+        "text": "Earn time by removing dough"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Scoggins and Kipping studied numerically prescribed mass extractions to compensate for changes in luminosity and prolong favorable conditions. The results depend on the initial mass and do not imply that all stars can stabilize indefinitely. The model describes the stellar response; it does not demonstrate an extraction machine. [1]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Removing mass reduces the weight that compresses inner layers and changes melting conditions. The star rearranges density and temperature; its luminosity does not respond like a lamp to which fuel is removed from an external tank. Evolution models calculate this response under assumptions about rate and composition. [1]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The material extracted must go somewhere. It can feed industry, form storage reserves or leave the system, and each destination exchanges energy and momentum. A prescribed rate in a simulation is converted into plasma mines, radiators and transport when you ask how to do it."
+      },
+      {
+        "kind": "heading",
+        "text": "The instruments see the interior indirectly"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The hypothetical project would need to measure the interior through indirect observations, update models and adjust an intervention over huge periods. A small, sustained error can matter more than a large, brief disturbance."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Luminosity, spectrum, surface oscillations, magnetic activity and particle flows offer clues about structure. No sensor submerges quietly in the core. Inferences combine observations and models, and their uncertainties should limit how much intervention changes at each stage. [2]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "A reference network would also measure planets: temperature, atmosphere and orbit. If the star meets the calculated target but the climate moves away from the habitable corridor, the program needs to review its metric. The care system includes the relationship between source and inhabitants."
+      },
+      {
+        "kind": "note",
+        "title": "A star is not a well-mixed deposit",
+        "paragraphs": [
+          "The availability of fuel for a reaction depends on where you are and local conditions. Adding external hydrogen does not mean automatically delivering it to the core. Any mixing or feeding proposal should explain how the structure changes."
+        ]
+      },
+      {
+        "kind": "heading",
+        "text": "The added matter does not reach the nucleus alone"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Different strategies could also be compared: moving habitats, changing orbits or regulating the radiation received. Caring for the star doesn't have to be the least expensive intervention to care for its inhabitants."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Adding hydrogen to outer layers increases mass and can alter opacity, circulation and activity without immediately resupplying the fusion region. Mixing it inward would require explaining transport through a stratified structure. A proposal that speaks of “feeding” the star needs to identify the route and time, not just the element."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Removing products from certain layers faces the reverse problem. The accessible composition does not automatically represent the core. Star lifting can modify total mass with external material, while other goals would require much more speculative mixing processes."
+      },
+      {
+        "kind": "heading",
+        "text": "The relay keeps a curve, not an original machine"
+      },
+      {
+        "kind": "paragraph",
+        "text": "For millions of years they would change materials, institutions and knowledge. No initial component would survive the entire mission. Files must retain models, decisions and raw data so that future generations can detect a mistaken assumption rather than obey an inherited slogan."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The program can stop. If observations deviate from predictions, reducing extraction offers time to study the response. The star retains already accumulated changes, but a gradual intervention allows avoiding a single irreversible decision of maximum scale."
+      },
+      {
+        "kind": "paragraph",
+        "text": "A daily scene could be a meeting that adjusts a rate at a minimum fraction. The annual effect is not perceived by the naked eye, but that decision modifies how much light will receive worlds within hundreds of thousands of years. The emotion comes from treating this distant future as a measurable responsibility."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The word careful here is deliberately strange. Applied to a sun, it forces us to imagine institutions that survive generations, instruments replaced over and over again and objectives revised as knowledge changes."
+      },
+      {
+        "kind": "paragraph",
+        "text": "What would be sought to preserve would not be an immobile photograph of the universe. It would be a margin for stories to continue to occur in a proper light. Even in the most ambitious scenario, time earned would still have a physical cost and an open end."
+      }
+    ],
+    "sources": [
+      {
+        "title": "Lazarus Stars: Numerical investigations of stellar evolution with star-lifting as a life extension strategy",
+        "publisher": "Matthew T. Scoggins y David Kipping, 2022; revisión de 2023",
+        "url": "https://arxiv.org/abs/2210.02338"
+      },
+      {
+        "title": "Stars",
+        "publisher": "NASA Science",
+        "url": "https://science.nasa.gov/universe/stars/"
+      },
+      {
+        "title": "The Habitable Zone",
+        "publisher": "NASA Science",
+        "url": "https://science.nasa.gov/exoplanets/habitable-zone/"
+      }
+    ],
+    "readingMinutes": 5
+  },
+  {
+    "id": "black-hole-engineering",
+    "title": "Work around the place where nothing comes back",
+    "lead": "A black hole can have an extraordinarily energetic environment. Taking advantage of it would require remaining off the horizon and distinguishing very different physical processes.",
+    "blocks": [
+      {
+        "kind": "paragraph",
+        "text": "The center of the image is dark, but around there is a bright disk deformed by gravity. The light we see does not come from inside the black hole: it comes from matter and radiation in its surroundings. That difference is the starting point for any engineering idea. [1]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The horizon marks a causal frontier. Once crossed inwards, there is no future path to send a signal back to the outside. It is not a solid surface where to support a plant or a mouth that can be opened and closed."
+      },
+      {
+        "kind": "heading",
+        "text": "Falling can release energy before the horizon"
+      },
+      {
+        "kind": "paragraph",
+        "text": "The matter that forms an accretion disc interacts, heats and can radiate while losing orbital energy. Part of that energy reaches the outside before the material crosses the horizon. A hypothetical system could try to take advantage of that broadcast without recovering what had already fallen."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Efficiency depends on geometry, twist and flow. It is not appropriate to assign a universal figure to any black hole or assume that all radiated energy can be captured. A very bright environment can also be destructive for instruments and structures."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The rotation offers another energy reservoir in the relativistic description. There are theoretical extraction processes and astrophysic phenomena related to fields and jets. This does not amount to having a generator with an accessible mechanical axis: interaction involves space-time, plasma and fields. [1]"
+      },
+      {
+        "kind": "note",
+        "title": "The tides depend on size and distance",
+        "paragraphs": [
+          "The difference in gravity between two points can stretch an object. Its magnitude is not given just by saying black hole. A more massive black hole has a bigger horizon, and the tides in that region may be smaller than those of a small one. The orbit and environment continue to impose other conditions."
+        ]
+      },
+      {
+        "kind": "heading",
+        "text": "A small black hole would be another kind of proposal."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Crane and Westmoreland explored whether artificial black holes could serve ships under alleged Hawking radiation, creation, and handling. It is theoretical speculation far away from an experimental capacity. It should not be mixed with the energy observed from accretion discs. [2]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "In the semiclassical description, smaller black holes have higher Hawking temperature and can lose mass faster. This relationship creates a compromise between power and duration. Creating, feeding and accelerating such an object are additional problems that the simple energy balance does not solve."
+      },
+      {
+        "kind": "paragraph",
+        "text": "A black hole of stellar mass wouldn't behave like that tiny, hot fountain. Using the same word for both can produce a misleading image of interchangeable performance."
+      },
+      {
+        "kind": "heading",
+        "text": "Keeping distance is also engineering."
+      },
+      {
+        "kind": "paragraph",
+        "text": "An installation would need appropriate orbits, radiation protection and a way to transmit useful energy. If it absorbs power, it must evacuate the losses. The vacuum does not cool by contact like the air of a room; radiators are still present even in this extreme scenario. [3]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Nor does a black hole aspire indiscriminately from any distance. Far from it, gravity is related to its mass as in other systems; an adequate orbital trajectory can remain outside. The dangerous is not a magical power of suction, but the geometry, tides and concrete environment to which the ship approaches."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The visible appearance could vary greatly. An object without an important flow of matter would not have to display the spectacular disc of an illustration. The bright image presupposes a supply and processes that are also part of the energy balance."
+      },
+      {
+        "kind": "paragraph",
+        "text": "This hypothetical engineering has a particularly clear limit: getting something useful before a border from which nothing can be returned. His imaginative strength is born from staying close to that limit without erasing it. The better you understand where the energy comes from, the more impressive is the landscape around the darkness."
+      }
+    ],
+    "sources": [
+      {
+        "title": "Anatomy of a Black Hole",
+        "publisher": "NASA Science",
+        "url": "https://science.nasa.gov/universe/black-holes/anatomy/"
+      },
+      {
+        "title": "Are Black Hole Starships Possible?",
+        "publisher": "Louis Crane y Shawn Westmoreland, 2009",
+        "url": "https://arxiv.org/abs/0908.1803"
+      },
+      {
+        "title": "Thermal Control: Small Spacecraft Technology State of the Art",
+        "publisher": "NASA",
+        "url": "https://www.nasa.gov/smallsat-institute/sst-soa/thermal-control/"
+      }
+    ],
+    "readingMinutes": 3
+  },
+  {
+    "id": "stellar-technosignatures",
+    "title": "Recognize an intervention in the light of a star",
+    "lead": "If someone were to build on a stellar scale, we might see its effect before distinguishing a single piece.",
+    "blocks": [
+      {
+        "kind": "paragraph",
+        "text": "A telescope receives a bright spot. At that point, the star, dust, planets and, as a hypothesis, an artificial infrastructure could coexist. The search begins by trying to separate mixed contributions."
+      },
+      {
+        "kind": "paragraph",
+        "text": "A structure that intercepts light and works with energy would have to emit heat. Dyson's studies of spheres and swarms show why infrared can be interesting for large-scale activity. Also natural dust produces infrared emission, so an isolated excess does not identify technology. [1]"
+      },
+      {
+        "kind": "heading",
+        "text": "Each machine leaves a different combination"
+      },
+      {
+        "kind": "paragraph",
+        "text": "A swarm that absorbs light reduces some of the visible stellar emission from certain directions and returns energy at wavelengths related to its temperature. Coverage, orientation and thermal distribution affect the spectrum. A perfect single temperature would be less realistic than components working on various regimens."
+      },
+      {
+        "kind": "paragraph",
+        "text": "A Shkadov reflector would produce an angular asymmetry: different directions would receive different amounts and patterns of light. A Caplan engine or a star lift operation could be associated with matter flows, spectral lines, mass changes or acceleration. Each proposal generates its own predictions; “rare star” is not a specific technosignature."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Observation usually integrates everything as a point. Directly solving parts may be impossible, but spectra, time curves and astrometry separate properties. The question is whether the same architecture explains several measurements without contradicting the energy and timing available."
+      },
+      {
+        "kind": "heading",
+        "text": "Strange behavior needs company."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Brightness changes, unusual spectra or combinations of properties that are difficult to explain could be sought. The strength of a candidate would grow if several independent observations supported the same model and ruled out simple alternatives."
+      },
+      {
+        "kind": "heading",
+        "text": "Dust is a physical rival, not an excuse."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Grains heated by a star emit infrared and can block visible light. Forming discs, collisions and expelled material produce natural excesses. Its temperature, composition, location and evolution help compare explanations. A technosignature must compete with concrete powder models, not with the word “natural” used as an automatic response. [1]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Starspots and pulsations change brightness; companions and planets produce transits; gas creates lines. Repeat observations at different wavelengths shows whether the pattern follows rotation, orbit or expected evolution. An instrumental device can disappear by using another telescope."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The artificial alternative gains interest if it predicts a new observation: a radiation direction, an additional temperature, a movement or an energy relationship. If that prediction fails, the model loses strength. Temporary unexplainability alone does not accumulate evidence of technology."
+      },
+      {
+        "kind": "paragraph",
+        "text": "An artificial mass extraction could, in principle, alter the evolution of a star. The numeric works of star lifting motivate questions about detectability, but predicting an anomaly does not show that we know how to distinguish it unequivocally between natural populations. [2]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "A star with apparent mass and composition that does not fit into an evolutionary trajectory may merit follow-up. However, age, mix, binary interaction and model errors offer alternatives. Detecting star lifting would require linking the anomaly to additional extraction-compatible flows or patterns."
+      },
+      {
+        "kind": "heading",
+        "text": "Movement and energy must tell the same story"
+      },
+      {
+        "kind": "paragraph",
+        "text": "If a star motor is proposed, the observed acceleration must have direction and magnitude compatible with radiation or jets. The current budget limits how much movement can be attributed to an intercepted luminosity. A corresponding dead-end acceleration asks for another explanation or reveals missing data."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Astrometry compares positions for years, while star engines would produce tiny effects. Invisible partners and galactic dynamics also accelerate stars. A technosignature is not obtained by subtracting a simple model; it requires discarding natural masses and forces within the available precision."
+      },
+      {
+        "kind": "note",
+        "title": "From anomaly to hypothesis",
+        "paragraphs": [
+          "An instrument has noise, selection and limits. First it is verified that the signal exists; then, that it is not an artifact or a known combination; finally, explanations are compared. Technology is a hypothesis that must produce predictions, not a label for everything still unexplained."
+        ]
+      },
+      {
+        "kind": "heading",
+        "text": "A Search Becomes a Campaign"
+      },
+      {
+        "kind": "paragraph",
+        "text": "SETI strategies extend the search beyond deliberate messages. An infrastructure could be revealed by consequences of its operation, even if no one wanted to communicate. The detectability depends on scale, distance, orientation and observation time. [3]"
+      },
+      {
+        "kind": "paragraph",
+        "text": "First calibration is checked and file data is searched. It is then observed in bands able to distinguish dust, gas, heat and variability. Independent teams try to reproduce the result. Publishing uncertainties and criteria allows a signal to survive future instruments rather than relying on a single interpretation."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Selection also matters. Searching only already strange stars increases candidates, but it makes it difficult to estimate how frequent each anomaly is. A comparison sample shows how natural properties are distributed and which part of the search space remains unobserved. [3]"
+      },
+      {
+        "kind": "heading",
+        "text": "Seeing a consequence does not reveal an intention"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Even a confirmed infrastructure would not automatically explain who built it, whether it works yet or for what. Heat can indicate energy use; a jet, momentum exchange. Translating those consequences into population, politics or message requires additional information."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The exciting possibility is more sober: several curves obtained by different instruments converge in a physical installation that makes predictions. The point stops being just weird and becomes a place where we know what to measure next. That transition from surprise to scientific program is the true threshold of a technosignature."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The scene is less immediate than finding a city in a photo. It would be a data curve, another measurement and a model that manages to explain both. Perhaps the first hint of a stellar civilization appears as a persistent question in the light of a point we had always considered natural."
+      }
+    ],
+    "sources": [
+      {
+        "title": "Dyson Spheres",
+        "publisher": "Jason T. Wright, 2020",
+        "url": "https://arxiv.org/abs/2006.16734"
+      },
+      {
+        "title": "Lazarus Stars: Numerical investigations of stellar evolution with star-lifting as a life extension strategy",
+        "publisher": "Matthew T. Scoggins y David Kipping, 2022; revisión de 2023",
+        "url": "https://arxiv.org/abs/2210.02338"
+      },
+      {
+        "title": "Strategies and Advice for the Search for Extraterrestrial Intelligence",
+        "publisher": "J. T. Wright, 2021",
+        "url": "https://arxiv.org/abs/2107.07283"
+      }
+    ],
+    "readingMinutes": 5
+  }
+] satisfies ConceptArticle[];

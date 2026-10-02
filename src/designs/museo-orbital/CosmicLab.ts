@@ -3,6 +3,7 @@
  * Everything else remains local to this laboratory, including its clock. */
 import { NEW_TOOLS, type LabTool, type Tool, type Family } from './lab/registry';
 import { Collection } from './lab/collection';
+import type { Locale } from '../../i18n/messages';
 import { segmentDistance } from './lab/shared';
 export type { LabTool } from './lab/registry';
 export type LabCommand = LabTool | 'clear' | 'exit' | 'repeat' | { solo: LabTool };
@@ -222,7 +223,7 @@ export class CosmicLab {
       else if (selected === 'echo') this.blast(at, 1);
       else if (selected === 'sail') this.makeSails(at);
       this.tool = 'hand';
-      this.emit(LAB_TOOLS.find(t => t.id === selected)!.hint.replace(/^Coloca[^.]*\. /, ''));
+      this.emit(LAB_TOOLS.find(t => t.id === selected)!.hint);
       return true;
     }
     if (this.portal) {
@@ -625,8 +626,8 @@ export class CosmicLab {
     ctx.fillStyle = `rgba(${color},0.85)`; ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, TAU); ctx.fill();
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
-    this.collection.draw(ctx, this.pointer);
+  draw(ctx: CanvasRenderingContext2D, locale: Locale = 'es') {
+    this.collection.draw(ctx, this.pointer, locale);
     ctx.save(); ctx.globalCompositeOperation = 'screen';
     if (this.echoes.length && !this.dust.length) {
       // Stable filaments: repeated flashes illuminate the same landscape.

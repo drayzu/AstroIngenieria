@@ -1,7 +1,9 @@
-import { Fragment, useEffect, useState, type ReactNode } from 'react';
+import { useLocale } from '../../i18n/LocaleProvider';
+import { Fragment, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { loadArticle } from '../../data/articles/loadArticle';
 import type { ConceptArticle } from '../../data/articles/model';
+import type { Locale } from '../../i18n/messages';
 import type { AstroConcept } from '../../types';
 import { ImageLightbox, type ImageLightboxImage } from './ImageLightbox';
 import './articleReader.css';
@@ -9,32 +11,35 @@ import './articleReader.css';
 interface ArticleReaderProps {
   concept: AstroConcept;
   onLightboxOpenChange?: (open: boolean) => void;
+  onContentReady?: () => void;
 }
 
-export function ArticleReader({ concept, onLightboxOpenChange }: ArticleReaderProps) {
-  const [content, setContent] = useState<ConceptArticle | null>(null);
+export function ArticleReader({ concept, onLightboxOpenChange, onContentReady }: ArticleReaderProps) {
+  const { locale, t } = useLocale();
+  const [loaded, setLoaded] = useState<{ article: ConceptArticle; locale: Locale } | null>(null);
+  const content = loaded?.locale === locale && loaded.article.id === concept.id ? loaded.article : null;
   const [error, setError] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<ImageLightboxImage | null>(null);
   useEffect(() => {
     let cancelled = false;
-    setContent(null);
+    setLoaded(null);
     setError(false);
     setLightboxImage(null);
     onLightboxOpenChange?.(false);
-    loadArticle(concept.sourceChapterId, concept.id).then(article => {
-      if (!cancelled) setContent(article);
+    loadArticle(concept.sourceChapterId, concept.id, locale).then(article => {
+      if (!cancelled) setLoaded({ article, locale });
     }).catch(() => {
       if (!cancelled) setError(true);
     });
     return () => { cancelled = true; };
-  }, [concept.id, concept.sourceChapterId, onLightboxOpenChange]);
+  }, [concept.id, concept.sourceChapterId, locale, onLightboxOpenChange]);
+  useLayoutEffect(() => { if (content) onContentReady?.(); }, [content, onContentReady]);
 
-  if (error) return <div className="ar-status" role="alert"><p>No se pudo cargar la lectura.</p><button type="button" onClick={() => {
+  if (error) return <div className="ar-status" role="alert"><p>{t("No se pudo cargar la lectura.")}</p><button type="button" onClick={() => {
     // A rejected module import can stay cached until the document is reloaded.
-    window.history.replaceState(window.history.state, '', `#obra-${concept.id}`);
     window.location.reload();
-  }}>Recargar lectura</button></div>;
-  if (!content || content.id !== concept.id) return <div className="ar-status" role="status" aria-live="polite">Preparando la lectura…</div>;
+  }}>{t("Recargar lectura")}</button></div>;
+  if (!content || content.id !== concept.id) return <div className="ar-status" role="status" aria-live="polite">{t("Preparando la lectura…")}</div>;
   // Las imágenes del artículo se incorporarán solo cuando se seleccionen para esa sección.
   const variants: { id: string; src: string; caption?: string }[] = [];
   const openLightbox = (image: ImageLightboxImage) => {
@@ -63,13 +68,13 @@ export function ArticleReader({ concept, onLightboxOpenChange }: ArticleReaderPr
     if (!match) return <Fragment key={index}>{part}</Fragment>;
     const number = Number(match[1]);
     const source = content.sources[number - 1];
-    return source ? <sup key={index}><a className="ar-citation" href={`#${prefix}-source-${number}`} onClick={event => { event.preventDefault(); document.getElementById(`${prefix}-source-${number}`)?.focus(); }} aria-label={`Referencia ${number}: ${source.title}`}>[{number}]</a></sup> : null;
+    return source ? <sup key={index}><a className="ar-citation" href={`#${prefix}-source-${number}`} onClick={event => { event.preventDefault(); document.getElementById(`${prefix}-source-${number}`)?.focus(); }} aria-label={t("Referencia {0}: {1}", number, source.title)}>[{number}]</a></sup> : null;
   });
   let paragraphIndex = 0;
   return <>
-    <article className="ar-reader" aria-labelledby={`${prefix}-title`}>
+    <article className="ar-reader" lang={locale} data-locale={locale} aria-labelledby={`${prefix}-title`}>
       <header className="ar-header">
-        <p className="ar-time">{content.readingMinutes} min de lectura{content.blocks.some(block => block.kind === 'note') ? ' · Notas para profundizar' : ''}</p>
+        <p className="ar-time">{content.readingMinutes} {t("min de lectura")}{content.blocks.some(block => block.kind === 'note') ? t(" · Notas para profundizar") : ''}</p>
         <h3 id={`${prefix}-title`}>{content.title}</h3>
         <p className="ar-lead">{content.lead}</p>
       </header>
@@ -84,8 +89,8 @@ export function ArticleReader({ concept, onLightboxOpenChange }: ArticleReaderPr
               type="button"
               className="ar-image-trigger"
               onClick={() => openLightbox({ src: variant.src, alt: block.caption, caption: block.caption })}
-              aria-label={`Ampliar imagen: ${block.caption}`}
-              data-cursor-label="Ampliar imagen"
+              aria-label={t("Ampliar imagen: {0}", block.caption)}
+              data-cursor-label={t("Ampliar imagen")}
             >
               <img src={variant.src} alt={block.caption} loading="lazy" decoding="async" />
             </button>
@@ -94,7 +99,7 @@ export function ArticleReader({ concept, onLightboxOpenChange }: ArticleReaderPr
         ) : null;
       })}
       <footer className="ar-sources">
-        <h4>Fuentes y caminos para seguir</h4>
+        <h4>{t("Fuentes y caminos para seguir")}</h4>
         <ol>{content.sources.map((source, index) => <li key={source.url} id={`${prefix}-source-${index + 1}`} tabIndex={-1}><a href={source.url} target="_blank" rel="noreferrer">{source.title} ↗</a><span>{source.publisher}</span></li>)}</ol>
       </footer>
     </article>
