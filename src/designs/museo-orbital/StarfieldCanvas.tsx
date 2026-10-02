@@ -5,17 +5,19 @@ import { CosmicLab, LAB_TOOLS, holeAcceleration, type LabState, type LabCommand 
 import { CosmicLabPanel } from './CosmicLabPanel';
 import { CursorConstellationLayer } from './CursorConstellationLayer';
 import {
+  PlaygroundArcade, PLAYGROUND_WORD, PLAYGROUND_LETTER_HP, PLAYGROUND_RAPID_LETTER_HP,
+  PLAYGROUND_BASE_DAMAGE, PLAYGROUND_RAPID_DAMAGE, PLAYGROUND_RAPID_FIRE_INTERVAL,
+  playgroundBounceMultiplier, playgroundDamageBudget, playgroundHitDamage,
+  type PlaygroundProgress, type PlaygroundWeaponAffinity,
+} from './PlaygroundArcade';
+export { playgroundBounceMultiplier, playgroundDamageBudget } from './PlaygroundArcade';
+export type { PlaygroundProgress } from './PlaygroundArcade';
+import {
   PLAYGROUND_ARRIVAL_END_MS,
   PLAYGROUND_ARRIVAL_START_MS,
   PLAYGROUND_DEPARTURE_END_MS,
   PLAYGROUND_DEPARTURE_START_MS,
 } from './playgroundTiming';
-
-export interface PlaygroundProgress {
-  destroyed: number;
-  total: number;
-  phase: 'active' | 'complete';
-}
 
 interface StarfieldProps {
   scrollRef: RefObject<HTMLDivElement | null>;
@@ -24,7 +26,6 @@ interface StarfieldProps {
   playground?: boolean;
   playgroundScene?: 'museum' | 'arriving' | 'active' | 'departing';
   playgroundRunId?: number;
-  playgroundPhase?: PlaygroundProgress['phase'];
   onPlaygroundProgress?: (progress: PlaygroundProgress) => void;
 }
 
@@ -39,7 +40,6 @@ interface Star {
 }
 
 type EffectLayer = 'museum' | 'studio';
-type PlaygroundWeaponAffinity = 'charged' | 'rapid';
 type PlayerProjectileKind = PlaygroundWeaponAffinity;
 
 interface ViewRect {
@@ -221,9 +221,7 @@ interface PlaygroundLetter {
   previousScreenY?: number;
   phase: number;
   nextEvade: number;
-  nextPointerEvade: number;
   nextDart: number;
-  threatenedUntil: number;
   destroyed: boolean;
   deathX?: number;
   deathY?: number;
@@ -235,6 +233,7 @@ interface ComboLabel {
   y: number;
   multiplier: number;
   life: number;
+  kind: 'bounce' | 'combo';
 }
 
 interface WarpDetail {
@@ -318,13 +317,7 @@ const VIVID_TINTS: RGB[] = [
   [142, 240, 255],
 ];
 
-const PLAYGROUND_WORD = 'ASTROINGENIERÍA';
-const PLAYGROUND_LETTER_HP = 60;
-const PLAYGROUND_RAPID_LETTER_HP = 120;
-const PLAYGROUND_BASE_DAMAGE = 20;
 const PLAYGROUND_RAPID_FIRE_EXPERIMENT = true;
-const PLAYGROUND_RAPID_FIRE_INTERVAL = 1 / 9;
-const PLAYGROUND_RAPID_DAMAGE = 3;
 const PLAYGROUND_SEGMENT_CHARGE_HITS = 10;
 const PLAYGROUND_SLOW_FACTOR = 0.45;
 const PLAYGROUND_SLOW_DURATION = 5;
@@ -366,12 +359,6 @@ const emberWobble = (seed: number, vertex: number) => {
   const value = Math.sin(seed * 127.1 + vertex * 311.7) * 43758.5453;
   return value - Math.floor(value);
 };
-
-export const playgroundBounceMultiplier = (bounceCount: number) =>
-  bounceCount <= 0 ? 1 : Math.min(25, bounceCount * 5);
-
-export const playgroundDamageBudget = (launchPower: number, bounceCount: number) =>
-  PLAYGROUND_BASE_DAMAGE * Math.max(0, Math.min(1, launchPower)) * playgroundBounceMultiplier(bounceCount);
 
 const sampleStops = (stops: RGB[], t: number): RGB => {
   const clamped = Math.min(0.999, Math.max(0, t));
@@ -550,7 +537,6 @@ export const StarfieldCanvas = ({
   playground = false,
   playgroundScene = 'museum',
   playgroundRunId = 0,
-  playgroundPhase: requestedPlaygroundPhase = 'active',
   onPlaygroundProgress,
 }: StarfieldProps) => {
   const { locale } = useLocale();
@@ -569,10 +555,9 @@ export const StarfieldCanvas = ({
   playgroundSceneRef.current = playgroundScene;
   const playgroundRunIdRef = useRef(playgroundRunId);
   playgroundRunIdRef.current = playgroundRunId;
-  const requestedPlaygroundPhaseRef = useRef(requestedPlaygroundPhase);
-  requestedPlaygroundPhaseRef.current = requestedPlaygroundPhase;
   const onPlaygroundProgressRef = useRef(onPlaygroundProgress);
   onPlaygroundProgressRef.current = onPlaygroundProgress;
+  const playgroundSceneCommandRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -662,6 +647,10 @@ export const StarfieldCanvas = ({
     let ambient: AmbientConstellation[] = [];
     let playgroundTargets: PlaygroundLetter[] = [];
     let playgroundPhase: PlaygroundProgress['phase'] = 'active';
+    let arcade = new PlaygroundArcade(rapidFireAvailable ? 'pulsar' : 'comet');
+    let nextProgressAt = 0;
+    let playgroundFrozenTime = 0;
+    let playgroundClockTimer = 0;
     let activePlaygroundRunId = -1;
     let comboLabels: ComboLabel[] = [];
     const clearSketch = () => {
@@ -727,12 +716,35 @@ export const StarfieldCanvas = ({
     const mouse = { x: -9999, y: -9999, sx: -9999, sy: -9999 };
 
     const notifyPlaygroundProgress = () => {
-      const destroyed = playgroundTargets.filter((target) => target.destroyed).length;
-      onPlaygroundProgressRef.current?.({
-        destroyed,
-        total: PLAYGROUND_WORD.length,
-        phase: playgroundPhase,
-      });
+      nextProgressAt = performance.now() + 100;
+      onPlaygroundProgressRef.current?.(arcade.snapshot());
+    };
+
+    const freezePlayground = () => {
+      window.clearInterval(playgroundClockTimer);
+      playgroundClockTimer = 0;
+      playgroundFrozenTime = time;
+      camVX = 0; camVY = 0;
+      heldDirs.clear(); heldMovementCodes.clear(); boostedWasdCodes.clear();
+      lastWasdDown.clear(); boostLatched = false; shiftHeld = false;
+      clearCharge(); clearSketch(); rapidFireHeld = false; resetPulsarPet();
+      comets.forEach(comet => { if (comet.launchPower !== undefined) comet.life = 0; });
+    };
+
+    const updatePlaygroundClock = (nowMs: number) => {
+      if (!playgroundRef.current || playgroundSceneRef.current !== 'active' ||
+        activePlaygroundRunId !== playgroundRunIdRef.current || playgroundPhase !== 'active') return;
+      if (!playgroundClockTimer) {
+        playgroundClockTimer = window.setInterval(() => updatePlaygroundClock(performance.now()), 100);
+      }
+      arcade.start(nowMs);
+      arcade.tick(nowMs);
+      const nextPhase = arcade.snapshot().phase;
+      if (nextPhase !== playgroundPhase) {
+        playgroundPhase = nextPhase;
+        freezePlayground();
+        notifyPlaygroundProgress();
+      } else if (nowMs >= nextProgressAt) notifyPlaygroundProgress();
     };
 
     const seededRandom = (seedValue: number) => {
@@ -779,6 +791,8 @@ export const StarfieldCanvas = ({
     };
 
     const beginPlaygroundRun = (runId: number) => {
+      window.clearInterval(playgroundClockTimer);
+      playgroundClockTimer = 0;
       const random = seededRandom(runId + 92821);
       const slots = Array.from({ length: PLAYGROUND_WORD.length }, (_, index) => {
         const column = index % 5;
@@ -802,7 +816,7 @@ export const StarfieldCanvas = ({
       }
       playgroundTargets = PLAYGROUND_WORD.split('').map((character, index) => {
         const affinity = affinities[index];
-        const movementScale = rapidFireAvailable ? 7 : 1;
+        const movementScale = rapidFireAvailable ? 4 : 1;
         const maxHp = affinity === 'rapid' ? PLAYGROUND_RAPID_LETTER_HP : PLAYGROUND_LETTER_HP;
         return {
           id: index,
@@ -834,14 +848,13 @@ export const StarfieldCanvas = ({
           slowedUntil: 0,
           phase: random() * Math.PI * 2,
           nextEvade: 0,
-          nextPointerEvade: 0,
           nextDart: 0,
-          threatenedUntil: 0,
           destroyed: false,
         };
       });
       playgroundTargets.forEach((target) => chooseLetterWaypoint(target));
       playgroundPhase = 'active';
+      arcade = new PlaygroundArcade(rapidFireAvailable ? 'pulsar' : 'comet');
       activePlaygroundRunId = runId;
       // La W usada para confirmar la entrada no se hereda como impulso de cámara:
       // hay que soltarla y pulsarla de nuevo ya dentro del minijuego.
@@ -862,23 +875,25 @@ export const StarfieldCanvas = ({
       nextRapidFireAt = time;
       comboLabels = [];
       comets = comets.filter((comet) => comet.launchPower === undefined);
+      waves = []; bubbles = []; flashes = []; sparkles = []; conductions = [];
       notifyPlaygroundProgress();
     };
 
     const playgroundFontSize = () => Math.max(58, Math.min(116, Math.min(width, height) * 0.14));
 
+    const playgroundLetterTime = () => playgroundPhase === 'timed-out' ? playgroundFrozenTime : time;
     const playgroundLetterCenter = (target: PlaygroundLetter) => ({
       x:
         width / 2 +
         target.worldU * width +
         target.offsetX +
-        Math.cos(time * target.floatRateX + target.phase) * target.floatRadiusX * Math.max(0.65, vscale) -
+        Math.cos(playgroundLetterTime() * target.floatRateX + target.phase) * target.floatRadiusX * Math.max(0.65, vscale) -
         camX,
       y:
         height / 2 +
         target.worldV * height +
         target.offsetY +
-        Math.sin(time * target.floatRateY + target.phase * 1.37) * target.floatRadiusY * Math.max(0.65, vscale) -
+        Math.sin(playgroundLetterTime() * target.floatRateY + target.phase * 1.37) * target.floatRadiusY * Math.max(0.65, vscale) -
         camY,
     });
 
@@ -1032,19 +1047,19 @@ export const StarfieldCanvas = ({
       trail.length = 0;
     };
 
+    // Share measurements with the deferred mask only within the current frame.
+    // A later composite must never reuse geometry from an earlier scroll frame.
+    const rectCache = new Map<Element, DOMRect>();
+    const measureRect = (element: Element) => {
+      let rect = rectCache.get(element);
+      if (!rect) {
+        rect = element.getBoundingClientRect();
+        rectCache.set(element, rect);
+      }
+      return rect;
+    };
     const refreshImgRects = () => {
-      // One geometry read per element for this refresh; the cache is discarded
-      // immediately so scrolling and animated layouts can never reuse stale data.
-      const rectCache = new Map<Element, DOMRect>();
-      const measureRect = (element: Element) => {
-        let rect = rectCache.get(element);
-        if (!rect) {
-          rect = element.getBoundingClientRect();
-          rectCache.set(element, rect);
-        }
-        return rect;
-      };
-      cursorLayer.refresh(measureRect);
+      cursorLayer.refreshBlocking(measureRect);
       imgRects = Array.from(document.querySelectorAll('.mo-root img'), (img) => {
         const r = measureRect(img);
         return { x: r.left, y: r.top, w: r.width, h: r.height };
@@ -1300,7 +1315,7 @@ export const StarfieldCanvas = ({
           ? mixRGB(PLAYGROUND_CHARGED_TINT, [255, 246, 228], 0.08 + comet.bounceCount * 0.08)
           : sampleStops(AURORA, Math.min(0.92, 0.28 + comet.bounceCount * 0.13));
       comet.tailAge = 0;
-      comboLabels.push({ x, y, multiplier, life: 1 });
+      comboLabels.push({ x, y, multiplier, life: 1, kind: 'bounce' });
       if (comboLabels.length > 12) comboLabels.splice(0, comboLabels.length - 12);
     };
 
@@ -1426,24 +1441,6 @@ export const StarfieldCanvas = ({
 
     const affinityTint = (affinity: PlaygroundWeaponAffinity) =>
       affinity === 'rapid' ? PLAYGROUND_RAPID_TINT : PLAYGROUND_CHARGED_TINT;
-
-    const spawnPlaygroundShieldImpact = (target: PlaygroundLetter, x: number, y: number) => {
-      const rgb = affinityTint(target.affinity);
-      flashes.push({ x, y, r: 7, alpha: 0.82, rgb, layer: 'museum' });
-      waves.push({
-        x,
-        y,
-        r: playgroundFontSize() * 0.24,
-        alpha: 0.92,
-        grow: 2.4,
-        decay: 0.88,
-        width: 1.8,
-        rgb,
-        delay: 0,
-        layer: 'museum',
-      });
-      spawnSparkleBurst(x, y, 10, 0.55, 'museum', rgb);
-    };
 
     const applyChargedSegmentContacts = (
       target: PlaygroundLetter,
@@ -2216,6 +2213,7 @@ export const StarfieldCanvas = ({
     };
 
     const onVisibility = () => {
+      updatePlaygroundClock(performance.now());
       running = !document.hidden;
       if (!running) cursorPresent = false;
       if (running) {
@@ -2273,6 +2271,7 @@ export const StarfieldCanvas = ({
 
     const frame = () => {
       if (!running) return;
+      rectCache.clear();
       const nowMs = performance.now();
       const cursorDt = lastFrameNow > 0 ? Math.max(0, (nowMs - lastFrameNow) / 1000) : 1 / 60;
       const easeCursorAlpha = (current: number, target: number) =>
@@ -2383,6 +2382,8 @@ export const StarfieldCanvas = ({
       if (hasPlaygroundScene && activePlaygroundRunId !== playgroundRunIdRef.current) {
         beginPlaygroundRun(playgroundRunIdRef.current);
       } else if (!hasPlaygroundScene && wasPlaygroundScene) {
+        window.clearInterval(playgroundClockTimer);
+        playgroundClockTimer = 0;
         clearSketch();
         playgroundTargets = [];
         comboLabels = [];
@@ -2392,17 +2393,7 @@ export const StarfieldCanvas = ({
       }
       wasPlaygroundScene = hasPlaygroundScene;
 
-      const requestedPhase = requestedPlaygroundPhaseRef.current;
-      if (isPlayground && playgroundPhase === 'active' && requestedPhase !== 'active') {
-        playgroundPhase = requestedPhase;
-        clearCharge();
-        clearSketch();
-        rapidFireHeld = false;
-        resetPulsarPet();
-        comets.forEach((comet) => {
-          if (comet.launchPower !== undefined) comet.life = 0;
-        });
-      }
+      updatePlaygroundClock(nowMs);
 
       /* ---- Navegación libre 360°: WASD/flechas empujan la cámara en
          cualquier dirección; fricción suave y velocidad de crucero limitada.
@@ -2777,7 +2768,7 @@ export const StarfieldCanvas = ({
             x: left, y: top,
             w: right - left,
             h: bottom - top,
-          });
+          }, measureRect);
         }
 
         // Constelaciones ambientales: presencia sutil de borde a borde.
@@ -2866,7 +2857,7 @@ export const StarfieldCanvas = ({
         // ASTROINGENIERÍA arriba, en pequeño, como progreso viviente.
         if (hasPlaygroundScene && playgroundTargets.length > 0) {
           const miniSize = Math.max(13, Math.min(20, Math.min(width, height) * 0.024));
-          const wordY = Math.max(26, miniSize * 1.7);
+          const wordY = width <= 720 ? 122 : 82;
           fxCtx.save();
           fxCtx.font = `600 ${miniSize}px "Fraunces Variable", Fraunces, serif`;
           fxCtx.textAlign = 'center';
@@ -3073,175 +3064,78 @@ export const StarfieldCanvas = ({
 
               center = playgroundLetterCenter(target);
               if (time >= target.nextEvade) {
-              let threat: Comet | null = null;
-              const rapidEvader = rapidFireAvailable && target.affinity === 'rapid';
-              const evadeScale = Math.max(0.72, vscale);
-              const baseThreatDistance = (rapidEvader ? 430 : 300) * evadeScale;
-              let nearestThreatDistance = Infinity;
-              for (const comet of comets) {
-                if (comet.launchPower === undefined || comet.life <= 0) continue;
-                const dx = center.x - comet.x;
-                const dy = center.y - comet.y;
-                const distance = Math.hypot(dx, dy);
-                // Proyectiles rapidos exigen detection proporcional a su velocidad
-                const approachSpeed = Math.hypot(comet.vx, comet.vy);
-                const reach = Math.max(baseThreatDistance, approachSpeed * 22 * evadeScale);
-                if (distance >= reach || dx * comet.vx + dy * comet.vy <= 0) continue;
-                if (distance >= nearestThreatDistance) continue;
-                threat = comet;
-                nearestThreatDistance = distance;
-              }
-              if (threat) {
-                const speed = Math.hypot(threat.vx, threat.vy) || 1;
-                let dodgeX = -threat.vy / speed;
-                let dodgeY = threat.vx / speed;
-                const side = Math.sign((center.x - threat.x) * dodgeX + (center.y - threat.y) * dodgeY) || 1;
-                dodgeX *= side;
-                dodgeY *= side;
-                const evadeImpulse =
-                  150 * (rapidEvader ? 1.9 : 1) * slowFactor * evadeScale;
-                target.vx += dodgeX * evadeImpulse;
-                target.vy += dodgeY * evadeImpulse;
-                const evadeSpeed = Math.hypot(target.vx, target.vy);
-                const maxEvadeSpeed =
-                  245 * (rapidEvader ? 1.65 : 1) * slowFactor * evadeScale;
-                if (evadeSpeed > maxEvadeSpeed) {
-                  target.vx *= maxEvadeSpeed / evadeSpeed;
-                  target.vy *= maxEvadeSpeed / evadeSpeed;
+                let threat: Comet | null = null;
+                const rapidEvader = rapidFireAvailable && target.affinity === 'rapid';
+                const evadeScale = Math.max(0.72, vscale);
+                const baseThreatDistance = (rapidEvader ? 430 : 300) * evadeScale;
+                let nearestThreatDistance = Infinity;
+                for (const comet of comets) {
+                  if (comet.launchPower === undefined || comet.life <= 0) continue;
+                  const dx = center.x - comet.x;
+                  const dy = center.y - comet.y;
+                  const distance = Math.hypot(dx, dy);
+                  const speed = Math.hypot(comet.vx, comet.vy) || 1;
+                  const reach = Math.max(baseThreatDistance, speed * 22 * evadeScale);
+                  const laneDistance = Math.abs(dx * comet.vy - dy * comet.vx) / speed;
+                  if (distance >= reach || dx * comet.vx + dy * comet.vy <= 0 ||
+                    laneDistance > fontSize * 0.7 + 36 * evadeScale || distance >= nearestThreatDistance) continue;
+                  threat = comet;
+                  nearestThreatDistance = distance;
                 }
-                target.nextEvade = time + (rapidEvader ? 0.12 : 0.3);
-                target.threatenedUntil = time + 0.25;
-              }
-            }
-
-            // Evasión del jugador: al acercar la cámara, el cursor termina
-            // encima de la letra. Durante la carga manda el origen fijo de la
-            // supernova, para que apuntar siga requiriendo anticipación.
-              const pointerThreat =
-              charge && charge.layer !== 'studio'
-                ? { x: charge.x, y: charge.y }
-                : mouse.x > -999
-                  ? mouse
-                  : null;
-              if (pointerThreat) {
-              let awayX = center.x - pointerThreat.x;
-              let awayY = center.y - pointerThreat.y;
-              let pointerDistance = Math.hypot(awayX, awayY);
-              const pointerScale = Math.max(0.72, vscale);
-              const rapidEvader = rapidFireAvailable && target.affinity === 'rapid';
-                const pointerRadius = (rapidEvader ? 390 : 320) * pointerScale;
-              if (pointerDistance < pointerRadius) {
-                if (pointerDistance < 0.001) {
-                  const fallbackAngle = target.phase + target.id * 1.7;
-                  awayX = Math.cos(fallbackAngle);
-                  awayY = Math.sin(fallbackAngle);
-                  pointerDistance = 1;
-                }
-                const normalX = awayX / pointerDistance;
-                const normalY = awayY / pointerDistance;
-                const proximity = Math.max(0, 1 - pointerDistance / pointerRadius);
-                const response = Math.pow(proximity, 1.35);
-                // Con un proyectil entrante la huida del cursor se atenia para
-                // que el esquivo lateral del proyectil no quede anulado.
-                const threatBias = target.threatenedUntil > time ? 0.4 : 1;
-                const pointerAcceleration =
-                  (130 + 700 * response) *
-                  pointerScale *
-                  (rapidEvader ? 1.85 : 1) *
-                  slowFactor *
-                  threatBias;
-                target.vx += normalX * pointerAcceleration * frameStep;
-                target.vy += normalY * pointerAcceleration * frameStep;
-
-                const pointerSpeed = Math.hypot(target.vx, target.vy);
-                const maxPointerSpeed =
-                  235 * pointerScale * (rapidEvader ? 1.6 : 1) * slowFactor;
-                if (pointerSpeed > maxPointerSpeed) {
-                  target.vx *= maxPointerSpeed / pointerSpeed;
-                  target.vy *= maxPointerSpeed / pointerSpeed;
-                }
-
-                if (proximity >= 0.38 && time >= target.nextPointerEvade) {
-                  const escapeDistance = pointerRadius * (0.9 + nextLetterRandom(target) * 0.35);
-                  target.destinationU = Math.max(
-                    -PLAYGROUND_FIELD_U,
-                    Math.min(PLAYGROUND_FIELD_U, target.worldU + (normalX * escapeDistance) / Math.max(1, width)),
-                  );
-                  target.destinationV = Math.max(
-                    -PLAYGROUND_FIELD_V,
-                    Math.min(PLAYGROUND_FIELD_V, target.worldV + (normalY * escapeDistance) / Math.max(1, height)),
-                  );
-                  target.pauseUntil = time;
-                  target.nextWaypoint = time + 3.5 + nextLetterRandom(target) * 1.5;
-                  target.nextPointerEvade = time + (rapidEvader ? 0.15 : 0.35);
-                }
-              }
-
-              // Linea de tiro del pulsar: mientras la mascota esta anclada y
-              // dispara, empuje perpendicular fuera del rayo anclaje->cursor y
-              // waypoint de escape lateral, para que el disparo no la alcance.
-              if (rapidFireHeld && !charge && pulsarPhase === 'firing') {
-                const aimX = mouse.x - pulsarAnchorX;
-                const aimY = mouse.y - pulsarAnchorY;
-                const aimLength = Math.hypot(aimX, aimY);
-                if (aimLength > 16) {
-                  const aimUX = aimX / aimLength;
-                  const aimUY = aimY / aimLength;
-                  const alongX = center.x - pulsarAnchorX;
-                  const alongY = center.y - pulsarAnchorY;
-                  const projection = alongX * aimUX + alongY * aimUY;
-                  if (projection > -fontSize) {
-                    let laneX = alongX - projection * aimUX;
-                    let laneY = alongY - projection * aimUY;
-                    let laneDistance = Math.hypot(laneX, laneY);
-                    if (laneDistance < 0.001) {
-                      laneX = -aimUY;
-                      laneY = aimUX;
-                      laneDistance = 1;
-                    }
-                    const laneRadius = fontSize * 1.3 + 70 * pointerScale;
-                    if (laneDistance < laneRadius) {
-                      const lanePush =
-                        (1 - laneDistance / laneRadius) *
-                        620 *
-                        pointerScale *
-                        (rapidEvader ? 1.7 : 1) *
-                        slowFactor;
-                      target.vx += (laneX / laneDistance) * lanePush * frameStep;
-                      target.vy += (laneY / laneDistance) * lanePush * frameStep;
-                      const laneMaxSpeed =
-                        260 * pointerScale * (rapidEvader ? 1.6 : 1) * slowFactor;
-                      const laneSpeed = Math.hypot(target.vx, target.vy);
-                      if (laneSpeed > laneMaxSpeed) {
-                        target.vx *= laneMaxSpeed / laneSpeed;
-                        target.vy *= laneMaxSpeed / laneSpeed;
-                      }
-                      if (time >= target.nextPointerEvade) {
-                        const laneEscape = laneRadius * (1.2 + nextLetterRandom(target) * 0.5);
-                        target.destinationU = Math.max(
-                          -PLAYGROUND_FIELD_U,
-                          Math.min(
-                            PLAYGROUND_FIELD_U,
-                            target.worldU + ((laneX / laneDistance) * laneEscape) / Math.max(1, width),
-                          ),
-                        );
-                        target.destinationV = Math.max(
-                          -PLAYGROUND_FIELD_V,
-                          Math.min(
-                            PLAYGROUND_FIELD_V,
-                            target.worldV + ((laneY / laneDistance) * laneEscape) / Math.max(1, height),
-                          ),
-                        );
-                        target.pauseUntil = time;
-                        target.nextWaypoint = time + 2 + nextLetterRandom(target) * 1.2;
-                        target.nextPointerEvade = time + (rapidEvader ? 0.25 : 0.5);
-                      }
-                    }
+                let dodgeX = 0;
+                let dodgeY = 0;
+                if (threat) {
+                  const speed = Math.hypot(threat.vx, threat.vy) || 1;
+                  dodgeX = -threat.vy / speed;
+                  dodgeY = threat.vx / speed;
+                  const side = Math.sign((center.x - threat.x) * dodgeX + (center.y - threat.y) * dodgeY) || 1;
+                  dodgeX *= side; dodgeY *= side;
+                } else if (rapidFireReady) {
+                  const aimX = mouse.x - pulsarAnchorX;
+                  const aimY = mouse.y - pulsarAnchorY;
+                  const aimLength = Math.hypot(aimX, aimY) || 1;
+                  const fromAnchorX = center.x - pulsarAnchorX;
+                  const fromAnchorY = center.y - pulsarAnchorY;
+                  const alongAim = (fromAnchorX * aimX + fromAnchorY * aimY) / aimLength;
+                  const acrossAim = (fromAnchorX * -aimY + fromAnchorY * aimX) / aimLength;
+                  if (alongAim > 0 && alongAim < aimLength + baseThreatDistance &&
+                    Math.abs(acrossAim) < fontSize * 0.7 + 36 * evadeScale) {
+                    const side = Math.sign(acrossAim) || 1;
+                    dodgeX = -aimY / aimLength * side;
+                    dodgeY = aimX / aimLength * side;
                   }
                 }
+                if (dodgeX === 0 && dodgeY === 0 && mouse.x > -999 && mouse.y > -999) {
+                  const pointerX = charge?.x ?? mouse.x;
+                  const pointerY = charge?.y ?? mouse.y;
+                  const awayX = center.x - pointerX;
+                  const awayY = center.y - pointerY;
+                  const pointerDistance = Math.hypot(awayX, awayY);
+                  if (pointerDistance < (rapidEvader ? 240 : 200) * evadeScale) {
+                    dodgeX = pointerDistance > 1 ? awayX / pointerDistance : Math.cos(target.phase);
+                    dodgeY = pointerDistance > 1 ? awayY / pointerDistance : Math.sin(target.phase);
+                  }
+                }
+                if (dodgeX !== 0 || dodgeY !== 0) {
+                  // One visible burst per cooldown, even under sustained Pulsar fire.
+                  const evadeImpulse = 150 * (rapidEvader ? 1.9 : 1) * slowFactor * evadeScale;
+                  target.vx += dodgeX * evadeImpulse;
+                  target.vy += dodgeY * evadeImpulse;
+                  const evadeSpeed = Math.hypot(target.vx, target.vy);
+                  const maxEvadeSpeed = 245 * (rapidEvader ? 1.65 : 1) * slowFactor * evadeScale;
+                  if (evadeSpeed > maxEvadeSpeed) {
+                    target.vx *= maxEvadeSpeed / evadeSpeed;
+                    target.vy *= maxEvadeSpeed / evadeSpeed;
+                  }
+                  target.destinationU = Math.max(-PLAYGROUND_FIELD_U, Math.min(PLAYGROUND_FIELD_U,
+                    target.worldU + dodgeX * 220 * evadeScale / width));
+                  target.destinationV = Math.max(-PLAYGROUND_FIELD_V, Math.min(PLAYGROUND_FIELD_V,
+                    target.worldV + dodgeY * 220 * evadeScale / height));
+                  target.pauseUntil = time;
+                  target.nextWaypoint = time + 1.5;
+                  target.nextEvade = time + (rapidEvader ? 0.4 : 0.6);
+                }
               }
-            }
-
             }
 
             if (isPlayground && playgroundPhase === 'active') {
@@ -3259,32 +3153,33 @@ export const StarfieldCanvas = ({
               continue;
             }
 
+            const letterTime = playgroundLetterTime();
             const damageRatio = 1 - target.hp / target.maxHp;
             const state = Math.min(4, Math.floor(damageRatio * 5));
-            const damageFlicker = state >= 3 ? Math.max(0, Math.sin(time * (7.5 + state) + target.phase * 2.1)) * 0.07 : 0;
-            const pulse = 0.97 - damageRatio * 0.2 + Math.sin(time * (1.2 + state * 0.38) + target.phase) * (0.025 + state * 0.012) - damageFlicker;
+            const damageFlicker = state >= 3 ? Math.max(0, Math.sin(letterTime * (7.5 + state) + target.phase * 2.1)) * 0.07 : 0;
+            const pulse = 0.97 - damageRatio * 0.2 + Math.sin(letterTime * (1.2 + state * 0.38) + target.phase) * (0.025 + state * 0.012) - damageFlicker;
             const rotation =
-              Math.sin(time * (0.28 + state * 0.12) + target.phase) * (0.012 + state * 0.011) +
+              Math.sin(letterTime * (0.28 + state * 0.12) + target.phase) * (0.012 + state * 0.011) +
               target.vx * 0.00045;
             const tint = affinityTint(target.affinity);
             const bodyTint = mixRGB(tint, [250, 246, 234], 0.64 - damageRatio * 0.18);
-            const isSlowed = target.slowedUntil > time;
+            const isSlowed = target.slowedUntil > letterTime;
 
             fxCtx.save();
             fxCtx.translate(center.x, center.y);
             fxCtx.rotate(rotation);
             fxCtx.globalAlpha = pulse * sceneProgress;
             if (target.affinity === 'rapid') {
-              const orbitPulse = 0.68 + Math.sin(time * 5.4 + target.phase) * 0.2;
+              const orbitPulse = 0.68 + Math.sin(letterTime * 5.4 + target.phase) * 0.2;
               fxCtx.setLineDash([3, 7]);
               fxCtx.lineWidth = 1.25;
               fxCtx.strokeStyle = `rgba(${tint[0]},${tint[1]},${tint[2]},${orbitPulse.toFixed(3)})`;
               fxCtx.beginPath();
-              fxCtx.ellipse(0, 0, fontSize * 0.48, fontSize * 0.39, time * 0.24 + target.phase, 0, Math.PI * 2);
+              fxCtx.ellipse(0, 0, fontSize * 0.48, fontSize * 0.39, letterTime * 0.24 + target.phase, 0, Math.PI * 2);
               fxCtx.stroke();
               fxCtx.globalAlpha *= 0.58;
               fxCtx.beginPath();
-              fxCtx.ellipse(0, 0, fontSize * 0.6, fontSize * 0.48, -time * 0.18 + target.phase, 0, Math.PI * 2);
+              fxCtx.ellipse(0, 0, fontSize * 0.6, fontSize * 0.48, -letterTime * 0.18 + target.phase, 0, Math.PI * 2);
               fxCtx.stroke();
               fxCtx.globalAlpha = pulse * sceneProgress;
               fxCtx.setLineDash([]);
@@ -3296,9 +3191,9 @@ export const StarfieldCanvas = ({
               fxCtx.stroke();
             }
             if (isSlowed) {
-              const slowSpin = time * 1.8 + target.phase;
+              const slowSpin = letterTime * 1.8 + target.phase;
               fxCtx.setLineDash([8, 6]);
-              fxCtx.lineDashOffset = -time * 18;
+              fxCtx.lineDashOffset = -letterTime * 18;
               fxCtx.lineWidth = 2.2;
               fxCtx.strokeStyle = `rgba(${PLAYGROUND_RAPID_TINT[0]},${PLAYGROUND_RAPID_TINT[1]},${PLAYGROUND_RAPID_TINT[2]},0.88)`;
               fxCtx.beginPath();
@@ -3708,6 +3603,9 @@ export const StarfieldCanvas = ({
 
             let progressChanged = false;
             for (const hit of hits) {
+              const hitNowMs = performance.now();
+              updatePlaygroundClock(hitNowMs);
+              if (playgroundPhase !== 'active') break;
               const totalBudget =
                 comet.projectileKind === 'rapid'
                   ? PLAYGROUND_RAPID_DAMAGE
@@ -3722,20 +3620,14 @@ export const StarfieldCanvas = ({
               const hitX = prevX + (comet.x - prevX) * hit.t;
               const hitY = prevY + (comet.y - prevY) * hit.t;
               const projectileAffinity = comet.projectileKind ?? 'charged';
-              if (projectileAffinity !== hit.target.affinity) {
-                comet.x = hitX;
-                comet.y = hitY;
-                comet.life = 0;
-                spawnPlaygroundShieldImpact(hit.target, hitX, hitY);
-                break;
-              }
-
-              const appliedDamage = Math.min(hit.target.hp, remainingBudget);
+              const { damage: appliedDamage, spent } = playgroundHitDamage(
+                hit.target.hp, remainingBudget, projectileAffinity, hit.target.affinity,
+              );
               hit.target.hp = Math.max(0, hit.target.hp - appliedDamage);
               comet.damageSpent =
                 comet.projectileKind === 'rapid'
                   ? totalBudget
-                  : (comet.damageSpent ?? 0) + appliedDamage;
+                  : (comet.damageSpent ?? 0) + spent;
 
               const impactSpeed = Math.hypot(comet.vx, comet.vy) || 1;
               const targetMotionFactor = hit.target.slowedUntil > time ? PLAYGROUND_SLOW_FACTOR : 1;
@@ -3747,13 +3639,12 @@ export const StarfieldCanvas = ({
                     Math.max(0.72, vscale);
               hit.target.vx += (comet.vx / impactSpeed) * targetImpulse;
               hit.target.vy += (comet.vy / impactSpeed) * targetImpulse;
-              hit.target.nextEvade = time + 0.5;
               const hitTint = affinityTint(hit.target.affinity);
               flashes.push({
                 x: hitX,
                 y: hitY,
-                r: 4 + appliedDamage * 0.06,
-                alpha: 0.45,
+                r: 7 + appliedDamage * 0.12,
+                alpha: 0.8,
                 rgb: hitTint,
                 layer: 'museum',
               });
@@ -3767,6 +3658,7 @@ export const StarfieldCanvas = ({
               );
 
               if (hit.target.hp <= 0.001) {
+                arcade.destroy(hit.target.id, projectileAffinity === 'charged' && (comet.bounceCount ?? 0) > 0, hitNowMs);
                 hit.target.destroyed = true;
                 hit.target.deathX = hitX;
                 hit.target.deathY = hitY;
@@ -3782,7 +3674,11 @@ export const StarfieldCanvas = ({
                   grow: 5.5,
                   layer: 'museum',
                 });
-                spawnSparkleBurst(hitX, hitY, 28, 1, 'museum', hitTint);
+                spawnSparkleBurst(hitX, hitY, 48, 1, 'museum', hitTint);
+                waves.push({ x: hitX, y: hitY, r: 18, alpha: 0.9, grow: 6, decay: 0.9,
+                  width: 2, rgb: hitTint, delay: 0, layer: 'museum' });
+                comboLabels.push({ x: hitX, y: hitY - 30, multiplier: arcade.snapshot().combo, life: 1, kind: 'combo' });
+                if (comboLabels.length > 12) comboLabels.splice(0, comboLabels.length - 12);
               }
 
               const unusedDamage = totalBudget - (comet.damageSpent ?? 0);
@@ -3795,16 +3691,9 @@ export const StarfieldCanvas = ({
             }
 
             if (progressChanged) {
-              const destroyed = playgroundTargets.filter((target) => target.destroyed).length;
-              if (destroyed === PLAYGROUND_WORD.length) {
+              if (arcade.snapshot().phase === 'complete') {
                 playgroundPhase = 'complete';
-                clearCharge();
-                clearSketch();
-                rapidFireHeld = false;
-                resetPulsarPet();
-                comets.forEach((item) => {
-                  if (item.launchPower !== undefined) item.life = 0;
-                });
+                freezePlayground();
                 waves.push({
                   x: width / 2,
                   y: height / 2,
@@ -4186,7 +4075,11 @@ export const StarfieldCanvas = ({
           fxCtx.fillStyle = '#f3dfac';
           fxCtx.shadowColor = 'rgba(201,168,106,0.85)';
           fxCtx.shadowBlur = 12;
-          fxCtx.fillText(`×${label.multiplier}`, label.x, label.y - (1 - label.life) * 18);
+          const labelText = label.kind === 'combo'
+            ? `COMBO ×${label.multiplier}`
+            : `${translate('Rebote', localeRef.current)} ×${label.multiplier}`;
+          fxCtx.fillStyle = label.kind === 'combo' ? '#bce8ff' : '#f3dfac';
+          fxCtx.fillText(labelText, label.x, label.y - (1 - label.life) * 18);
           fxCtx.restore();
         }
 
@@ -4708,6 +4601,18 @@ export const StarfieldCanvas = ({
     if (scrollEl) structureObserver.observe(scrollEl, { childList: true, subtree: true });
     document.addEventListener('visibilitychange', onVisibility);
     document.addEventListener('selectstart', onSelectStart);
+    playgroundSceneCommandRef.current = () => {
+      if (playgroundSceneRef.current !== 'museum' && activePlaygroundRunId !== playgroundRunIdRef.current) {
+        beginPlaygroundRun(playgroundRunIdRef.current);
+      }
+      if (playgroundSceneRef.current === 'active') {
+        // Scene activation must start the clock even when no canvas frames run.
+        updatePlaygroundClock(performance.now());
+      } else {
+        window.clearInterval(playgroundClockTimer);
+        playgroundClockTimer = 0;
+      }
+    };
     raf = requestAnimationFrame(frame);
 
     return () => {
@@ -4717,6 +4622,8 @@ export const StarfieldCanvas = ({
       labCommandRef.current = () => {};
       museumRoot?.classList.remove('is-cosmic-lab');
       cancelAnimationFrame(raf);
+      window.clearInterval(playgroundClockTimer);
+      playgroundSceneCommandRef.current = () => {};
       window.removeEventListener('resize', onResize);
       window.removeEventListener('mo-warp', onWarp);
       window.removeEventListener('keydown', onKeyDown);
@@ -4742,6 +4649,10 @@ export const StarfieldCanvas = ({
       document.removeEventListener('selectstart', onSelectStart);
     };
   }, [scrollRef]);
+
+  useEffect(() => {
+    playgroundSceneCommandRef.current();
+  }, [playground, playgroundScene, playgroundRunId]);
 
   return (
     <>

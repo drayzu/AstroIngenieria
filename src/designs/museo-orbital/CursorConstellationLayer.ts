@@ -24,28 +24,33 @@ export class CursorConstellationLayer {
   private width = 0;
   private height = 0;
   private signature = '';
+  private maskDirty = true;
   private pixels: ImageData | null = null;
   private readonly root: HTMLElement;
   blocked = false;
 
   constructor(root: HTMLElement, invalidate: () => void) {
     this.root = root;
+    const invalidateGeometry = () => {
+      this.maskDirty = true;
+      invalidate();
+    };
     this.observer = new IntersectionObserver(entries => {
       for (const entry of entries) {
         if (entry.isIntersecting) this.visible.add(entry.target);
         else this.visible.delete(entry.target);
       }
-      invalidate();
+      invalidateGeometry();
     }, { root, rootMargin: '32px' });
-    this.resizeObserver = new ResizeObserver(invalidate);
+    this.resizeObserver = new ResizeObserver(invalidateGeometry);
     this.structureObserver = new MutationObserver(records => {
       if (records.some(record => record.type === 'childList')) this.sync();
       if (records.some(record => record.type !== 'attributes' ||
-        (record.target instanceof Element && record.target.matches('.mo-chapter-intro,.mo-hero,.mo-image-lightbox,.mo-menu,.mo-studio')))) invalidate();
+        (record.target instanceof Element && record.target.matches('.mo-chapter-intro,.mo-hero,.mo-image-lightbox,.mo-menu,.mo-studio')))) invalidateGeometry();
     });
     this.structureObserver.observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] });
     this.sync();
-    document.fonts.ready.then(() => { if (this.width) invalidate(); });
+    document.fonts.ready.then(() => { if (this.width) invalidateGeometry(); });
   }
 
   private sync() {
@@ -79,23 +84,40 @@ export class CursorConstellationLayer {
       this.pixels = null;
     }
     this.signature = '';
+    this.maskDirty = true;
+  }
+
+  private inViewport(r: DOMRect) {
+    return r.width > 0 && r.height > 0 &&
+      r.right > -32 && r.left < this.width + 32 && r.bottom > -32 && r.top < this.height + 32;
+  }
+
+  refreshBlocking(measureRect: (element: Element) => DOMRect = element => element.getBoundingClientRect()) {
+    // Geometry may change while no constellation needs the mask. Keep it dirty
+    // until a protected composite actually draws, including fading nodes.
+    this.maskDirty = true;
+    this.blocked = Boolean(document.querySelector('.mo-image-lightbox,.mo-menu,.mo-studio-panel')) ||
+      Array.from(this.root.querySelectorAll('.mo-chapter-intro.is-image-focus')).some(el => this.inViewport(measureRect(el)));
   }
 
   refresh(measureRect: (element: Element) => DOMRect = element => element.getBoundingClientRect()) {
-    const inViewport = (r: DOMRect) => r.width > 0 && r.height > 0 &&
-      r.right > -32 && r.left < this.width + 32 && r.bottom > -32 && r.top < this.height + 32;
-    this.blocked = Boolean(document.querySelector('.mo-image-lightbox,.mo-menu,.mo-studio-panel')) ||
-      Array.from(this.root.querySelectorAll('.mo-chapter-intro.is-image-focus')).some(el => inViewport(measureRect(el)));
+    this.refreshBlocking(measureRect);
+    this.refreshMask(measureRect);
+  }
+
+  private refreshMask(measureRect: (element: Element) => DOMRect) {
+    if (!this.maskDirty) return;
+    this.maskDirty = false;
     const rects: MaskRect[] = [];
     const add = (r: DOMRect, strength: number, feather: number, padding = 0, chapterFade = false) => {
-      if (!inViewport(r)) return;
+      if (!this.inViewport(r)) return;
       rects.push({ x: r.left - padding, y: r.top - padding,
         w: r.width + padding * 2, h: r.height + padding * 2, strength, feather, chapterFade });
     };
     const seenText = new Set<Node>();
     const range = document.createRange();
     for (const element of this.visible) {
-      if (!element.isConnected || !inViewport(measureRect(element))) continue;
+      if (!element.isConnected || !this.inViewport(measureRect(element))) continue;
       if (element.matches('img,.mo-vitrina-card')) {
         const chapter = element.closest('.mo-chapter-image');
         add(measureRect(chapter ?? element), 0.45, 32, 0, Boolean(chapter));
@@ -152,13 +174,15 @@ export class CursorConstellationLayer {
   clear() { this.context.clearRect(0, 0, this.width, this.height); }
 
   composite(target: CanvasRenderingContext2D, protectedContent: boolean,
-    bounds: { x: number; y: number; w: number; h: number }) {
+    bounds: { x: number; y: number; w: number; h: number },
+    measureRect: (element: Element) => DOMRect = element => element.getBoundingClientRect()) {
     const x = Math.max(0, Math.floor(bounds.x));
     const y = Math.max(0, Math.floor(bounds.y));
     const w = Math.min(this.width, Math.ceil(bounds.x + bounds.w)) - x;
     const h = Math.min(this.height, Math.ceil(bounds.y + bounds.h)) - y;
     if (w <= 0 || h <= 0) return;
     if (protectedContent) {
+      this.refreshMask(measureRect);
       this.context.save();
       this.context.beginPath();
       this.context.rect(x, y, w, h);
