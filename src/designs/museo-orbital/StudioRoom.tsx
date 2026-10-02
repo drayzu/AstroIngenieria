@@ -1,3 +1,4 @@
+import { useLocale } from '../../i18n/LocaleProvider';
 import {
   useCallback,
   useEffect,
@@ -41,9 +42,11 @@ export const StudioRoom = ({
   onClose,
   onSelect,
 }: StudioProps) => {
+  const { locale, t } = useLocale();
   const panelRef = useRef<HTMLDivElement>(null);
   const backdropPressRef = useRef<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const languageScrollProgress = useRef<number | null>(null);
   const figureRef = useRef<HTMLDivElement>(null);
   const [lightboxImage, setLightboxImage] = useState<ImageLightboxImage | null>(null);
   const [articleLightboxOpen, setArticleLightboxOpen] = useState(false);
@@ -56,15 +59,15 @@ export const StudioRoom = ({
     const approved = selectedStudyImages[concept.id];
     return approved?.map((src, index) => ({
       id: `seleccion-${index}`,
-      label: index === 0 ? 'Principal' : `Adicional ${index}`,
+      label: index === 0 ? t("Principal") : t("Adicional {0}", index),
       src,
-      caption: index === 0 ? `${concept.title} · imagen principal` : `${concept.title} · imagen adicional`,
+      caption: index === 0 ? t("{0} · imagen principal", concept.title) : t("{0} · imagen adicional", concept.title),
     })) ?? [];
-  }, [concept]);
+  }, [concept, t]);
   const approvedImage = selectedStudyImage(concept.id);
   const [variantIndex, setVariantIndex] = useState(0);
 
-  const navigation = getReadingConnections(concept.id, siblings, navigationContext);
+  const navigation = getReadingConnections(concept.id, siblings, navigationContext, locale);
   const { index, previous, next, previousLabel, nextLabel } = navigation;
   const [progress, setProgress] = useState(0);
 
@@ -92,14 +95,29 @@ export const StudioRoom = ({
       resizeObserver.disconnect();
       mutationObserver.disconnect();
     };
-  }, [concept]);
+  }, [concept.id]);
 
   useEffect(() => {
     setVariantIndex(0);
     setLightboxImage(null);
     setArticleLightboxOpen(false);
     scrollRef.current?.scrollTo({ top: 0 });
-  }, [concept]);
+  }, [concept.id]);
+
+  useEffect(() => {
+    const rememberPosition = () => {
+      const element = scrollRef.current;
+      if (element) languageScrollProgress.current = element.scrollTop / Math.max(1, element.scrollHeight - element.clientHeight);
+    };
+    window.addEventListener('mo-locale-before-change', rememberPosition);
+    return () => window.removeEventListener('mo-locale-before-change', rememberPosition);
+  }, []);
+  const restoreLanguagePosition = useCallback(() => {
+    const element = scrollRef.current;
+    if (!element || languageScrollProgress.current === null) return;
+    element.scrollTop = languageScrollProgress.current * Math.max(0, element.scrollHeight - element.clientHeight);
+    languageScrollProgress.current = null;
+  }, []);
 
   useEffect(() => {
     const closeBtn = panelRef.current?.querySelector<HTMLButtonElement>('.mo-studio-close');
@@ -141,7 +159,7 @@ export const StudioRoom = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [lightboxImage, next, previous, onClose, onSelect]);
 
-  const profileRows = metricRows(concept.metrics);
+  const profileRows = metricRows(concept.metrics, locale);
 
   const variant = variants[Math.min(variantIndex, variants.length - 1)];
 
@@ -165,7 +183,7 @@ export const StudioRoom = ({
       className={`mo-studio${lightboxOpen ? ' is-lightbox-open' : ''}`}
       role="dialog"
       aria-modal="true"
-      aria-label={`Sala de estudio: ${concept.title}`}
+      aria-label={t("Sala de estudio: {0}", concept.title)}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -192,31 +210,31 @@ export const StudioRoom = ({
           className="mo-read-progress"
           style={{ width: `${(progress * 100).toFixed(1)}%` }}
           role="progressbar"
-          aria-label="Progreso de lectura"
+          aria-label={t("Progreso de lectura")}
         />
         <header className="mo-studio-topbar">
           <button
             type="button"
             className="mo-studio-close"
             onClick={onClose}
-            data-cursor-label="Cerrar"
+            data-cursor-label={t("Cerrar")}
           >
-            ✕ &nbsp;Volver al recorrido
+            ✕ &nbsp;{t('Volver al recorrido')}
           </button>
           <span className="mo-studio-plate">
             {navigationContext === 'vitrine'
-              ? `Vitrina · ${String(index + 1).padStart(2, '0')} / ${String(siblings.length).padStart(2, '0')}`
-              : `N.º ${String(index + 1).padStart(2, '0')} / ${String(siblings.length).padStart(2, '0')}`}
+              ? t("Vitrina · {0} / {1}", String(index + 1).padStart(2, '0'), String(siblings.length).padStart(2, '0'))
+              : t("N.º {0} / {1}", String(index + 1).padStart(2, '0'), String(siblings.length).padStart(2, '0'))}
           </span>
           <nav
             className="mo-studio-nav"
-            aria-label={navigationContext === 'vitrine' ? 'Obras de la vitrina' : 'Lecturas del recorrido'}
+            aria-label={navigationContext === 'vitrine' ? t("Obras de la vitrina") : t("Lecturas del recorrido")}
           >
             <button
               type="button"
               disabled={!previous}
               onClick={() => previous && onSelect(previous)}
-              data-cursor-label="Anterior"
+              data-cursor-label={t("Anterior")}
               aria-label={previousLabel}
               title={previousLabel}
             >
@@ -226,7 +244,7 @@ export const StudioRoom = ({
               type="button"
               disabled={!next}
               onClick={() => next && onSelect(next)}
-              data-cursor-label="Siguiente"
+              data-cursor-label={t("Siguiente")}
               aria-label={nextLabel}
               title={nextLabel}
             >
@@ -261,8 +279,8 @@ export const StudioRoom = ({
                     alt: concept.illustration.alt,
                     caption: variant.caption,
                   })}
-                  aria-label={`Ampliar imagen de ${concept.title}`}
-                  data-cursor-label="Ampliar imagen"
+                  aria-label={t("Ampliar imagen de {0}", concept.title)}
+                  data-cursor-label={t("Ampliar imagen")}
                 >
                   <motion.div
                     className="mo-studio-imgframe"
@@ -285,7 +303,7 @@ export const StudioRoom = ({
                       </div>
                     </div>
                   </motion.div>
-                </button> : <span className="mo-image-pending" role="img" aria-label={`Imagen de ${concept.title} pendiente de selección`}>Imagen pendiente de selección</span>}
+                </button> : <span className="mo-image-pending" role="img" aria-label={t("Imagen de {0} pendiente de selección", concept.title)}>{t("Imagen pendiente de selección")}</span>}
 
                 {approvedImage && variants.length > 1 && (
                   <>
@@ -293,8 +311,8 @@ export const StudioRoom = ({
                       type="button"
                       className="mo-studio-image-nav is-prev"
                       onClick={() => changeVariant(-1)}
-                      aria-label="Ver imagen anterior"
-                      data-cursor-label="Anterior"
+                      aria-label={t("Ver imagen anterior")}
+                      data-cursor-label={t("Anterior")}
                     >
                       <span aria-hidden="true">‹</span>
                     </button>
@@ -302,8 +320,8 @@ export const StudioRoom = ({
                       type="button"
                       className="mo-studio-image-nav is-next"
                       onClick={() => changeVariant(1)}
-                      aria-label="Ver imagen siguiente"
-                      data-cursor-label="Siguiente"
+                      aria-label={t("Ver imagen siguiente")}
+                      data-cursor-label={t("Siguiente")}
                     >
                       <span aria-hidden="true">›</span>
                     </button>
@@ -314,7 +332,7 @@ export const StudioRoom = ({
               </div>
 
               {approvedImage && variants.length > 1 && (
-                <div className="mo-filmstrip" role="group" aria-label="Capas visuales de la obra">
+                <div className="mo-filmstrip" role="group" aria-label={t("Capas visuales de la obra")}>
                   {variants.map((item, itemIndex) => (
                     <button
                       key={item.id}
@@ -333,33 +351,32 @@ export const StudioRoom = ({
             </div>
 
             <div className="mo-studio-brief">
-              <p className="mo-kicker">
-                Sala de estudio · Capítulo {chapter.number.padStart(2, '0')}, {chapter.title}
+              <p className="mo-kicker">{t("Sala de estudio · Capítulo")} {chapter.number.padStart(2, '0')}, {chapter.title}
               </p>
               <h2>{concept.title}</h2>
               <div className="mo-chip-row">
                 <span>{concept.category}</span>
-                <span>{scaleLabels[concept.scale]}</span>
-                <span>{plausibilityLabels[concept.plausibility]}</span>
+                <span>{t(scaleLabels[concept.scale])}</span>
+                <span>{t(plausibilityLabels[concept.plausibility])}</span>
               </div>
               <p className="mo-studio-lead">{concept.summary}</p>
 
               <div className="mo-metric-profile-heading">
-                <span>Perfil comparativo</span>
+                <span>{t("Perfil comparativo")}</span>
                 <button
                   type="button"
                   className={`mo-vitrine-toggle${inVitrine ? ' is-in' : ''}`}
                   onClick={() => onToggleVitrine(concept.id)}
-                  data-cursor-label={inVitrine ? 'Quitar' : 'Añadir'}
+                  data-cursor-label={inVitrine ? t("Quitar") : t("Añadir")}
                 >
-                  {inVitrine ? '✓ En la vitrina de contrastes' : '+ Añadir a la vitrina de contrastes'}
+                  {inVitrine ? t("✓ En la vitrina de contrastes") : t("+ Añadir a la vitrina de contrastes")}
                 </button>
               </div>
               <dl className="mo-metrics-v2">
                 {profileRows.map((row) => (
                   <div key={row.key} title={row.definition}>
                     <dt>{row.label}<small>{row.descriptor}</small></dt>
-                    <dd aria-label={metricValueLabel(row)}>
+                    <dd aria-label={metricValueLabel(row, locale)}>
                       {[1, 2, 3, 4, 5].map((cell) => (
                         <i key={cell} className={cell <= row.value ? 'is-on' : ''} />
                       ))}
@@ -370,10 +387,11 @@ export const StudioRoom = ({
             </div>
           </section>
 
-          <section className="mo-tab-pane mo-tab-pane-with-back" aria-label="Lectura del tema">
+          <section className="mo-tab-pane mo-tab-pane-with-back" aria-label={t("Lectura del tema")}>
             <ArticleReader
               key={concept.id}
               concept={concept}
+              onContentReady={restoreLanguagePosition}
               onLightboxOpenChange={handleArticleLightboxOpenChange}
             />
             <button
@@ -383,9 +401,9 @@ export const StudioRoom = ({
                 top: 0,
                 behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
               })}
-              aria-label="Volver al inicio de la sala de estudio"
-              data-cursor-label="Volver arriba"
-              title="Volver arriba"
+              aria-label={t("Volver al inicio de la sala de estudio")}
+              data-cursor-label={t("Volver arriba")}
+              title={t("Volver arriba")}
             >
               <span aria-hidden="true">↑</span>
             </button>

@@ -1,4 +1,5 @@
 import type { AstroConcept } from '../types';
+import { translate, type Locale } from '../i18n/messages';
 
 export type MetricKey = keyof AstroConcept['metrics'];
 
@@ -28,13 +29,14 @@ const definitions: Record<MetricKey, { label: string; definition: string }> = {
   },
 };
 
-export const metricRows = (metrics: AstroConcept['metrics']): MetricRow[] =>
+export const metricRows = (metrics: AstroConcept['metrics'], locale: Locale = 'es'): MetricRow[] =>
   (['energia', 'materiales', 'madurez'] as const).map((key) => ({
     key,
-    ...definitions[key],
+    label: translate(definitions[key].label, locale),
+    definition: translate(definitions[key].definition, locale),
     value: metrics[key],
-    descriptor: (key === 'madurez' ? maturityDescriptors : demandDescriptors)[metrics[key] - 1],
+    descriptor: translate((key === 'madurez' ? maturityDescriptors : demandDescriptors)[metrics[key] - 1], locale),
   }));
 
-export const metricValueLabel = (row: MetricRow) =>
-  `${row.label}: ${row.value} de 5, ${row.descriptor.toLocaleLowerCase('es')}. ${row.definition}`;
+export const metricValueLabel = (row: MetricRow, locale: Locale = 'es') =>
+  translate('{0}: {1} de 5, {2}. {3}', locale, row.label, row.value, row.descriptor.toLocaleLowerCase(locale), row.definition);

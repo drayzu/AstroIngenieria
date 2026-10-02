@@ -374,39 +374,38 @@ try {
   await page.screenshot({ path: desktopShot });
   console.log(`Notas, referencias y siguiente tema correctos. Captura: ${desktopShot}`);
 
-  const imageExpectations = {
-    astroingenieria: 2,
-    kardashev: 2,
-    'artificial-gravity': 2,
-    iss: 3,
-    'bernal-sphere': 3,
-    'oneill-cylinder': 3,
-    worldship: 3,
-    'life-support': 3,
-  };
-  for (const [id, expected] of Object.entries(imageExpectations)) {
+  const imageTopics = ['astroingenieria', 'kardashev', 'artificial-gravity', 'iss', 'bernal-sphere', 'oneill-cylinder', 'worldship', 'life-support'];
+  const selectedImages = await page.evaluate(async () => {
+    const { selectedStudyImages } = await import('/AstroIngenieria/src/data/selectedStudyImages.ts');
+    return selectedStudyImages;
+  });
+  for (const id of imageTopics) {
     await page.evaluate(value => { globalThis.location.hash = `obra-${value}`; }, id);
     await expect(page.locator(`#article-${id}-title`)).toBeVisible();
-    const reader = page.locator('.ar-reader');
-    assert.equal(await reader.locator('figure').count(), expected, `Image count for ${id}`);
-    const layout = await reader.evaluate(element => {
-      const children = [...element.children];
-      const figures = children.flatMap((child, index) => child.tagName === 'FIGURE' ? [index] : []);
-      return {
-        figureCount: figures.length,
-        firstFigure: figures[0] ?? -1,
-        lastFigure: figures.at(-1) ?? -1,
-        childCount: children.length,
-        adjacent: figures.some((index, position) => position > 0 && index === figures[position - 1] + 1),
-        missingAlt: children.some(child => child.tagName === 'FIGURE' && !child.querySelector('img')?.getAttribute('alt')),
-      };
-    });
-    assert.equal(layout.figureCount, expected, `Figure layout count for ${id}`);
-    assert(layout.firstFigure > 0 && layout.lastFigure < layout.childCount - 1, `Figures should be interleaved for ${id}`);
-    assert.equal(layout.adjacent, false, `Adjacent figures for ${id}`);
-    assert.equal(layout.missingAlt, false, `Missing image alt text for ${id}`);
+    // Only curated study images are displayed; inline article illustrations await selection.
+    assert.equal(await page.locator('.ar-reader figure').count(), 0, `Unselected inline illustrations for ${id}`);
+    const approved = selectedImages[id] ?? [];
+    const image = page.locator('.mo-studio-image-open .mo-kb img');
+    if (!approved.length) {
+      await expect(page.locator('.mo-studio-figure .mo-image-pending')).toBeVisible();
+      await expect(image).toHaveCount(0);
+      continue;
+    }
+    await expect(image).toHaveAttribute('src', approved[0]);
+    assert(await image.getAttribute('alt'), `Missing image alt text for ${id}`);
+    await expect(page.locator('.mo-filmstrip button')).toHaveCount(approved.length > 1 ? approved.length : 0);
+    if (approved.length > 1) {
+      await page.locator('.mo-filmstrip button').last().click();
+      await expect(image).toHaveAttribute('src', approved.at(-1));
+      await expect(page.locator('.mo-filmstrip button').last()).toHaveAttribute('aria-pressed', 'true');
+    }
+    await page.locator('.mo-studio-image-open').click();
+    await expect(page.locator('.mo-image-lightbox-media img')).toHaveAttribute('src', approved.at(-1));
+    assert(await page.locator('.mo-image-lightbox-media img').getAttribute('alt'), `Missing enlarged image alt text for ${id}`);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.mo-image-lightbox')).toHaveCount(0);
   }
-  console.log('Ocho lecturas verificadas: variantes visuales intercaladas y accesibles.');
+  console.log('Ocho lecturas verificadas: galerías seleccionadas, ampliación y alternativas accesibles.');
 
   await page.setViewportSize({ width: 390, height: 844 });
   for (const id of editorialBatchOne) {
@@ -568,12 +567,12 @@ try {
   await page.screenshot({ path: mobileShot });
   console.log(`Móvil: lectura y notas sin desbordamiento. Captura: ${mobileShot}`);
 
-  for (const id of Object.keys(imageExpectations)) {
+  for (const id of imageTopics) {
     await page.evaluate(value => { globalThis.location.hash = `obra-${value}`; }, id);
     await expect(page.locator(`#article-${id}-title`)).toBeVisible();
     assert.equal(await page.locator('.ar-reader').evaluate(element => element.scrollWidth <= element.clientWidth + 1), true, `Mobile image overflow: ${id}`);
   }
-  console.log('Móvil: las figuras de los ocho temas verificados no generan desbordamiento horizontal.');
+  console.log('Móvil: las ocho lecturas y sus galerías no generan desbordamiento horizontal.');
 
   await page.evaluate(() => { globalThis.location.hash = 'obra-oneill-cylinder'; });
   await expect(page.locator('#article-oneill-cylinder-title')).toBeVisible();

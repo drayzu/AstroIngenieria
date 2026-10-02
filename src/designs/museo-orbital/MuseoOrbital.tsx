@@ -1,10 +1,15 @@
-﻿import '@fontsource-variable/fraunces';
+import { useLocale } from '../../i18n/LocaleProvider';
+import { getCatalog } from '../../i18n/catalog';
+import { LanguageSwitch } from '../../i18n/LanguageSwitch';
+import type { Locale } from '../../i18n/messages';
+import '@fontsource-variable/fraunces';
 import '@fontsource-variable/space-grotesk';
 import '@fontsource-variable/jetbrains-mono';
 import {
   memo,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -25,7 +30,7 @@ import { chapters, conceptById, plausibilityLabels, scaleLabels } from '../../da
 import { selectedStudyImages } from '../../data/selectedStudyImages';
 import { refs } from '../../data/articles/sources';
 import { metricRows, metricValueLabel } from '../../data/metricProfile';
-import { readingSequence, type ReadingContext } from '../../data/readingJourney';
+import type { ReadingContext } from '../../data/readingJourney';
 import type { AstroChapter, AstroConcept, SourceRef } from '../../types';
 import { Grain } from '../shared/Grain';
 import { useScrollLock } from '../shared/useScrollLock';
@@ -108,8 +113,8 @@ interface PlaygroundResult {
 
 type PlaygroundEntryState = 'idle' | 'charging' | 'entering' | 'leaving';
 
-const resolveChapter = (concept: AstroConcept): AstroChapter =>
-  chapters.find((chapter) => chapter.id === concept.chapterId) ?? chapters[0];
+const resolveChapter = (concept: AstroConcept, locale: Locale = 'es'): AstroChapter =>
+  getCatalog(locale).chapters.find((chapter) => chapter.id === concept.chapterId) ?? getCatalog(locale).chapters[0];
 
 const readingFromHash = (vitrineIds: readonly string[]): {
   concept: AstroConcept | null;
@@ -140,9 +145,9 @@ const loadVitrine = (): string[] => {
   }
 };
 
-const getVitrineConcepts = (ids: readonly string[]) =>
+const getVitrineConcepts = (ids: readonly string[], locale: Locale = 'es') =>
   ids
-    .map((id) => conceptById.get(id))
+    .map((id) => getCatalog(locale).conceptById.get(id))
     .filter((item): item is AstroConcept => Boolean(item));
 
 const scrollToId = (id: string) => {
@@ -375,9 +380,10 @@ const Hero = memo(({
   playgroundHoldProgress,
   playgroundEntryState,
 }: HeroProps) => {
+  const { locale, t } = useLocale();
   const reduced = useReducedMotion();
   const [imageFocus, setImageFocus] = useState(false);
-  const letters = useMemo(() => 'ASTROINGENIERÍA'.split(''), []);
+  const letters = useMemo(() => (locale === 'en' ? 'ASTROENGINEERING' : 'ASTROINGENIERÍA').split(''), [locale]);
   const letterRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const boxRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const pgRefs = useRef<(HTMLSpanElement | null)[]>([]);
@@ -1293,14 +1299,15 @@ const Hero = memo(({
       onMouseMove={trackSpotlight}
     >
       {playgroundEntryState !== 'entering' && playgroundEntryState !== 'leaving' && (
+        <div className="mo-hero-toolbar">
+        <LanguageSwitch />
         <button
           type="button"
           className="mo-index-button mo-hero-index"
           onClick={onOpenIndex}
-          data-cursor-label="Índice"
-        >
-          Índice
-        </button>
+          data-cursor-label={t("Índice")}
+        >{t("Índice")}</button>
+        </div>
       )}
       <AnimatePresence initial={false}>
         <motion.div
@@ -1320,22 +1327,22 @@ const Hero = memo(({
       <div className="mo-hero-scrim" />
       <div className="mo-hero-spot" aria-hidden="true" />
       {playgroundEntryState !== 'entering' && playgroundEntryState !== 'leaving' && (
-        <div className={`mo-hero-carousel${imageFocus ? ' is-expanded' : ''}`} role="group" aria-label="Imágenes de portada">
+        <div className={`mo-hero-carousel${imageFocus ? ' is-expanded' : ''}`} role="group" aria-label={t("Imágenes de portada")}>
           {imageFocus && (
             <>
               <button
                 type="button"
                 onClick={() => showHeroAt((heroPosition - 1 + heroOrder.length) % heroOrder.length)}
-                aria-label="Ver imagen anterior"
-                title="Imagen anterior"
+                aria-label={t("Ver imagen anterior")}
+                title={t("Imagen anterior")}
               >
                 <ChevronLeft size={16} strokeWidth={1.5} aria-hidden="true" />
               </button>
               <button
                 type="button"
                 onClick={() => showHeroAt((heroPosition + 1) % heroOrder.length)}
-                aria-label="Ver imagen siguiente"
-                title="Imagen siguiente"
+                aria-label={t("Ver imagen siguiente")}
+                title={t("Imagen siguiente")}
               >
                 <ChevronRight size={16} strokeWidth={1.5} aria-hidden="true" />
               </button>
@@ -1346,8 +1353,8 @@ const Hero = memo(({
             className={`mo-hero-carousel-view${imageFocus ? ' is-active' : ''}`}
             onClick={() => setImageFocus((current) => !current)}
             aria-expanded={imageFocus}
-            aria-label={imageFocus ? 'Mostrar textos y ocultar controles de imágenes' : 'Ver imagen y mostrar controles de imágenes'}
-            title={imageFocus ? 'Mostrar textos' : 'Ver imagen'}
+            aria-label={imageFocus ? t("Mostrar textos y ocultar controles de imágenes") : t("Ver imagen y mostrar controles de imágenes")}
+            title={imageFocus ? t("Mostrar textos") : t("Ver imagen")}
           >
             <Aperture size={18} strokeWidth={1.2} aria-hidden="true" />
           </button>
@@ -1368,8 +1375,8 @@ const Hero = memo(({
           className={`mo-hero-playground is-${playgroundEntryState}`}
           onClick={onOpenPlayground}
           onPointerEnter={onPlaygroundArm}
-          data-cursor-label="Entrar"
-          aria-label="Entrar al Playground"
+          data-cursor-label={t("Entrar")}
+          aria-label={t("Entrar al Playground")}
           tabIndex={imageFocus ? -1 : 0}
           disabled={playgroundEntryState === 'entering' || playgroundEntryState === 'leaving'}
           initial={{ opacity: 0, y: 8 }}
@@ -1420,11 +1427,9 @@ const Hero = memo(({
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: reduced ? 0 : 0.5, duration: 0.9, ease: EASE_OUT }}
-        >
-          Atlas de astroingeniería
-        </motion.p>
+        >{t("Atlas de astroingeniería")}</motion.p>
 
-        <h1 className="mo-hero-title" aria-label="Astroingeniería">
+        <h1 key={locale} className="mo-hero-title" aria-label={t("Astroingeniería")}>
           {letters.map((letter, index) => (
             <span
               className="mo-hero-letterbox"
@@ -1440,11 +1445,11 @@ const Hero = memo(({
                   ref={(el) => {
                     letterRefs.current[index] = el;
                   }}
-                  initial={{ y: '180%' }}
+                  initial={{ y: reduced ? '0%' : '180%' }}
                   animate={{ y: '0%' }}
                   transition={{
                     delay: reduced ? 0 : 0.55 + index * 0.038,
-                    duration: 1.25,
+                    duration: reduced ? 0 : 1.25,
                     ease: EASE_OUT,
                   }}
                 >
@@ -1468,10 +1473,7 @@ const Hero = memo(({
           initial={{ opacity: 0, y: 22 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: reduced ? 0 : 1.6, duration: 1, ease: EASE_OUT }}
-        >
-          De los hábitats orbitales a las estrellas, exploramos qué podríamos construir,
-          qué haría falta para lograrlo y dónde aparecen los límites físicos.
-        </motion.p>
+        >{t("De los hábitats orbitales a las estrellas, exploramos qué podríamos construir, qué haría falta para lograrlo y dónde aparecen los límites físicos.")}</motion.p>
 
         <motion.span
           ref={hintRef}
@@ -1481,18 +1483,18 @@ const Hero = memo(({
           transition={{ delay: reduced ? 0 : 2.8, duration: 1 }}
         >
           <span className="mo-sky-action">
-            <kbd className="mo-sky-key is-pulse">clic mantenido</kbd>
-            <span>supernova</span>
+            <kbd className="mo-sky-key is-pulse">{t("clic mantenido")}</kbd>
+            <span>{t("supernova")}</span>
           </span>
           <i className="mo-sky-sep" aria-hidden="true" />
           <span className="mo-sky-action">
-            <kbd className="mo-sky-key is-pulse is-step-2">clic + arrastre</kbd>
-            <span>meteorito</span>
+            <kbd className="mo-sky-key is-pulse is-step-2">{t("clic + arrastre")}</kbd>
+            <span>{t("meteorito")}</span>
           </span>
           <i className="mo-sky-sep" aria-hidden="true" />
           <span className="mo-sky-action">
-            <kbd className="mo-sky-key is-pulse is-step-3">shift + clic</kbd>
-            <span>constelación</span>
+            <kbd className="mo-sky-key is-pulse is-step-3">{t("shift + clic")}</kbd>
+            <span>{t("constelación")}</span>
           </span>
         </motion.span>
       </div>
@@ -1501,7 +1503,8 @@ const Hero = memo(({
 });
 
 const Marquee = memo(() => {
-  const phrase = `${chapters.length} CAPÍTULOS · ${totalWorks} TEMAS · MATERIA · ENERGÍA · CALOR · GRAVEDAD · TIEMPO · DISTANCIA · VIDA · `;
+  const { t } = useLocale();
+  const phrase = t("{0} CAPÍTULOS · {1} TEMAS · MATERIA · ENERGÍA · CALOR · GRAVEDAD · TIEMPO · DISTANCIA · VIDA · ", chapters.length, totalWorks);
   return (
     <div className="mo-marquee mo-layer" aria-hidden="true">
       <div className="mo-marquee-track">
@@ -1514,8 +1517,10 @@ const Marquee = memo(() => {
 
 /* ---------------- Índice de salas ---------------- */
 
-const HallIndex = memo(({ activeId }: { activeId: string | null }) => (
-  <nav className="mo-halls mo-layer" aria-label="Capítulos de la exposición">
+const HallIndex = memo(({ activeId }: { activeId: string | null }) => {
+  const { locale, t } = useLocale();
+  const { chapters } = getCatalog(locale);
+  return <nav className="mo-halls mo-layer" aria-label={t('Capítulos de la exposición')}>
     {chapters.map((chapter) => (
       <button
         key={chapter.id}
@@ -1536,7 +1541,7 @@ const HallIndex = memo(({ activeId }: { activeId: string | null }) => (
       onClick={() => scrollToId('vitrina')}
     >
       <b>✦</b>
-      Vitrina
+      {t('Vitrina')}
     </button>
     <button
       type="button"
@@ -1545,10 +1550,10 @@ const HallIndex = memo(({ activeId }: { activeId: string | null }) => (
       onClick={() => scrollToId('archivo')}
     >
       <b>§</b>
-      Archivo
+      {t('Archivo')}
     </button>
   </nav>
-));
+});
 
 /* ---------------- Reveals por palabras ---------------- */
 
@@ -1627,6 +1632,7 @@ const Obra = memo(({
   enableFlight: boolean;
   onSelect: (concept: AstroConcept) => void;
 }) => {
+  const { t } = useLocale();
   const [hovered, setHovered] = useState(false);
   const [hoverImageIndex, setHoverImageIndex] = useState(0);
   const images = selectedStudyImages[concept.id];
@@ -1694,7 +1700,7 @@ const Obra = memo(({
       <button
         type="button"
         className="mo-obra-hit"
-        data-cursor-label="Abrir sala de estudio"
+        data-cursor-label={t("Abrir sala de estudio")}
         onMouseMove={tilt}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={(event) => {
@@ -1713,7 +1719,7 @@ const Obra = memo(({
               alt={concept.illustration.alt}
               loading="lazy"
               decoding="async"
-            /> : <span className="mo-image-pending" role="img" aria-label={`Imagen de ${concept.title} pendiente de selección`}>Imagen pendiente de selección</span>}
+            /> : <span className="mo-image-pending" role="img" aria-label={t("Imagen de {0} pendiente de selección", concept.title)}>{t("Imagen pendiente de selección")}</span>}
             <AnimatePresence initial={false}>
               {shouldLoadImage && images && hoverImageIndex > 0 && (
                 <motion.img
@@ -1735,13 +1741,12 @@ const Obra = memo(({
           <span className="mo-frame-glow" aria-hidden="true" />
         </figure>
         <div className="mo-obra-meta">
-          <span className="mo-plate">
-            N.º {String(plate).padStart(2, '0')}
+          <span className="mo-plate">{t("N.º")} {String(plate).padStart(2, '0')}
           </span>
           <h3>{concept.title}</h3>
           <p>
-            {concept.category} · {scaleLabels[concept.scale]} ·{' '}
-            {plausibilityLabels[concept.plausibility]}
+            {concept.category} · {t(scaleLabels[concept.scale])} ·{' '}
+            {t(plausibilityLabels[concept.plausibility])}
           </p>
         </div>
       </button>
@@ -1752,6 +1757,7 @@ const Obra = memo(({
 /* ---------------- Sala ---------------- */
 
 const ChapterIntro = memo(({ chapter }: { chapter: AstroChapter }) => {
+  const { t } = useLocale();
   const introRef = useRef<HTMLElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
   const [imageFocus, setImageFocus] = useState(false);
@@ -1806,16 +1812,15 @@ const ChapterIntro = memo(({ chapter }: { chapter: AstroChapter }) => {
         className={`mo-index-button mo-hero-view mo-chapter-view${imageFocus ? ' is-active' : ''}`}
         onClick={() => setImageFocus((current) => !current)}
         aria-pressed={imageFocus}
-        aria-label={imageFocus ? `Mostrar textos de ${chapter.title}` : `Ver imagen de ${chapter.title}`}
-        data-cursor-label={imageFocus ? 'Mostrar textos' : 'Ver imagen'}
-        title={imageFocus ? 'Mostrar textos' : 'Ver imagen'}
+        aria-label={imageFocus ? t("Mostrar textos de {0}", chapter.title) : t("Ver imagen de {0}", chapter.title)}
+        data-cursor-label={imageFocus ? t("Mostrar textos") : t("Ver imagen")}
+        title={imageFocus ? t("Mostrar textos") : t("Ver imagen")}
       >
         <Aperture size={15} strokeWidth={1.2} aria-hidden="true" />
       </button>
 
       <div className="mo-chapter-content">
-        <p className="mo-chapter-kicker">
-          Capítulo {chapter.number.padStart(2, '0')} · {chapter.concepts.length} {chapter.concepts.length === 1 ? 'tema' : 'temas'}
+        <p className="mo-chapter-kicker">{t("Capítulo")} {chapter.number.padStart(2, '0')} · {chapter.concepts.length} {chapter.concepts.length === 1 ? t("tema") : t("temas")}
         </p>
         <div className="mo-chapter-heading">
           <span aria-hidden="true">{chapter.number}</span>
@@ -1840,6 +1845,8 @@ const Sala = memo(({
   onSelect: (concept: AstroConcept) => void;
 }) => {
   const sectionRef = useRef<HTMLElement>(null);
+  const { locale } = useLocale();
+  const { conceptById } = getCatalog(locale);
 
   return (
     <section
@@ -1849,7 +1856,7 @@ const Sala = memo(({
       style={{ '--accent': chapter.color } as CSSProperties}
     >
       <ChapterIntro chapter={chapter} />
-      {chapter.groups?.map(group => <section className="mo-topic-group" key={group.title} aria-label={group.title}>
+      {chapter.groups?.map((group, groupIndex) => <section className="mo-topic-group" key={`${chapter.id}-${groupIndex}`} aria-label={group.title}>
           <h3>{group.title}</h3>
           <div className="mo-wall">
             {group.conceptIds.map(id => {
@@ -1873,38 +1880,34 @@ const Vitrina = memo(({
   onRemove: (conceptId: string) => void;
   onOpen: (concept: AstroConcept) => void;
 }) => {
-  const obras = getVitrineConcepts(ids);
+  const { locale, t } = useLocale();
+  const obras = getVitrineConcepts(ids, locale);
 
   return (
     <section id="vitrina" className="mo-vitrina mo-layer">
       <header className="mo-section-head">
-        <p className="mo-kicker">Vitrina de contrastes</p>
+        <p className="mo-kicker">{t("Vitrina de contrastes")}</p>
         <h2>
-          <RevealWords text="Obras seleccionadas" />
+          <RevealWords text={t("Obras seleccionadas")} />
         </h2>
-        <p className="mo-section-sub">
-          Añade hasta {VITRINE_CAP} obras desde su sala de estudio para leerlas en paralelo.
-        </p>
+        <p className="mo-section-sub">{t("Añade hasta")} {VITRINE_CAP} {t("obras desde su sala de estudio para leerlas en paralelo.")}</p>
       </header>
 
       {obras.length === 0 ? (
-        <p className="mo-vitrina-empty">
-          La vitrina está vacía. Entra a cualquier obra y pulsa «Añadir a la vitrina de
-          contrastes» para comenzar la comparación.
-        </p>
+        <p className="mo-vitrina-empty">{t("La vitrina está vacía. Entra a cualquier obra y pulsa «Añadir a la vitrina de contrastes» para comenzar la comparación.")}</p>
       ) : (
         <div className="mo-vitrina-grid">
           {obras.map((concept, cardIndex) => {
-            const chapter = resolveChapter(concept);
+            const chapter = resolveChapter(concept, locale);
             return (
               <motion.article
                 key={concept.id}
                 className="mo-vitrina-card"
                 role="button"
                 tabIndex={0}
-                aria-label={`Abrir sala de estudio: ${concept.title}`}
+                aria-label={t("Abrir sala de estudio: {0}", concept.title)}
                 data-cursor="true"
-                data-cursor-label="Abrir"
+                data-cursor-label={t("Abrir")}
                 style={{ '--accent': chapter.color } as CSSProperties}
                 initial={{ opacity: 0, y: 34 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -1931,25 +1934,25 @@ const Vitrina = memo(({
                       event.stopPropagation();
                       onRemove(concept.id);
                     }}
-                    aria-label={`Quitar ${concept.title} de la vitrina`}
-                    data-cursor-label="Quitar"
+                    aria-label={t("Quitar {0} de la vitrina", concept.title)}
+                    data-cursor-label={t("Quitar")}
                   >
                     ✕
                   </button>
                 </header>
                 <div className="mo-chip-row">
                   <span>{concept.category}</span>
-                  <span>{scaleLabels[concept.scale]}</span>
-                  <span>{plausibilityLabels[concept.plausibility]}</span>
+                  <span>{t(scaleLabels[concept.scale])}</span>
+                  <span>{t(plausibilityLabels[concept.plausibility])}</span>
                 </div>
                 <div className="mo-metric-profile-heading">
-                  <span>Perfil comparativo</span>
+                  <span>{t("Perfil comparativo")}</span>
                 </div>
                 <dl className="mo-metrics-v2">
-                  {metricRows(concept.metrics).map((row) => (
+                  {metricRows(concept.metrics, locale).map((row) => (
                     <div key={row.key} title={row.definition}>
                       <dt>{row.label}<small>{row.descriptor}</small></dt>
-                      <dd aria-label={metricValueLabel(row)}>
+                      <dd aria-label={metricValueLabel(row, locale)}>
                         {[1, 2, 3, 4, 5].map((cell) => (
                           <i key={cell} className={cell <= row.value ? 'is-on' : ''} />
                         ))}
@@ -1981,6 +1984,7 @@ const buildArchive = (): SourceRef[] => {
 };
 
 const Archivo = memo(({ sources }: { sources: SourceRef[] }) => {
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const summaryRef = useRef<HTMLButtonElement>(null);
 
@@ -2006,14 +2010,11 @@ const Archivo = memo(({ sources }: { sources: SourceRef[] }) => {
   return (
     <section id="archivo" className="mo-archivo mo-layer">
       <header className="mo-section-head">
-        <p className="mo-kicker">Sala archivo</p>
+        <p className="mo-kicker">{t("Sala archivo")}</p>
         <h2>
-          <RevealWords text="Fuentes de la colección" />
+          <RevealWords text={t("Fuentes de la colección")} />
         </h2>
-        <p className="mo-section-sub">
-          Estudios, documentación y obras que acompañan las lecturas. Cada artículo señala
-          sus referencias y distingue investigación, propuestas y ficción.
-        </p>
+        <p className="mo-section-sub">{t("Estudios, documentación y obras que acompañan las lecturas. Cada artículo señala sus referencias y distingue investigación, propuestas y ficción.")}</p>
       </header>
 
       <div className={`mo-archivo-drawer${open ? ' is-open' : ''}`}>
@@ -2024,10 +2025,10 @@ const Archivo = memo(({ sources }: { sources: SourceRef[] }) => {
           aria-expanded={open}
           aria-controls="archivo-referencias"
           onClick={() => setOpen((value) => !value)}
-          data-cursor-label={open ? 'Cerrar fuentes' : 'Abrir fuentes'}
+          data-cursor-label={open ? t("Cerrar fuentes") : t("Abrir fuentes")}
         >
-          <span className="mo-archivo-summary-label">Explorar el archivo completo</span>
-          <span className="mo-archivo-count">{sources.length} referencias</span>
+          <span className="mo-archivo-summary-label">{t("Explorar el archivo completo")}</span>
+          <span className="mo-archivo-count">{sources.length} {t("referencias")}</span>
           <i aria-hidden="true">+</i>
         </button>
 
@@ -2060,7 +2061,7 @@ const Archivo = memo(({ sources }: { sources: SourceRef[] }) => {
                     <b>{String(index + 1).padStart(2, '0')}</b>
                     <div>
                       <span>{source.publisher}</span>
-                      <a href={source.url} target="_blank" rel="noreferrer" data-cursor-label="Leer">
+                      <a href={source.url} target="_blank" rel="noreferrer" data-cursor-label={t("Leer")}>
                         {source.title} ↗
                       </a>
                     </div>
@@ -2072,9 +2073,7 @@ const Archivo = memo(({ sources }: { sources: SourceRef[] }) => {
                   type="button"
                   className="mo-archivo-close"
                   onClick={closeArchive}
-                >
-                  Cerrar referencias ↑
-                </button>
+                >{t("Cerrar referencias ↑")}</button>
               </div>
             </motion.div>
           )}
@@ -2095,6 +2094,8 @@ const MenuOverlay = memo(({
   onClose: () => void;
   onGo: (targetId: string) => void;
 }) => {
+  const { locale, t } = useLocale();
+  const { chapters } = getCatalog(locale);
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -2116,7 +2117,7 @@ const MenuOverlay = memo(({
       className="mo-menu"
       role="dialog"
       aria-modal="true"
-      aria-label="Índice del museo"
+      aria-label={t("Índice del museo")}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -2124,18 +2125,17 @@ const MenuOverlay = memo(({
     >
       <div className="mo-menu-panel">
         <header className="mo-menu-head">
-          <p className="mo-kicker">Museo Orbital</p>
+          <p className="mo-kicker">{t("Museo Orbital")}</p>
+          <LanguageSwitch />
           <button
             ref={closeRef}
             type="button"
             className="mo-menu-close"
             onClick={onClose}
-            data-cursor-label="Cerrar"
-          >
-            ✕ Cerrar índice
-          </button>
+            data-cursor-label={t("Cerrar")}
+          >{t("✕ Cerrar índice")}</button>
         </header>
-        <h2>Índice del recorrido</h2>
+        <h2>{t("Índice del recorrido")}</h2>
         <ol className="mo-menu-list">
           {chapters.map((chapter, index) => (
             <motion.li
@@ -2148,7 +2148,7 @@ const MenuOverlay = memo(({
                 type="button"
                 style={{ '--accent': chapter.color } as CSSProperties}
                 onClick={() => onGo(`sala-${chapter.id}`)}
-                data-cursor-label={`Capítulo ${chapter.number.padStart(2, '0')}`}
+                data-cursor-label={t("Capítulo {0}", chapter.number.padStart(2, '0'))}
               >
                 <b>{chapter.number}</b>
                 <span>{chapter.title}</span>
@@ -2165,10 +2165,10 @@ const MenuOverlay = memo(({
               type="button"
               className="is-extra"
               onClick={() => onGo('vitrina')}
-              data-cursor-label="Comparar"
+              data-cursor-label={t("Comparar")}
             >
               <b>✦</b>
-              <span>Vitrina de contrastes</span>
+              <span>{t("Vitrina de contrastes")}</span>
             </button>
           </motion.li>
           <motion.li
@@ -2180,10 +2180,10 @@ const MenuOverlay = memo(({
               type="button"
               className="is-extra"
               onClick={() => onGo('archivo')}
-              data-cursor-label="Fuentes"
+              data-cursor-label={t("Fuentes")}
             >
               <b>§</b>
-              <span>Sala archivo</span>
+              <span>{t("Sala archivo")}</span>
             </button>
           </motion.li>
         </ol>
@@ -2195,9 +2195,27 @@ const MenuOverlay = memo(({
 /* ---------------- Principal ---------------- */
 
 export default function MuseoOrbital() {
+  const { locale, t } = useLocale();
+  const { chapters, allConcepts: localizedSequence, conceptById: localizedConcepts } = getCatalog(locale);
   const reduced = useReducedMotion();
   usePageTextPhysics(Boolean(reduced));
   const rootRef = useRef<HTMLDivElement>(null);
+  const languageScrollProgress = useRef<number | null>(null);
+  useEffect(() => {
+    const rememberPosition = () => {
+      const element = rootRef.current;
+      if (element) languageScrollProgress.current = element.scrollTop / Math.max(1, element.scrollHeight - element.clientHeight);
+    };
+    window.addEventListener('mo-locale-before-change', rememberPosition);
+    return () => window.removeEventListener('mo-locale-before-change', rememberPosition);
+  }, []);
+  useLayoutEffect(() => {
+    const element = rootRef.current;
+    if (element && languageScrollProgress.current !== null) {
+      element.scrollTop = languageScrollProgress.current * Math.max(0, element.scrollHeight - element.clientHeight);
+      languageScrollProgress.current = null;
+    }
+  }, [locale]);
   const heroRef = useRef<HTMLElement>(null);
   const [vitrineIds, setVitrineIds] = useState<string[]>(loadVitrine);
   const initialReading = useRef(readingFromHash(vitrineIds));
@@ -3156,11 +3174,12 @@ export default function MuseoOrbital() {
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   let plateOffset = 0;
-  const vitrineConcepts = getVitrineConcepts(vitrineIds);
+  const vitrineConcepts = getVitrineConcepts(vitrineIds, locale);
+  const localizedActive = active ? localizedConcepts.get(active.id) ?? active : null;
   const activeUsesVitrineNavigation = readingContext === 'vitrine';
   const activeSiblings = activeUsesVitrineNavigation
     ? vitrineConcepts
-    : readingSequence;
+    : localizedSequence;
   const playgroundArriving = playgroundEntryState === 'entering';
   const playgroundDeparting = playgroundEntryState === 'leaving';
   const playgroundTransitioning = playgroundArriving || playgroundDeparting;
@@ -3264,10 +3283,8 @@ export default function MuseoOrbital() {
               leavePlayground();
             }}
             disabled={playgroundTransitioning}
-            data-cursor-label="Volver"
-          >
-            ← Volver al museo
-          </button>
+            data-cursor-label={t("Volver")}
+          >{t("← Volver al museo")}</button>
           <button
             type="button"
             className={`mo-playground-audio${playgroundMusicBlocked ? ' is-blocked' : ''}`}
@@ -3278,13 +3295,13 @@ export default function MuseoOrbital() {
             disabled={playgroundTransitioning}
             aria-label={
               playgroundMusicMuted || playgroundMusicBlocked
-                ? 'Activar música del playground'
-                : 'Silenciar música del playground'
+                ? t("Activar música del playground")
+                : t("Silenciar música del playground")
             }
             aria-pressed={playgroundMusicMuted}
-            title={playgroundMusicBlocked ? 'Activar música' : undefined}
+            title={playgroundMusicBlocked ? t("Activar música") : undefined}
             data-cursor-label={
-              playgroundMusicMuted || playgroundMusicBlocked ? 'Activar música' : 'Silenciar música'
+              playgroundMusicMuted || playgroundMusicBlocked ? t("Activar música") : t("Silenciar música")
             }
           >
             {playgroundMusicMuted || playgroundMusicBlocked ? (
@@ -3295,7 +3312,7 @@ export default function MuseoOrbital() {
           </button>
           <div className="mo-playground-status">
             <div>
-              <span>Tiempo</span>
+              <span>{t("Tiempo")}</span>
               <strong>
                 <time dateTime={`PT${Math.floor(playgroundElapsedMs / 1000)}S`}>
                   {formatPlaygroundElapsed(playgroundElapsedMs)}
@@ -3316,7 +3333,7 @@ export default function MuseoOrbital() {
                 role="dialog"
                 aria-modal="true"
               >
-                <span className="mo-playground-complete-kicker">Misión completada</span>
+                <span className="mo-playground-complete-kicker">{t("Misión completada")}</span>
                 <h2 id="mo-playground-result-title" aria-label={PLAYGROUND_WORD}>
                   {PLAYGROUND_WORD.split('').map((letter, index) => (
                     <motion.span
@@ -3334,17 +3351,17 @@ export default function MuseoOrbital() {
                     </motion.span>
                   ))}
                 </h2>
-                <p>Las piezas dispersas vuelven a ser una sola idea.</p>
+                <p>{t("Las piezas dispersas vuelven a ser una sola idea.")}</p>
 
                 {playgroundResult && (
                   <div className="mo-playground-current-time">
-                    <span>Tu tiempo</span>
+                    <span>{t("Tu tiempo")}</span>
                     <strong>{formatPlaygroundTime(playgroundResult.durationMs)}</strong>
                   </div>
                 )}
 
-                <div className="mo-playground-ranking" aria-label="Tus diez mejores tiempos">
-                  <span className="mo-playground-ranking-title">Tus mejores tiempos</span>
+                <div className="mo-playground-ranking" aria-label={t("Tus diez mejores tiempos")}>
+                  <span className="mo-playground-ranking-title">{t("Tus mejores tiempos")}</span>
                   {playgroundBestTimes.length > 0 ? (
                     <ol>
                       {playgroundBestTimes.map((entry, index) => (
@@ -3354,12 +3371,12 @@ export default function MuseoOrbital() {
                         >
                           <span>{String(index + 1).padStart(2, '0')}</span>
                           <strong>{formatPlaygroundTime(entry.durationMs)}</strong>
-                          {entry.id === playgroundResult?.id && <em>nuevo</em>}
+                          {entry.id === playgroundResult?.id && <em>{t("nuevo")}</em>}
                         </li>
                       ))}
                     </ol>
                   ) : (
-                    <p>Completa una misión para estrenar el registro.</p>
+                    <p>{t("Completa una misión para estrenar el registro.")}</p>
                   )}
                 </div>
 
@@ -3371,10 +3388,8 @@ export default function MuseoOrbital() {
                       event.currentTarget.blur();
                       replayPlayground();
                     }}
-                    data-cursor-label="Repetir"
-                  >
-                    Jugar de nuevo
-                  </button>
+                    data-cursor-label={t("Repetir")}
+                  >{t("Jugar de nuevo")}</button>
                 </div>
               </motion.section>
             )}
@@ -3384,28 +3399,22 @@ export default function MuseoOrbital() {
             <p className="mo-playground-hint">
               <span className="mo-playground-hint-desktop">
                 <span className="mo-pg-action">
-                  <kbd className="mo-pg-key">Espacio</kbd>Pulsar
-                </span>
+                  <kbd className="mo-pg-key">{t("Espacio")}</kbd>{t("Pulsar")}</span>
                 <i className="mo-pg-sep" aria-hidden="true" />
                 <span className="mo-pg-action">
-                  <kbd className="mo-pg-key">Clic mantenido</kbd>Supernova
-                </span>
+                  <kbd className="mo-pg-key">{t("Clic mantenido")}</kbd>{t("Supernova")}</span>
                 <i className="mo-pg-sep" aria-hidden="true" />
                 <span className="mo-pg-action">
-                  <kbd className="mo-pg-key">Clic + Arrastre</kbd>Cometa
-                </span>
+                  <kbd className="mo-pg-key">{t("Clic + Arrastre")}</kbd>{t("Cometa")}</span>
                 <i className="mo-pg-sep" aria-hidden="true" />
                 <span className="mo-pg-action">
                   <kbd className="mo-pg-key">Shift + WASD</kbd>Speed Boost
                 </span>
                 <i className="mo-pg-sep" aria-hidden="true" />
                 <span className="mo-pg-action">
-                  <kbd className="mo-pg-key">Shift + Clic</kbd>Constelación
-                </span>
+                  <kbd className="mo-pg-key">{t("Shift + Clic")}</kbd>{t("Constelación")}</span>
               </span>
-              <span className="mo-playground-hint-touch">
-                COMETA: TOCA Y ARRASTRA PARA LANZAR
-              </span>
+              <span className="mo-playground-hint-touch">{t("COMETA: TOCA Y ARRASTRA PARA LANZAR")}</span>
             </p>
           </div>
         </div>
@@ -3445,18 +3454,11 @@ export default function MuseoOrbital() {
       <Archivo sources={archiveSources} />
 
       <footer className="mo-footer mo-layer">
-        <blockquote>
-          La naturaleza necesitó miles de millones de años para engendrar una
-          mente capaz de comprenderla. Bastó una fracción de ese tiempo para que
-          aquella mente aprendiera a crear otras. Y así, de un universo que
-          nunca supo hacia dónde iba, nació algo capaz de elegir hacia dónde irá.
-        </blockquote>
-        <p className="mo-footer-line">
-          ASTROINGENIERÍA — EXPOSICIÓN PERMANENTE · MUSEO ORBITAL · MMXXVI
-        </p>
+        <blockquote>{t("La naturaleza necesitó miles de millones de años para engendrar una mente capaz de comprenderla. Bastó una fracción de ese tiempo para que aquella mente aprendiera a crear otras. Y así, de un universo que nunca supo hacia dónde iba, nació algo capaz de elegir hacia dónde irá.")}</blockquote>
+        <p className="mo-footer-line">{t("ASTROINGENIERÍA — EXPOSICIÓN PERMANENTE · MUSEO ORBITAL · MMXXVI")}</p>
       </footer>
 
-      <nav className="mo-rail" aria-label="Navegación por capítulos">
+      <nav className="mo-rail" aria-label={t("Navegación por capítulos")}>
         <div className="mo-rail-track" aria-hidden="true">
           <span ref={railFillRef} className="mo-rail-fill" />
         </div>
@@ -3465,13 +3467,13 @@ export default function MuseoOrbital() {
             key={chapter.id}
             type="button"
             className={activeHallId === chapter.id ? 'is-eclipsed' : ''}
-            aria-label={`Capítulo ${chapter.number.padStart(2, '0')}: ${chapter.title}`}
+            aria-label={t("Capítulo {0}: {1}", chapter.number.padStart(2, '0'), chapter.title)}
             aria-current={activeHallId === chapter.id ? 'location' : undefined}
             onClick={() => scrollToId(`sala-${chapter.id}`)}
           >
             <span className="mo-rail-disc" aria-hidden="true" />
             <span className="mo-rail-tooltip" aria-hidden="true">
-              <span>Capítulo {chapter.number.padStart(2, '0')}</span>
+              <span>{t("Capítulo")} {chapter.number.padStart(2, '0')}</span>
               <strong>{chapter.title}</strong>
             </span>
           </button>
@@ -3501,8 +3503,8 @@ export default function MuseoOrbital() {
         {active && (
           <StudioRoom
             key="studio"
-            concept={active}
-            chapter={resolveChapter(active)}
+            concept={localizedActive!}
+            chapter={resolveChapter(active, locale)}
             siblings={activeSiblings}
             navigationContext={activeUsesVitrineNavigation ? 'vitrine' : 'journey'}
             enableFlight={!reduced}

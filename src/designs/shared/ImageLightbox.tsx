@@ -1,3 +1,4 @@
+import { useLocale } from '../../i18n/LocaleProvider';
 import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useScrollLock } from './useScrollLock';
@@ -16,6 +17,7 @@ interface ImageLightboxProps {
 }
 
 export function ImageLightbox({ image, onClose, onPrevious, onNext }: ImageLightboxProps) {
+  const { t } = useLocale();
   const closeRef = useRef<HTMLButtonElement>(null);
   useScrollLock(true);
 
@@ -41,7 +43,7 @@ export function ImageLightbox({ image, onClose, onPrevious, onNext }: ImageLight
       className="mo-image-lightbox"
       role="dialog"
       aria-modal="true"
-      aria-label={`Imagen ampliada: ${image.alt}`}
+      aria-label={t("Imagen ampliada: {0}", image.alt)}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -58,9 +60,9 @@ export function ImageLightbox({ image, onClose, onPrevious, onNext }: ImageLight
           type="button"
           className="mo-image-lightbox-close"
           onClick={onClose}
-          data-cursor-label="Cerrar"
+          data-cursor-label={t("Cerrar")}
         >
-          ✕ <span>Cerrar</span>
+          ✕ <span>{t("Cerrar")}</span>
         </button>
         <div className="mo-image-lightbox-viewer">
           <figure className="mo-image-lightbox-figure">
@@ -70,8 +72,8 @@ export function ImageLightbox({ image, onClose, onPrevious, onNext }: ImageLight
                   type="button"
                   className="mo-image-lightbox-nav is-prev"
                   onClick={onPrevious}
-                  aria-label="Ver imagen anterior"
-                  data-cursor-label="Anterior"
+                  aria-label={t("Ver imagen anterior")}
+                  data-cursor-label={t("Anterior")}
                 >
                   <span aria-hidden="true">‹</span>
                 </button>
@@ -81,16 +83,16 @@ export function ImageLightbox({ image, onClose, onPrevious, onNext }: ImageLight
                 alt={image.alt}
                 draggable={false}
                 onClick={onClose}
-                title="Clic para cerrar"
-                data-cursor-label="Cerrar"
+                title={t("Clic para cerrar")}
+                data-cursor-label={t("Cerrar")}
               />
               {onNext && (
                 <button
                   type="button"
                   className="mo-image-lightbox-nav is-next"
                   onClick={onNext}
-                  aria-label="Ver imagen siguiente"
-                  data-cursor-label="Siguiente"
+                  aria-label={t("Ver imagen siguiente")}
+                  data-cursor-label={t("Siguiente")}
                 >
                   <span aria-hidden="true">›</span>
                 </button>

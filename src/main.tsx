@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './designs/museo-orbital/base.css';
+import { LocaleProvider } from './i18n/LocaleProvider';
 
 const root = createRoot(document.getElementById('root')!);
 
@@ -20,7 +21,7 @@ if (isLabPath('/disenos')) {
     void import('./designs/museo-orbital/MuseoOrbital').then(({ default: MuseoOrbital }) => {
       root.render(
         <StrictMode>
-          <MuseoOrbital />
+          <LocaleProvider><MuseoOrbital /></LocaleProvider>
         </StrictMode>,
       );
     });
@@ -37,7 +38,7 @@ if (isLabPath('/disenos')) {
   void import('./designs/museo-orbital/MuseoOrbital').then(({ default: MuseoOrbital }) => {
     root.render(
       <StrictMode>
-        <MuseoOrbital />
+        <LocaleProvider><MuseoOrbital /></LocaleProvider>
       </StrictMode>,
     );
   });

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useLocale } from '../../i18n/LocaleProvider';
+import { translate } from '../../i18n/messages';
 import { CosmicLab, LAB_TOOLS, holeAcceleration, type LabState, type LabCommand } from './CosmicLab';
 import { CosmicLabPanel } from './CosmicLabPanel';
 import { CursorConstellationLayer } from './CursorConstellationLayer';
@@ -551,6 +553,9 @@ export const StarfieldCanvas = ({
   playgroundPhase: requestedPlaygroundPhase = 'active',
   onPlaygroundProgress,
 }: StarfieldProps) => {
+  const { locale } = useLocale();
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [labUi, setLabUi] = useState<LabState | null>(null);
   const labCommandRef = useRef<(command: LabCommand) => void>(() => {});
@@ -4495,11 +4500,11 @@ export const StarfieldCanvas = ({
       }
 
       if (sandboxActive && fxCtx) {
-        cosmicLab.draw(fxCtx);
+        cosmicLab.draw(fxCtx, localeRef.current);
         fxCtx.save();
         fxCtx.font = '500 10px "JetBrains Mono Variable", monospace';
         fxCtx.fillStyle = 'rgba(186,207,225,0.6)';
-        fxCtx.fillText(`LAB · ${Math.round(labFps)} fps · tiempo ×${sandboxTimeScale.toFixed(2)} · Q/E ajustar`, 20, 78);
+        fxCtx.fillText(translate('LAB · {0} fps · tiempo ×{1} · Q/E ajustar', localeRef.current, Math.round(labFps), sandboxTimeScale.toFixed(2)), 20, 78);
         fxCtx.restore();
       }
       if (sandboxChargeT0 !== null && !sandboxActive && fxCtx && mouse.x > -999) {
