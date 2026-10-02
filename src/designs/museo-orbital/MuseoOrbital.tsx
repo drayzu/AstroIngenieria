@@ -45,6 +45,10 @@ import {
 } from './playgroundTiming';
 import { StudioRoom } from './StudioRoom';
 import { StarfieldCanvas, type PlaygroundProgress } from './StarfieldCanvas';
+import {
+  PlaygroundArcade, PLAYGROUND_WORD, PLAYGROUND_LIMIT_MS, playgroundRecordsKey,
+  parsePlaygroundRecords, rankPlaygroundRecords, type PlaygroundRecord, type PlaygroundControlMode,
+} from './PlaygroundArcade';
 import { DistortOverlay } from './DistortOverlay';
 import './museoOrbital.css';
 
@@ -74,9 +78,6 @@ const shuffledHeroOrder = () => {
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 const VITRINE_CAP = 9;
 const VITRINE_KEY = 'mo-vitrine';
-const PLAYGROUND_WORD = 'ASTROINGENIERÍA';
-const PLAYGROUND_TIMES_KEY = 'mo-playground-best-times-v1';
-const PLAYGROUND_TIMES_CAP = 10;
 const PLAYGROUND_HOLD_MS = 2_000;
 const PG_TAIL_SEGMENTS = 16;
 const pgTailColor = (f: number) => {
@@ -94,21 +95,10 @@ const PLAYGROUND_MUSIC_TRACKS = [
   `${import.meta.env.BASE_URL}music/in-the-pool.mp3`,
   `${import.meta.env.BASE_URL}music/my-lady.mp3`,
 ];
-const INITIAL_PLAYGROUND_PROGRESS: PlaygroundProgress = {
-  destroyed: 0,
-  total: PLAYGROUND_WORD.length,
-  phase: 'active',
-};
+const INITIAL_PLAYGROUND_PROGRESS = new PlaygroundArcade('comet').snapshot();
 
-interface PlaygroundBestTime {
+interface PlaygroundResult extends PlaygroundProgress {
   id: string;
-  durationMs: number;
-  completedAt: string;
-}
-
-interface PlaygroundResult {
-  id: string;
-  durationMs: number;
 }
 
 type PlaygroundEntryState = 'idle' | 'charging' | 'entering' | 'leaving';
@@ -155,28 +145,12 @@ const scrollToId = (id: string) => {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
-const loadPlaygroundBestTimes = (): PlaygroundBestTime[] => {
-  try {
-    const raw = window.localStorage.getItem(PLAYGROUND_TIMES_KEY);
-    const parsed: unknown = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter((entry): entry is PlaygroundBestTime => {
-        if (!entry || typeof entry !== 'object') return false;
-        const candidate = entry as Partial<PlaygroundBestTime>;
-        return (
-          typeof candidate.id === 'string' &&
-          typeof candidate.durationMs === 'number' &&
-          Number.isFinite(candidate.durationMs) &&
-          candidate.durationMs > 0 &&
-          typeof candidate.completedAt === 'string'
-        );
-      })
-      .sort((a, b) => a.durationMs - b.durationMs)
-      .slice(0, PLAYGROUND_TIMES_CAP);
-  } catch {
-    return [];
-  }
+const loadPlaygroundRecords = (): Record<PlaygroundControlMode, PlaygroundRecord[]> => {
+  const load = (mode: PlaygroundControlMode) => {
+    try { return parsePlaygroundRecords(window.localStorage.getItem(playgroundRecordsKey(mode)), mode); }
+    catch { return []; }
+  };
+  return { pulsar: load('pulsar'), comet: load('comet') };
 };
 
 const loadPlaygroundMusicMuted = () => {
@@ -2233,13 +2207,11 @@ export default function MuseoOrbital() {
   const [playgroundProgress, setPlaygroundProgress] = useState<PlaygroundProgress>(
     INITIAL_PLAYGROUND_PROGRESS,
   );
-  const [playgroundElapsedMs, setPlaygroundElapsedMs] = useState(0);
-  const [playgroundBestTimes, setPlaygroundBestTimes] = useState<PlaygroundBestTime[]>(
-    loadPlaygroundBestTimes,
-  );
+  const [playgroundRecords, setPlaygroundRecords] = useState(loadPlaygroundRecords);
   const [playgroundResult, setPlaygroundResult] = useState<PlaygroundResult | null>(null);
-  const playgroundStartedAt = useRef<number | null>(null);
-  const playgroundPhase = useRef<PlaygroundProgress['phase']>('active');
+  const playgroundBestRecords = playgroundRecords[playgroundProgress.controlMode];
+  const playgroundRemainingMs = Math.max(0, PLAYGROUND_LIMIT_MS - playgroundProgress.elapsedMs);
+  const playgroundResultHandled = useRef(false);
   const reducedPlaygroundRun = useRef(false);
   const flightTimer = useRef(0);
   const playgroundTransitionTimer = useRef(0);
@@ -2413,35 +2385,26 @@ export default function MuseoOrbital() {
   const preparePlaygroundScene = useCallback(() => {
     const isReducedRun = Boolean(reduced);
     reducedPlaygroundRun.current = isReducedRun;
-    playgroundStartedAt.current = null;
-    playgroundPhase.current = isReducedRun ? 'complete' : 'active';
-    setPlaygroundElapsedMs(0);
+    playgroundResultHandled.current = false;
     setPlaygroundResult(null);
     setPlaygroundRunId((current) => current + 1);
     setPlaygroundProgress(
       isReducedRun
-        ? { destroyed: PLAYGROUND_WORD.length, total: PLAYGROUND_WORD.length, phase: 'complete' }
+        ? { ...INITIAL_PLAYGROUND_PROGRESS, destroyed: PLAYGROUND_WORD.length, phase: 'complete' }
         : INITIAL_PLAYGROUND_PROGRESS,
     );
   }, [reduced]);
 
-  const startPlaygroundRun = useCallback(() => {
-    playgroundStartedAt.current = reducedPlaygroundRun.current ? null : performance.now();
-  }, []);
-
   const activatePlayground = useCallback(() => {
     playgroundActiveRef.current = true;
-    startPlaygroundRun();
     setPlayground(true);
-  }, [startPlaygroundRun]);
+  }, []);
 
   const resetPlayground = useCallback(() => {
     playgroundActiveRef.current = false;
-    playgroundStartedAt.current = null;
-    playgroundPhase.current = 'active';
+    playgroundResultHandled.current = false;
     setPlayground(false);
     setPlaygroundProgress(INITIAL_PLAYGROUND_PROGRESS);
-    setPlaygroundElapsedMs(0);
     setPlaygroundResult(null);
   }, []);
 
@@ -2496,7 +2459,6 @@ export default function MuseoOrbital() {
     playgroundEntryStateRef.current = 'leaving';
     setPlaygroundEntryState('leaving');
     setPlaygroundHoldProgress(0);
-    playgroundStartedAt.current = null;
     stopPlaygroundMusic();
 
     const finishLeaving = () => {
@@ -2531,39 +2493,26 @@ export default function MuseoOrbital() {
 
   const replayPlayground = useCallback(() => {
     preparePlaygroundScene();
-    startPlaygroundRun();
-  }, [preparePlaygroundScene, startPlaygroundRun]);
+  }, [preparePlaygroundScene]);
 
   const handlePlaygroundProgress = useCallback((nextProgress: PlaygroundProgress) => {
-    if (nextProgress.phase !== 'complete') {
-      if (playgroundPhase.current === 'active') {
-        setPlaygroundProgress({ ...nextProgress, phase: 'active' });
-      }
-      return;
-    }
-
-    if (playgroundPhase.current !== 'active') return;
-    const now = performance.now();
-    const startedAt = playgroundStartedAt.current;
-    if (startedAt === null || reducedPlaygroundRun.current) return;
-    const durationMs = Math.max(1, now - startedAt);
-
-    playgroundPhase.current = 'complete';
-    playgroundStartedAt.current = null;
+    if (playgroundResultHandled.current || reducedPlaygroundRun.current) return;
     setPlaygroundProgress(nextProgress);
+    if (nextProgress.phase === 'active') return;
+    playgroundResultHandled.current = true;
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-    const entry: PlaygroundBestTime = {
-      id,
-      durationMs,
-      completedAt: new Date().toISOString(),
-    };
-    setPlaygroundElapsedMs(durationMs);
-    setPlaygroundResult({ id, durationMs });
-    setPlaygroundBestTimes((current) =>
-      [...current, entry]
-        .sort((a, b) => a.durationMs - b.durationMs)
-        .slice(0, PLAYGROUND_TIMES_CAP),
-    );
+    setPlaygroundResult({ id, ...nextProgress });
+    if (nextProgress.phase === 'complete') {
+      const entry: PlaygroundRecord = {
+        id, durationMs: nextProgress.elapsedMs, score: nextProgress.score,
+        bestCombo: nextProgress.bestCombo, controlMode: nextProgress.controlMode,
+        completedAt: new Date().toISOString(),
+      };
+      setPlaygroundRecords(current => ({
+        ...current,
+        [entry.controlMode]: rankPlaygroundRecords([...current[entry.controlMode], entry]),
+      }));
+    }
   }, []);
 
   // W/S recorren el museo con inercia. Al llegar arriba, W sostenida confirma
@@ -2599,6 +2548,8 @@ export default function MuseoOrbital() {
     };
 
     const clearInput = () => {
+      cancelAnimationFrame(raf);
+      raf = 0;
       held.w = false;
       held.s = false;
       velocity = 0;
@@ -2619,6 +2570,12 @@ export default function MuseoOrbital() {
       menuOpen ||
       !['idle', 'charging'].includes(playgroundEntryStateRef.current) ||
       isEditable(document.activeElement);
+
+    const requestLoop = () => {
+      if (raf || document.hidden || blocked()) return;
+      previous = performance.now();
+      raf = requestAnimationFrame(loop);
+    };
 
     const onKeyDown = (event: KeyboardEvent) => {
       updateModifiers(event);
@@ -2641,6 +2598,7 @@ export default function MuseoOrbital() {
         publishIdle();
       }
       if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) publishIdle();
+      if (held.w || held.s) requestLoop();
     };
 
     const onKeyUp = (event: KeyboardEvent) => {
@@ -2653,11 +2611,17 @@ export default function MuseoOrbital() {
       if (event.code.startsWith('Shift') || event.code.startsWith('Control') || event.code.startsWith('Alt') || event.code.startsWith('Meta')) {
         publishIdle();
       }
+      if (held.w || held.s || velocity !== 0) requestLoop();
     };
 
     const onManualScroll = () => {
       velocity = 0;
+      museumKeyboardVelocityRef.current = 0;
       publishIdle();
+      if (!held.w && !held.s) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
     };
 
     const onVisibility = () => {
@@ -2665,13 +2629,13 @@ export default function MuseoOrbital() {
     };
 
     const loop = (now: number) => {
+      raf = 0;
       const dt = Math.min(0.032, Math.max(0, (now - previous) / 1000));
       previous = now;
 
       if (blocked()) {
-        velocity = 0;
-        museumKeyboardVelocityRef.current = 0;
-        if (playgroundEntryStateRef.current === 'charging') publishIdle();
+        clearInput();
+        return;
       } else {
         const direction = Number(held.s) - Number(held.w);
         if (reduced) {
@@ -2712,7 +2676,9 @@ export default function MuseoOrbital() {
         museumKeyboardVelocityRef.current = velocity;
       }
 
-      raf = requestAnimationFrame(loop);
+      if (!document.hidden && !blocked() && (held.w || held.s || velocity !== 0 || holdStartedAt !== null)) {
+        raf = requestAnimationFrame(loop);
+      }
     };
 
     window.addEventListener('keydown', onKeyDown);
@@ -2721,7 +2687,6 @@ export default function MuseoOrbital() {
     document.addEventListener('visibilitychange', onVisibility);
     root.addEventListener('wheel', onManualScroll, { passive: true });
     root.addEventListener('touchstart', onManualScroll, { passive: true });
-    raf = requestAnimationFrame(loop);
 
     return () => {
       window.removeEventListener('keydown', onKeyDown);
@@ -2745,25 +2710,6 @@ export default function MuseoOrbital() {
     return () => window.removeEventListener('keydown', onKey);
   }, [leavePlayground, playground]);
 
-  // El reloj monotónico sigue contabilizando el intervalo aunque la pestaña se
-  // oculte y se congela únicamente al completar todos los objetivos.
-  useEffect(() => {
-    if (!playground || playgroundProgress.phase !== 'active' || reduced) return;
-    const tick = () => {
-      const startedAt = playgroundStartedAt.current;
-      if (startedAt === null || playgroundPhase.current !== 'active') return;
-      const elapsedMs = Math.max(0, performance.now() - startedAt);
-      setPlaygroundElapsedMs(elapsedMs);
-    };
-    tick();
-    const timer = window.setInterval(tick, 100);
-    document.addEventListener('visibilitychange', tick);
-    return () => {
-      window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', tick);
-    };
-  }, [playground, playgroundProgress.phase, playgroundRunId, reduced]);
-
   useEffect(
     () => () => {
       window.clearTimeout(flightTimer.current);
@@ -2784,12 +2730,11 @@ export default function MuseoOrbital() {
   }, [vitrineIds]);
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(PLAYGROUND_TIMES_KEY, JSON.stringify(playgroundBestTimes));
-    } catch {
-      /* almacenamiento no disponible */
+    for (const mode of ['pulsar', 'comet'] as const) {
+      try { window.localStorage.setItem(playgroundRecordsKey(mode), JSON.stringify(playgroundRecords[mode])); }
+      catch { /* Local records are optional when storage is unavailable. */ }
     }
-  }, [playgroundBestTimes]);
+  }, [playgroundRecords]);
 
   useEffect(() => {
     try {
@@ -2829,7 +2774,8 @@ export default function MuseoOrbital() {
   useEffect(() => {
     if (reduced) return;
     const el = rootRef.current;
-    if (!el) return;
+    const marquee = el?.querySelector<HTMLElement>('.mo-marquee');
+    if (!el || !marquee) return;
     let last = el.scrollTop;
     let vel = 0;
     let raf = 0;
@@ -2848,7 +2794,7 @@ export default function MuseoOrbital() {
       const skew = Math.max(-5, Math.min(5, vel * 0.012)).toFixed(2);
       if (skew !== lastSkew) {
         lastSkew = skew;
-        el.style.setProperty('--marquee-skew', `${skew}deg`);
+        marquee.style.setProperty('--marquee-skew', `${skew}deg`);
       }
       if (Math.abs(vel) < 0.04 && skew === '0.00') {
         vel = 0;
@@ -2863,7 +2809,7 @@ export default function MuseoOrbital() {
         raf = 0;
         vel = 0;
         lastSkew = '0.00';
-        el.style.setProperty('--marquee-skew', '0.00deg');
+        marquee.style.setProperty('--marquee-skew', '0.00deg');
       } else {
         last = el.scrollTop;
       }
@@ -2874,6 +2820,7 @@ export default function MuseoOrbital() {
       el.removeEventListener('scroll', onScroll);
       document.removeEventListener('visibilitychange', onVisibility);
       cancelAnimationFrame(raf);
+      marquee.style.setProperty('--marquee-skew', '0.00deg');
     };
   }, [reduced]);
 
@@ -3222,7 +3169,6 @@ export default function MuseoOrbital() {
         playground={playground}
         playgroundScene={playgroundScene}
         playgroundRunId={playgroundRunId}
-        playgroundPhase={playgroundProgress.phase}
         onPlaygroundProgress={handlePlaygroundProgress}
       />
       <Grain opacity={0.06} blend="screen" zIndex={40} />
@@ -3274,6 +3220,9 @@ export default function MuseoOrbital() {
           data-playground-scene={playgroundScene}
           data-playground-phase={playgroundProgress.phase}
           data-playground-destroyed={playgroundProgress.destroyed}
+          data-playground-score={playgroundProgress.score}
+          data-playground-combo={playgroundProgress.combo}
+          data-playground-control-mode={playgroundProgress.controlMode}
         >
           <button
             type="button"
@@ -3310,14 +3259,19 @@ export default function MuseoOrbital() {
               <Volume2 aria-hidden="true" />
             )}
           </button>
-          <div className="mo-playground-status">
+          <div className={`mo-playground-status${playgroundRemainingMs <= 10_000 && playgroundProgress.phase === 'active' ? ' is-urgent' : ''}`}>
             <div>
-              <span>{t("Tiempo")}</span>
+              <span>{t("Tiempo restante")}</span>
               <strong>
-                <time dateTime={`PT${Math.floor(playgroundElapsedMs / 1000)}S`}>
-                  {formatPlaygroundElapsed(playgroundElapsedMs)}
+                <time dateTime={`PT${Math.ceil(playgroundRemainingMs / 1000)}S`}>
+                  {formatPlaygroundElapsed(Math.ceil(playgroundRemainingMs / 1000) * 1000)}
                 </time>
               </strong>
+            </div>
+            <div><span>{t("Letras")}</span><strong>{playgroundProgress.destroyed}/{playgroundProgress.total}</strong></div>
+            <div><span>{t("Puntos")}</span><strong>{playgroundProgress.score}</strong></div>
+            <div className={playgroundProgress.combo > 1 ? 'is-combo' : undefined}>
+              <span>{t("Combo")}</span><strong>×{playgroundProgress.combo}</strong>
             </div>
           </div>
 
@@ -3333,9 +3287,11 @@ export default function MuseoOrbital() {
                 role="dialog"
                 aria-modal="true"
               >
-                <span className="mo-playground-complete-kicker">{t("Misión completada")}</span>
-                <h2 id="mo-playground-result-title" aria-label={PLAYGROUND_WORD}>
-                  {PLAYGROUND_WORD.split('').map((letter, index) => (
+                <span className="mo-playground-complete-kicker">
+                  {t(playgroundProgress.phase === 'timed-out' ? "Misión incompleta" : "Misión completada")}
+                </span>
+                <h2 id="mo-playground-result-title" aria-label={playgroundProgress.phase === 'timed-out' ? t("Tiempo agotado") : PLAYGROUND_WORD}>
+                  {playgroundProgress.phase === 'timed-out' ? t("Tiempo agotado") : PLAYGROUND_WORD.split('').map((letter, index) => (
                     <motion.span
                       aria-hidden="true"
                       key={`${letter}-${index}`}
@@ -3351,26 +3307,36 @@ export default function MuseoOrbital() {
                     </motion.span>
                   ))}
                 </h2>
-                <p>{t("Las piezas dispersas vuelven a ser una sola idea.")}</p>
+                <p>{playgroundProgress.phase === 'timed-out'
+                  ? t("Destruiste {0} de {1} letras. Vuelve a intentarlo.", playgroundProgress.destroyed, playgroundProgress.total)
+                  : t("Las piezas dispersas vuelven a ser una sola idea.")}</p>
 
                 {playgroundResult && (
-                  <div className="mo-playground-current-time">
-                    <span>{t("Tu tiempo")}</span>
-                    <strong>{formatPlaygroundTime(playgroundResult.durationMs)}</strong>
+                  <div className="mo-playground-summary">
+                    <div className="mo-playground-current-time">
+                      <span>{t("Puntos")}</span><strong>{playgroundResult.score}</strong>
+                    </div>
+                    <div className="mo-playground-current-time">
+                      <span>{t("Tu tiempo")}</span><strong>{formatPlaygroundTime(playgroundResult.elapsedMs)}</strong>
+                    </div>
+                    <div className="mo-playground-current-time">
+                      <span>{t("Mejor combo")}</span><strong>×{playgroundResult.bestCombo}</strong>
+                    </div>
                   </div>
                 )}
 
-                <div className="mo-playground-ranking" aria-label={t("Tus diez mejores tiempos")}>
-                  <span className="mo-playground-ranking-title">{t("Tus mejores tiempos")}</span>
-                  {playgroundBestTimes.length > 0 ? (
+                <div className="mo-playground-ranking" aria-label={t("Tus diez mejores partidas")}>
+                  <span className="mo-playground-ranking-title">{t("Tus mejores partidas")}</span>
+                  <span className="mo-playground-ranking-mode">{t(playgroundProgress.controlMode === 'pulsar' ? "Con Pulsar" : "Solo Cometa")}</span>
+                  {playgroundBestRecords.length > 0 ? (
                     <ol>
-                      {playgroundBestTimes.map((entry, index) => (
+                      {playgroundBestRecords.map((entry, index) => (
                         <li
                           key={entry.id}
                           className={entry.id === playgroundResult?.id ? 'is-current' : undefined}
                         >
                           <span>{String(index + 1).padStart(2, '0')}</span>
-                          <strong>{formatPlaygroundTime(entry.durationMs)}</strong>
+                          <strong>{entry.score}<small>{formatPlaygroundTime(entry.durationMs)}</small></strong>
                           {entry.id === playgroundResult?.id && <em>{t("nuevo")}</em>}
                         </li>
                       ))}

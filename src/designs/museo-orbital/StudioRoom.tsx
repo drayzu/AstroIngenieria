@@ -46,6 +46,7 @@ export const StudioRoom = ({
   const panelRef = useRef<HTMLDivElement>(null);
   const backdropPressRef = useRef<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
   const languageScrollProgress = useRef<number | null>(null);
   const figureRef = useRef<HTMLDivElement>(null);
   const [lightboxImage, setLightboxImage] = useState<ImageLightboxImage | null>(null);
@@ -69,14 +70,23 @@ export const StudioRoom = ({
 
   const navigation = getReadingConnections(concept.id, siblings, navigationContext, locale);
   const { index, previous, next, previousLabel, nextLabel } = navigation;
-  const [progress, setProgress] = useState(0);
-
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el) return;
-    const onScroll = () => {
+    const bar = progressRef.current;
+    if (!el || !bar) return;
+    let frame = 0;
+    let lastPercentage = '';
+    const updateProgress = () => {
+      frame = 0;
       const max = el.scrollHeight - el.clientHeight;
-      setProgress(max > 4 ? Math.min(1, el.scrollTop / max) : 0);
+      const percentage = ((max > 4 ? Math.max(0, Math.min(1, el.scrollTop / max)) : 0) * 100).toFixed(1);
+      if (percentage === lastPercentage) return;
+      lastPercentage = percentage;
+      bar.style.width = `${percentage}%`;
+      bar.setAttribute('aria-valuenow', percentage);
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(updateProgress);
     };
     onScroll();
     el.addEventListener('scroll', onScroll, { passive: true });
@@ -94,6 +104,7 @@ export const StudioRoom = ({
       el.removeEventListener('scroll', onScroll);
       resizeObserver.disconnect();
       mutationObserver.disconnect();
+      cancelAnimationFrame(frame);
     };
   }, [concept.id]);
 
@@ -208,9 +219,13 @@ export const StudioRoom = ({
       >
         <div
           className="mo-read-progress"
-          style={{ width: `${(progress * 100).toFixed(1)}%` }}
+          ref={progressRef}
+          style={{ width: '0%' }}
           role="progressbar"
           aria-label={t("Progreso de lectura")}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={0}
         />
         <header className="mo-studio-topbar">
           <button

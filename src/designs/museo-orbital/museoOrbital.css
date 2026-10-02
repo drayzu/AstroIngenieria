@@ -2333,8 +2333,10 @@ body:has(.mo-root) {
 
 .mo-playground-status > div {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 64px;
 }
 
 .mo-playground-status > div > span {
@@ -2350,6 +2352,46 @@ body:has(.mo-root) {
   font-weight: 500;
   color: #f3dfac;
   font-variant-numeric: tabular-nums;
+}
+
+.mo-playground-status.is-urgent {
+  border-color: rgba(255, 128, 96, 0.65);
+}
+
+.mo-playground-status.is-urgent > div:first-child > strong {
+  color: #ff8060;
+}
+
+.mo-playground-status > .is-combo > strong {
+  color: #bce8ff;
+}
+
+.mo-playground-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.mo-playground-summary .mo-playground-current-time {
+  margin: 0;
+}
+
+.mo-playground-ranking-mode {
+  display: block;
+  margin-bottom: 10px;
+  text-align: center;
+  font-family: var(--mo-mono);
+  font-size: 9px;
+  color: #c9a86a;
+}
+
+.mo-playground-ranking li > strong > small {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  color: rgba(245, 241, 232, 0.6);
 }
 
 .mo-playground-controls {
@@ -2373,7 +2415,9 @@ body:has(.mo-root) {
   overflow-y: auto;
   text-align: center;
   color: #fff9eb;
-  background: radial-gradient(circle at center, rgba(201, 168, 106, 0.12), transparent 66%);
+  background: radial-gradient(circle at center, rgba(201, 168, 106, 0.12), transparent 66%), rgba(7, 7, 7, 0.9);
+  border: 1px solid rgba(201, 168, 106, 0.2);
+  backdrop-filter: blur(8px);
   filter: drop-shadow(0 0 32px rgba(201, 168, 106, 0.2));
   transform-origin: center;
   pointer-events: auto;
@@ -2599,7 +2643,7 @@ body:has(.mo-root) {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   text-align: center;
-  white-space: nowrap;
+  white-space: normal;
   color: rgba(245, 241, 232, 0.64);
   border: 1px solid rgba(245, 241, 232, 0.1);
   background: rgba(7, 7, 7, 0.38);
@@ -2645,7 +2689,7 @@ body:has(.mo-root) {
     align-items: center;
     justify-content: center;
     gap: 9px;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
   }
 
   .mo-playground-hint-touch {
@@ -3624,6 +3668,7 @@ body:has(.mo-root) {
 
   .mo-playground-status {
     top: 12px;
+    left: 10px;
     right: 10px;
     padding: 7px 11px;
     gap: 9px;
@@ -3642,11 +3687,13 @@ body:has(.mo-root) {
   }
 
   .mo-playground-status > div {
-    gap: 7px;
+    min-width: 0;
+    flex: 1;
+    gap: 3px;
   }
 
   .mo-playground-status > div > span {
-    font-size: 7px;
+    font-size: 8px;
     letter-spacing: 0.12em;
   }
 

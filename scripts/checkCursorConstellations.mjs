@@ -1,4 +1,4 @@
-/* global document */
+/* global document, Range */
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { chromium } from '@playwright/test';
@@ -115,6 +115,42 @@ try {
     check(allocations === 1, 'DPR-only resize reuses the mask buffer');
     layer.resize(600, 400, 1); refreshMeasured();
     check(allocations === 2, 'A changed mask size replaces the pixel buffer once');
+
+    // Geometry can change repeatedly without any protected drawing. A later
+    // fading constellation must use the current mask on its very first frame.
+    root.innerHTML = '<button style="position:absolute;left:80px;top:100px;width:120px;height:40px">Moved control</button>';
+    await pause();
+    let rangeReads = 0;
+    const getRects = Range.prototype.getClientRects;
+    Range.prototype.getClientRects = function () { rangeReads++; return getRects.call(this); };
+    const writesBeforeIdle = writes;
+    layer.refreshBlocking();
+    root.querySelector('button').style.left = '250px';
+    layer.refreshBlocking();
+    check(writes === writesBeforeIdle && rangeReads === 0, 'Blocking checks do not construct an unused mask');
+    layer.clear(); target.clearRect(0, 0, 800, 600);
+    layer.context.fillStyle = 'white'; layer.context.fillRect(0, 0, 600, 400);
+    layer.composite(target, false, bounds);
+    check(writes === writesBeforeIdle, 'Playground compositing does not build a protection mask');
+    const overlay = document.createElement('div'); overlay.className = 'mo-studio-panel'; root.append(overlay);
+    layer.refreshBlocking();
+    check(layer.blocked, 'Blocking remains current while mask work is deferred');
+    layer.clear(); target.clearRect(0, 0, 800, 600);
+    layer.context.fillStyle = 'white'; layer.context.fillRect(0, 0, 600, 400);
+    layer.composite(target, true, { x: 0, y: 0, w: 600, h: 400 });
+    check(writes === writesBeforeIdle + 1, 'The first protected composite refreshes the deferred mask, even while blocked');
+    check(target.getImageData(280, 120, 1, 1).data[3] === 0, 'A fading constellation respects the moved control');
+    check(target.getImageData(100, 120, 1, 1).data[3] === 255, 'A deferred mask never retains the old control position');
+    layer.composite(target, true, bounds);
+    check(writes === writesBeforeIdle + 1, 'Unchanged protected composites reuse the mask');
+    root.querySelector('button').style.left = '400px';
+    await pause();
+    layer.refreshBlocking();
+    layer.clear(); target.clearRect(0, 0, 800, 600);
+    layer.context.fillStyle = 'white'; layer.context.fillRect(0, 0, 600, 400);
+    layer.composite(target, true, { x: 0, y: 0, w: 600, h: 400 });
+    check(target.getImageData(430, 120, 1, 1).data[3] === 0, 'A periodic geometry refresh detects subsequent layout motion');
+    Range.prototype.getClientRects = getRects;
     layer.dispose(); check(layer.canvas.width === 0 && layer.observed.size === 0, 'Resources are released');
     check(layer.pixels === null, 'The pixel buffer is released');
     return 'Mask pixels, shared measurements, buffer reuse, compositing, fades, DPR and cleanup passed';
