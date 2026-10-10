@@ -8,6 +8,7 @@ const {
   PlaygroundArcade, playgroundHitDamage, playgroundDamageBudget, PLAYGROUND_LETTER_HP,
   PLAYGROUND_RAPID_LETTER_HP, PLAYGROUND_RAPID_DAMAGE, PLAYGROUND_RAPID_FIRE_INTERVAL,
   parsePlaygroundRecords, playgroundRecordsKey, rankPlaygroundRecords,
+  PLAYGROUND_BONUS_MS, PLAYGROUND_BONUS_SCORE, PLAYGROUND_MAX_BONUSES,
 } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
 
 function check(label, fn) { fn(); console.log(`✓ ${label}`); }
@@ -70,8 +71,28 @@ check('A completion just before the deadline succeeds; time bonus is floored and
   for (let id = 0; id < 15; id++) lastMoment.destroy(id, false, 89_999);
   assert.equal(lastMoment.snapshot().phase, 'complete'); assert.equal(lastMoment.snapshot().score, 6500);
   assert.deepEqual(new PlaygroundArcade('comet').snapshot(), {
-    destroyed: 0, total: 15, phase: 'active', elapsedMs: 0, score: 0, combo: 1, bestCombo: 1, controlMode: 'comet',
+    destroyed: 0, total: 15, phase: 'active', elapsedMs: 0, limitMs: 90_000, score: 0, combo: 1, bestCombo: 1,
+    comboRemainingMs: 0, bonuses: 0, controlMode: 'comet',
   });
+});
+
+check('Golden stars extend the clock, score once each, cap per run and count toward the time bonus', () => {
+  const run = new PlaygroundArcade('pulsar');
+  assert.equal(run.collectBonus(0), false, 'No bonus before the clock starts');
+  run.start(0);
+  for (let i = 0; i < PLAYGROUND_MAX_BONUSES + 2; i++) run.collectBonus(1000 + i);
+  assert.equal(run.snapshot().bonuses, PLAYGROUND_MAX_BONUSES);
+  assert.equal(run.snapshot().limitMs, 90_000 + PLAYGROUND_BONUS_MS * PLAYGROUND_MAX_BONUSES);
+  assert.equal(run.snapshot().score, PLAYGROUND_BONUS_SCORE * PLAYGROUND_MAX_BONUSES);
+  run.tick(95_000); assert.equal(run.snapshot().phase, 'active', 'Extended time keeps the run alive');
+  run.destroy(0, false, 95_000);
+  assert.equal(run.snapshot().comboRemainingMs, 6000);
+  run.tick(97_500); assert.equal(run.snapshot().comboRemainingMs, 3500);
+  run.tick(110_000); assert.equal(run.snapshot().phase, 'timed-out');
+  assert.equal(run.collectBonus(110_000), false, 'No bonus after the run ends');
+  const records = parsePlaygroundRecords(JSON.stringify([{ id: 'long', score: 10, durationMs: 100_000, bestCombo: 1,
+    completedAt: '2026-10-02T00:00:00.000Z', controlMode: 'pulsar' }]), 'pulsar');
+  assert.equal(records.length, 1, 'Records beyond 90 seconds are valid with golden stars');
 });
 
 check('Records rank score first, time second, keep ten, separate controls and recover from malformed storage', () => {
@@ -82,7 +103,7 @@ check('Records rank score first, time second, keep ten, separate controls and re
   assert.equal(parsePlaygroundRecords(JSON.stringify(ordered), 'pulsar').length, 3);
   assert.deepEqual(parsePlaygroundRecords(JSON.stringify(ordered), 'comet'), []);
   assert.deepEqual(parsePlaygroundRecords('{bad', 'pulsar'), []);
-  assert.deepEqual(parsePlaygroundRecords(JSON.stringify([entry('late', 400, 90_000), entry('invalid', -1), {}]), 'pulsar'), []);
+  assert.deepEqual(parsePlaygroundRecords(JSON.stringify([entry('late', 400, 110_000), entry('invalid', -1), {}]), 'pulsar'), []);
   assert.notEqual(playgroundRecordsKey('pulsar'), playgroundRecordsKey('comet'));
   assert.notEqual(playgroundRecordsKey('pulsar'), 'mo-playground-best-times-v1');
 });

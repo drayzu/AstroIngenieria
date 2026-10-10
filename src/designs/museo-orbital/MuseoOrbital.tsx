@@ -50,7 +50,7 @@ import {
 import { StudioRoom } from './StudioRoom';
 import { StarfieldCanvas, type PlaygroundProgress } from './StarfieldCanvas';
 import {
-  PlaygroundArcade, PLAYGROUND_WORD, PLAYGROUND_LIMIT_MS, playgroundRecordsKey,
+  PlaygroundArcade, PLAYGROUND_WORD, PLAYGROUND_COMBO_MS, PLAYGROUND_MAX_BONUSES, playgroundRecordsKey,
   parsePlaygroundRecords, rankPlaygroundRecords, type PlaygroundRecord, type PlaygroundControlMode,
 } from './PlaygroundArcade';
 import { DistortOverlay } from './DistortOverlay';
@@ -2482,7 +2482,7 @@ export default function MuseoOrbital() {
   const [playgroundRecords, setPlaygroundRecords] = useState(loadPlaygroundRecords);
   const [playgroundResult, setPlaygroundResult] = useState<PlaygroundResult | null>(null);
   const playgroundBestRecords = playgroundRecords[playgroundProgress.controlMode];
-  const playgroundRemainingMs = Math.max(0, PLAYGROUND_LIMIT_MS - playgroundProgress.elapsedMs);
+  const playgroundRemainingMs = Math.max(0, playgroundProgress.limitMs - playgroundProgress.elapsedMs);
   const playgroundResultHandled = useRef(false);
   const reducedPlaygroundRun = useRef(false);
   const flightTimer = useRef(0);
@@ -3532,6 +3532,7 @@ export default function MuseoOrbital() {
         playgroundScene={playgroundScene}
         playgroundRunId={playgroundRunId}
         onPlaygroundProgress={handlePlaygroundProgress}
+        playgroundSfxMuted={playgroundMusicMuted}
       />
       {/* Mezcla normal: igual de sutil y sin forzar la composición de toda la página */}
       <Grain opacity={0.045} blend="normal" zIndex={40} />
@@ -3607,13 +3608,13 @@ export default function MuseoOrbital() {
             disabled={playgroundTransitioning}
             aria-label={
               playgroundMusicMuted || playgroundMusicBlocked
-                ? t("Activar música del playground")
-                : t("Silenciar música del playground")
+                ? t("Activar sonido del playground")
+                : t("Silenciar sonido del playground")
             }
             aria-pressed={playgroundMusicMuted}
-            title={playgroundMusicBlocked ? t("Activar música") : undefined}
+            title={playgroundMusicBlocked ? t("Activar sonido") : undefined}
             data-cursor-label={
-              playgroundMusicMuted || playgroundMusicBlocked ? t("Activar música") : t("Silenciar música")
+              playgroundMusicMuted || playgroundMusicBlocked ? t("Activar sonido") : t("Silenciar sonido")
             }
           >
             {playgroundMusicMuted || playgroundMusicBlocked ? (
@@ -3630,11 +3631,17 @@ export default function MuseoOrbital() {
                   {formatPlaygroundElapsed(Math.ceil(playgroundRemainingMs / 1000) * 1000)}
                 </time>
               </strong>
+              {playgroundProgress.bonuses > 0 && (
+                <em key={playgroundProgress.bonuses} className="mo-playground-bonus-pop" aria-hidden="true">+5 s</em>
+              )}
             </div>
-            <div><span>{t("Letras")}</span><strong>{playgroundProgress.destroyed}/{playgroundProgress.total}</strong></div>
-            <div><span>{t("Puntos")}</span><strong>{playgroundProgress.score}</strong></div>
+            <div><span>{t("Letras")}</span><strong key={playgroundProgress.destroyed} className="mo-playground-bump">{playgroundProgress.destroyed}/{playgroundProgress.total}</strong></div>
+            <div><span>{t("Puntos")}</span><strong key={playgroundProgress.score} className="mo-playground-bump">{playgroundProgress.score}</strong></div>
             <div className={playgroundProgress.combo > 1 ? 'is-combo' : undefined}>
-              <span>{t("Combo")}</span><strong>×{playgroundProgress.combo}</strong>
+              <span>{t("Combo")}</span><strong key={playgroundProgress.combo} className="mo-playground-bump">×{playgroundProgress.combo}</strong>
+              <i className="mo-playground-combo-meter" aria-hidden="true">
+                <b style={{ transform: `scaleX(${playgroundProgress.combo > 1 ? playgroundProgress.comboRemainingMs / PLAYGROUND_COMBO_MS : 0})` }} />
+              </i>
             </div>
           </div>
 
@@ -3684,6 +3691,9 @@ export default function MuseoOrbital() {
                     </div>
                     <div className="mo-playground-current-time">
                       <span>{t("Mejor combo")}</span><strong>×{playgroundResult.bestCombo}</strong>
+                    </div>
+                    <div className="mo-playground-current-time">
+                      <span>{t("Estrellas doradas")}</span><strong>{playgroundResult.bonuses}/{PLAYGROUND_MAX_BONUSES}</strong>
                     </div>
                   </div>
                 )}

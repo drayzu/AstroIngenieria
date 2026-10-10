@@ -17,6 +17,7 @@ const fixture = `
         playerProjectiles: comets.filter(c => c.launchPower !== undefined && c.life > 0).length }),
       isolate: id => {
         comets = comets.filter(c => c.launchPower === undefined);
+        bonusStar = null; nextBonusAt = Infinity;
         camX = 0; camY = 0; camVX = 0; camVY = 0;
         playgroundTargets.forEach(t => {
           t.worldU = t.id === id ? 0 : 4 + t.id; t.worldV = 0;

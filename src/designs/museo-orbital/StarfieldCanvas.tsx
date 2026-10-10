@@ -8,7 +8,7 @@ import { skyDrift } from './roomShared';
 import {
   PlaygroundArcade, PLAYGROUND_WORD, PLAYGROUND_LETTER_HP, PLAYGROUND_RAPID_LETTER_HP,
   PLAYGROUND_BASE_DAMAGE, PLAYGROUND_RAPID_DAMAGE, PLAYGROUND_RAPID_FIRE_INTERVAL,
-  playgroundBounceMultiplier, playgroundDamageBudget, playgroundHitDamage,
+  PLAYGROUND_MAX_BONUSES, playgroundBounceMultiplier, playgroundDamageBudget, playgroundHitDamage,
   type PlaygroundProgress, type PlaygroundWeaponAffinity,
 } from './PlaygroundArcade';
 export { playgroundBounceMultiplier, playgroundDamageBudget } from './PlaygroundArcade';
@@ -19,6 +19,7 @@ import {
   PLAYGROUND_DEPARTURE_END_MS,
   PLAYGROUND_DEPARTURE_START_MS,
 } from './playgroundTiming';
+import { PlaygroundSfx } from './playgroundSfx';
 
 interface StarfieldProps {
   scrollRef: RefObject<HTMLDivElement | null>;
@@ -28,6 +29,7 @@ interface StarfieldProps {
   playgroundScene?: 'museum' | 'arriving' | 'active' | 'departing';
   playgroundRunId?: number;
   onPlaygroundProgress?: (progress: PlaygroundProgress) => void;
+  playgroundSfxMuted?: boolean;
 }
 
 interface Star {
@@ -227,6 +229,50 @@ interface PlaygroundLetter {
   deathX?: number;
   deathY?: number;
   destroyedAt?: number;
+  // Respuesta al impacto: destello, resorte de escala y vida "fantasma"
+  hitFlash: number;
+  punch: number;
+  punchV: number;
+  ghostHp: number;
+  lastHitAt: number;
+}
+
+/* Esquirla de una letra rota: triángulo que gira y se apaga */
+interface Shard {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  angle: number;
+  spin: number;
+  size: number;
+  life: number;
+  rgb: RGB;
+  points: [number, number][];
+}
+
+/* Texto flotante de puntaje (+300, +5 s) */
+interface ScorePop {
+  x: number;
+  y: number;
+  text: string;
+  detail?: string;
+  age: number;
+  rgb: RGB;
+  size: number;
+}
+
+/* Estrella dorada: cruza el campo de vez en cuando; atraparla da tiempo,
+   puntos y congela las letras unos segundos. Posición en píxeles de mundo. */
+interface BonusStar {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  born: number;
+  ttl: number;
+  phase: number;
+  trail: { x: number; y: number }[];
 }
 
 interface ComboLabel {
@@ -327,6 +373,9 @@ const PLAYGROUND_CHARGED_TINT: RGB = [255, 176, 84];
 const PLAYGROUND_FIELD_U = 1.78;
 const PLAYGROUND_FIELD_V = 1.18;
 const PLAYGROUND_PROFILES: PlaygroundLetter['profile'][] = ['drift', 'orbit', 'pause', 'wander'];
+const PLAYGROUND_BONUS_TINT: RGB = [255, 214, 120];
+const PLAYGROUND_BONUS_TTL = 8;
+const PLAYGROUND_SHAKE_MAX = 11;
 /* Diseño "brasa" para el proyectil de clic+arrastre: esquirla poligonal
    irregular con grietas incandescentes y estela de ceniza. false = diseño
    clásico (núcleo circular + cinta degradada). Un flag, dos looks. */
@@ -539,6 +588,7 @@ export const StarfieldCanvas = ({
   playgroundScene = 'museum',
   playgroundRunId = 0,
   onPlaygroundProgress,
+  playgroundSfxMuted = false,
 }: StarfieldProps) => {
   const { locale } = useLocale();
   const localeRef = useRef(locale);
@@ -558,6 +608,8 @@ export const StarfieldCanvas = ({
   playgroundRunIdRef.current = playgroundRunId;
   const onPlaygroundProgressRef = useRef(onPlaygroundProgress);
   onPlaygroundProgressRef.current = onPlaygroundProgress;
+  const playgroundSfxMutedRef = useRef(playgroundSfxMuted);
+  playgroundSfxMutedRef.current = playgroundSfxMuted;
   const playgroundSceneCommandRef = useRef<() => void>(() => {});
 
   useEffect(() => {
@@ -665,6 +717,18 @@ export const StarfieldCanvas = ({
     let playgroundClockTimer = 0;
     let activePlaygroundRunId = -1;
     let comboLabels: ComboLabel[] = [];
+    let shards: Shard[] = [];
+    let scorePops: ScorePop[] = [];
+    let bonusStar: BonusStar | null = null;
+    let nextBonusAt = Infinity;
+    // Sacudida de pantalla por "trauma": cada golpe suma, decae sola y el
+    // desplazamiento crece con su cuadrado (golpes chicos casi no se notan).
+    let trauma = 0;
+    const sfx = new PlaygroundSfx();
+    const addTrauma = (amount: number) => { trauma = Math.min(1, trauma + amount); };
+    const clearPlaygroundJuice = () => {
+      shards = []; scorePops = []; bonusStar = null; nextBonusAt = Infinity; trauma = 0;
+    };
     const clearSketch = () => {
       sketch = null;
     };
@@ -742,6 +806,8 @@ export const StarfieldCanvas = ({
       lastWasdDown.clear(); boostLatched = false; shiftHeld = false;
       clearCharge(); clearSketch(); rapidFireHeld = false; resetPulsarPet();
       comets.forEach(comet => { if (comet.launchPower !== undefined) comet.life = 0; });
+      bonusStar = null;
+      nextBonusAt = Infinity;
     };
 
     const updatePlaygroundClock = (nowMs: number) => {
@@ -756,6 +822,7 @@ export const StarfieldCanvas = ({
       if (nextPhase !== playgroundPhase) {
         playgroundPhase = nextPhase;
         freezePlayground();
+        if (nextPhase === 'timed-out') sfx.timeout();
         notifyPlaygroundProgress();
       } else if (nowMs >= nextProgressAt) notifyPlaygroundProgress();
     };
@@ -863,6 +930,11 @@ export const StarfieldCanvas = ({
           nextEvade: 0,
           nextDart: 0,
           destroyed: false,
+          hitFlash: 0,
+          punch: 0,
+          punchV: 0,
+          ghostHp: maxHp,
+          lastHitAt: Number.NEGATIVE_INFINITY,
         };
       });
       playgroundTargets.forEach((target) => chooseLetterWaypoint(target));
@@ -889,6 +961,8 @@ export const StarfieldCanvas = ({
       comboLabels = [];
       comets = comets.filter((comet) => comet.launchPower === undefined);
       waves = []; bubbles = []; flashes = []; sparkles = []; conductions = [];
+      clearPlaygroundJuice();
+      nextBonusAt = time + 14 + random() * 6;
       notifyPlaygroundProgress();
     };
 
@@ -1459,6 +1533,84 @@ export const StarfieldCanvas = ({
     const affinityTint = (affinity: PlaygroundWeaponAffinity) =>
       affinity === 'rapid' ? PLAYGROUND_RAPID_TINT : PLAYGROUND_CHARGED_TINT;
 
+    const spawnShards = (x: number, y: number, rgb: RGB, dirX: number, dirY: number, count: number) => {
+      const scale = Math.max(0.75, vscale);
+      for (let i = 0; i < count; i += 1) {
+        const angle = Math.atan2(dirY, dirX) + (Math.random() - 0.5) * Math.PI * 1.6;
+        const speed = (140 + Math.random() * 380) * scale;
+        const size = (5 + Math.random() * 11) * scale;
+        shards.push({
+          x: x + (Math.random() - 0.5) * 24,
+          y: y + (Math.random() - 0.5) * 24,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          angle: Math.random() * Math.PI * 2,
+          spin: (Math.random() - 0.5) * 14,
+          size,
+          life: 1,
+          rgb: mixRGB(rgb, [255, 250, 240], Math.random() * 0.45),
+          points: [
+            [1, 0],
+            [-0.5 - Math.random() * 0.4, 0.5 + Math.random() * 0.5],
+            [-0.4 - Math.random() * 0.5, -0.4 - Math.random() * 0.6],
+          ],
+        });
+      }
+      if (shards.length > 140) shards.splice(0, shards.length - 140);
+    };
+
+    const pushScorePop = (x: number, y: number, text: string, rgb: RGB, detail?: string, size = 26) => {
+      scorePops.push({ x, y, text, detail, age: 0, rgb, size });
+      if (scorePops.length > 10) scorePops.splice(0, scorePops.length - 10);
+    };
+
+    const spawnBonusStar = () => {
+      const scale = Math.max(0.7, vscale);
+      const speed = (150 + Math.random() * 70) * scale;
+      const side = Math.floor(Math.random() * 4);
+      const margin = 50;
+      const drift = (Math.random() - 0.5) * 0.5;
+      // Entra por un borde de la vista actual y la cruza en unos segundos
+      const horizontal = side < 2;
+      const sign = side % 2 === 0 ? 1 : -1;
+      const x = horizontal
+        ? camX + (sign > 0 ? -margin : width + margin)
+        : camX + width * (0.25 + Math.random() * 0.5);
+      const y = horizontal
+        ? camY + height * (0.28 + Math.random() * 0.44)
+        : camY + (sign > 0 ? -margin : height + margin);
+      const vx = horizontal ? speed * sign : speed * drift;
+      const vy = horizontal ? speed * drift : speed * 0.8 * sign;
+      bonusStar = { x, y, vx, vy, born: time, ttl: PLAYGROUND_BONUS_TTL, phase: Math.random() * Math.PI * 2, trail: [] };
+      sfx.bonusAppear();
+    };
+
+    const collectBonusStar = (x: number, y: number) => {
+      bonusStar = null;
+      nextBonusAt = time + 16 + Math.random() * 8;
+      if (!arcade.collectBonus(performance.now())) return;
+      // Pulso de estasis: todas las letras quedan ralentizadas unos segundos
+      for (const target of playgroundTargets) {
+        if (target.destroyed) continue;
+        if (target.slowedUntil <= time) {
+          target.roamVX *= PLAYGROUND_SLOW_FACTOR;
+          target.roamVY *= PLAYGROUND_SLOW_FACTOR;
+          target.vx *= PLAYGROUND_SLOW_FACTOR;
+          target.vy *= PLAYGROUND_SLOW_FACTOR;
+        }
+        target.slowedUntil = Math.max(target.slowedUntil, time + PLAYGROUND_SLOW_DURATION);
+      }
+      waves.push({ x, y, r: 16, alpha: 0.95, grow: 14, decay: 0.75, width: 3, rgb: PLAYGROUND_BONUS_TINT, delay: 0, layer: 'museum' });
+      waves.push({ x, y, r: 10, alpha: 0.7, grow: 9, decay: 0.8, width: 1.6, rgb: PLAYGROUND_RAPID_TINT, delay: 0.08, layer: 'museum' });
+      flashes.push({ x, y, r: 26, alpha: 1, rgb: PLAYGROUND_BONUS_TINT, layer: 'museum' });
+      spawnSparkleBurst(x, y, 40, 1, 'museum', PLAYGROUND_BONUS_TINT);
+      spawnShards(x, y, PLAYGROUND_BONUS_TINT, 0, -1, 10);
+      pushScorePop(x, y - 24, '+5 s', PLAYGROUND_BONUS_TINT, translate('Estasis', localeRef.current), 30);
+      addTrauma(0.38);
+      sfx.bonus();
+      notifyPlaygroundProgress();
+    };
+
     const applyChargedSegmentContacts = (
       target: PlaygroundLetter,
       previousCenter: { x: number; y: number },
@@ -1641,6 +1793,10 @@ export const StarfieldCanvas = ({
 
     const onDown = (event: PointerEvent) => {
       if (event.button !== 0) return;
+      if (playgroundRef.current) {
+        sfx.muted = playgroundSfxMutedRef.current;
+        sfx.unlock();
+      }
       if (
         scriptedWarp ||
         playgroundSceneRef.current === 'arriving' ||
@@ -2103,6 +2259,7 @@ export const StarfieldCanvas = ({
       }
 
       // Lanzamiento del meteorito en sentido contrario al arrastre
+      if (playgroundRef.current) sfx.launch(power);
       const norm = pull || 1;
       const baseSpeed = Math.min(17, 5 + pull * 0.075);
       const speed = Math.max(2, baseSpeed * (0.4 + 0.6 * power));
@@ -2404,11 +2561,13 @@ export const StarfieldCanvas = ({
         clearSketch();
         playgroundTargets = [];
         comboLabels = [];
+        clearPlaygroundJuice();
         rapidFireHeld = false;
         resetPulsarPet();
         activePlaygroundRunId = -1;
       }
       wasPlaygroundScene = hasPlaygroundScene;
+      sfx.muted = playgroundSfxMutedRef.current;
 
       updatePlaygroundClock(nowMs);
 
@@ -2524,9 +2683,20 @@ export const StarfieldCanvas = ({
         nextComet = time + 5 + Math.random() * 8;
       }
 
+      // Cada cuadro parte sin sacudida; luego se aplica la del trauma actual
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      fxCtx?.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
       fxCtx?.clearRect(0, 0, width, height);
       trailCtx?.clearRect(0, 0, width, height);
+      trauma = hasPlaygroundScene ? Math.max(0, trauma - dt * 1.6) : 0;
+      if (trauma > 0.001) {
+        const shake = trauma * trauma * PLAYGROUND_SHAKE_MAX * Math.max(0.75, vscale);
+        const shakeX = Math.sin(time * 61.3) * Math.cos(time * 17.9) * shake;
+        const shakeY = Math.cos(time * 53.1) * Math.sin(time * 23.7) * shake;
+        ctx.setTransform(dpr, 0, 0, dpr, shakeX * dpr * 0.45, shakeY * dpr * 0.45);
+        fxCtx?.setTransform(dpr, 0, 0, dpr, shakeX * dpr, shakeY * dpr);
+      }
       const keyboardVelocity = playgroundRef.current
         ? 0
         : Math.abs(museumKeyboardVelocityRef?.current ?? 0);
@@ -3075,6 +3245,13 @@ export const StarfieldCanvas = ({
                 chooseLetterWaypoint(target);
               }
 
+              target.punchV += (-target.punch * 220 - target.punchV * 14) * frameStep;
+              target.punch += target.punchV * frameStep;
+              target.hitFlash = Math.max(0, target.hitFlash - frameStep * 6);
+              if (time - target.lastHitAt > 0.3) {
+                target.ghostHp += (target.hp - target.ghostHp) * (1 - Math.exp(-6 * frameStep));
+              }
+
               target.vx += -target.offsetX * 4.1 * frameStep;
               target.vy += -target.offsetY * 4.1 * frameStep;
               const evadeDamping = Math.exp(-2.5 * frameStep);
@@ -3189,12 +3366,50 @@ export const StarfieldCanvas = ({
               Math.sin(letterTime * (0.28 + state * 0.12) + target.phase) * (0.012 + state * 0.011) +
               target.vx * 0.00045;
             const tint = affinityTint(target.affinity);
-            const bodyTint = mixRGB(tint, [250, 246, 234], 0.64 - damageRatio * 0.18);
+            const flash = Math.min(1, target.hitFlash);
+            const bodyTint = mixRGB(
+              mixRGB(tint, [250, 246, 234], 0.64 - damageRatio * 0.18), [255, 255, 255], flash * 0.85,
+            );
             const isSlowed = target.slowedUntil > letterTime;
+            const punch = Math.max(-0.3, Math.min(0.55, target.punch));
+
+            // Anillo de vida: arco del color de la letra, con la vida recién
+            // perdida en blanco que se consume un instante después del golpe.
+            if (target.hp < target.maxHp && playgroundPhase === 'active') {
+              const recent = Math.max(0, 1 - (time - target.lastHitAt) / 2.2);
+              const ringRadius = fontSize * 0.7;
+              const startAngle = -Math.PI / 2;
+              fxCtx.save();
+              fxCtx.globalAlpha = (0.22 + recent * 0.68) * sceneProgress;
+              fxCtx.lineCap = 'round';
+              fxCtx.lineWidth = 2 + recent;
+              fxCtx.strokeStyle = 'rgba(245,241,232,0.08)';
+              fxCtx.beginPath();
+              fxCtx.arc(center.x, center.y, ringRadius, 0, Math.PI * 2);
+              fxCtx.stroke();
+              const ghostFraction = Math.max(0, Math.min(1, target.ghostHp / target.maxHp));
+              const hpFraction = Math.max(0, Math.min(1, target.hp / target.maxHp));
+              if (ghostFraction > hpFraction + 0.002) {
+                fxCtx.strokeStyle = 'rgba(255,250,240,0.7)';
+                fxCtx.beginPath();
+                fxCtx.arc(center.x, center.y, ringRadius, startAngle, startAngle + ghostFraction * Math.PI * 2);
+                fxCtx.stroke();
+              }
+              if (hpFraction > 0.002) {
+                fxCtx.strokeStyle = `rgb(${tint[0]},${tint[1]},${tint[2]})`;
+                fxCtx.shadowColor = `rgba(${tint[0]},${tint[1]},${tint[2]},0.8)`;
+                fxCtx.shadowBlur = 8;
+                fxCtx.beginPath();
+                fxCtx.arc(center.x, center.y, ringRadius, startAngle, startAngle + hpFraction * Math.PI * 2);
+                fxCtx.stroke();
+              }
+              fxCtx.restore();
+            }
 
             fxCtx.save();
             fxCtx.translate(center.x, center.y);
             fxCtx.rotate(rotation);
+            fxCtx.scale(1 + punch, 1 - punch * 0.45);
             fxCtx.globalAlpha = pulse * sceneProgress;
             if (target.affinity === 'rapid') {
               const orbitPulse = 0.68 + Math.sin(letterTime * 5.4 + target.phase) * 0.2;
@@ -3232,9 +3447,9 @@ export const StarfieldCanvas = ({
             fxCtx.lineWidth = 1.2 + state * 0.55;
             fxCtx.strokeStyle = `rgba(${tint[0]},${tint[1]},${tint[2]},${(0.48 + damageRatio * 0.42).toFixed(3)})`;
             fxCtx.shadowColor = `rgba(${tint[0]},${tint[1]},${tint[2]},${0.38 + damageRatio * 0.35})`;
-            fxCtx.shadowBlur = 14 + state * 5;
+            fxCtx.shadowBlur = 14 + state * 5 + flash * 26;
             fxCtx.strokeText(target.character, 0, 0);
-            fxCtx.fillStyle = `rgba(${bodyTint[0]},${bodyTint[1]},${bodyTint[2]},${(0.94 - damageRatio * 0.38).toFixed(3)})`;
+            fxCtx.fillStyle = `rgba(${bodyTint[0]},${bodyTint[1]},${bodyTint[2]},${Math.min(1, 0.94 - damageRatio * 0.38 + flash * 0.4).toFixed(3)})`;
             fxCtx.fillText(target.character, 0, 0);
             fxCtx.shadowBlur = 0;
 
@@ -3258,79 +3473,265 @@ export const StarfieldCanvas = ({
           }
 
           if (playgroundPhase === 'active') {
-          const remainingTargets = playgroundTargets.filter((target) => !target.destroyed);
-          let nearest: { center: { x: number; y: number }; rect: ViewRect; distance: number } | null = null;
-          for (const target of remainingTargets) {
-            const fullCenter = playgroundLetterCenter(target);
-            const center = {
-              x: width / 2 + (fullCenter.x - width / 2) * sceneDepthScale,
-              y: height / 2 + (fullCenter.y - height / 2) * sceneDepthScale,
+            const compactRadar = width <= 720;
+            const radarSide = compactRadar ? 64 : 58;
+            const radarTop = compactRadar ? 126 : 104;
+            const radarBottom = Math.max(radarTop + 80, height - (compactRadar ? 154 : 150));
+            const radarSafeRect: ViewRect = {
+              x: radarSide,
+              y: radarTop,
+              w: Math.max(40, width - radarSide * 2),
+              h: Math.max(40, radarBottom - radarTop),
             };
-            const fullRect = playgroundLetterRect(target);
-            const rect = {
-              x: center.x - (fullRect.w * sceneDepthScale) / 2,
-              y: center.y - (fullRect.h * sceneDepthScale) / 2,
-              w: fullRect.w * sceneDepthScale,
-              h: fullRect.h * sceneDepthScale,
-            };
-            const distance = Math.hypot(center.x - width / 2, center.y - height / 2);
-            if (!nearest || distance < nearest.distance) {
-              nearest = { center, rect, distance };
+            // Radar completo: una flecha por cada letra fuera de vista (y por la
+            // estrella dorada). La más cercana manda; las lejanas se atenúan.
+            const indicators: { x: number; y: number; distance: number; label: string; tint: RGB; bonus: boolean }[] = [];
+            const remainingTargets = playgroundTargets.filter((target) => !target.destroyed);
+            for (const target of remainingTargets) {
+              const fullCenter = playgroundLetterCenter(target);
+              const center = {
+                x: width / 2 + (fullCenter.x - width / 2) * sceneDepthScale,
+                y: height / 2 + (fullCenter.y - height / 2) * sceneDepthScale,
+              };
+              const fullRect = playgroundLetterRect(target);
+              const halfW = (fullRect.w * sceneDepthScale) / 2;
+              const halfH = (fullRect.h * sceneDepthScale) / 2;
+              const visible =
+                center.x + halfW >= radarSafeRect.x &&
+                center.x - halfW <= radarSafeRect.x + radarSafeRect.w &&
+                center.y + halfH >= radarSafeRect.y &&
+                center.y - halfH <= radarSafeRect.y + radarSafeRect.h;
+              if (visible) continue;
+              indicators.push({
+                x: center.x, y: center.y,
+                distance: Math.hypot(center.x - width / 2, center.y - height / 2),
+                label: target.character, tint: affinityTint(target.affinity), bonus: false,
+              });
+            }
+            if (bonusStar) {
+              const starX = bonusStar.x - camX;
+              const starY = bonusStar.y - camY;
+              if (!pointInRect(starX, starY, radarSafeRect)) {
+                indicators.push({
+                  x: starX, y: starY, distance: Math.hypot(starX - width / 2, starY - height / 2),
+                  label: '★', tint: PLAYGROUND_BONUS_TINT, bonus: true,
+                });
+              }
+            }
+            indicators.sort((a, b) => a.distance - b.distance);
+            const nearestLetter = indicators.find((indicator) => !indicator.bonus);
+            const urgentPulse = remainingTargets.length <= 3 ? 0.5 + 0.5 * Math.sin(time * 7) : 0;
+            fxCtx.font = `600 ${compactRadar ? 11 : 12}px "Fraunces Variable", Fraunces, serif`;
+            for (const indicator of indicators) {
+              const dx = indicator.x - width / 2;
+              const dy = indicator.y - height / 2;
+              const scaleX =
+                dx > 0
+                  ? (radarSafeRect.x + radarSafeRect.w - width / 2) / dx
+                  : dx < 0
+                    ? (radarSafeRect.x - width / 2) / dx
+                    : Number.POSITIVE_INFINITY;
+              const scaleY =
+                dy > 0
+                  ? (radarSafeRect.y + radarSafeRect.h - height / 2) / dy
+                  : dy < 0
+                    ? (radarSafeRect.y - height / 2) / dy
+                    : Number.POSITIVE_INFINITY;
+              const scale = Math.max(0, Math.min(scaleX, scaleY));
+              const radarX = width / 2 + dx * scale;
+              const radarY = height / 2 + dy * scale;
+              const angle = Math.atan2(dy, dx);
+              const isNearest = indicator === nearestLetter;
+              const emphasis = isNearest || indicator.bonus;
+              const size = emphasis ? 1 + urgentPulse * 0.25 : 0.68;
+              const alpha = emphasis
+                ? 0.92
+                : Math.max(0.28, 0.72 - indicator.distance / Math.max(1, width * 3));
+              const arrowTint = isNearest ? mixRGB(indicator.tint, [243, 223, 172], 0.45) : indicator.tint;
+              fxCtx.save();
+              fxCtx.globalAlpha = alpha * sceneProgress;
+              fxCtx.translate(radarX, radarY);
+              fxCtx.save();
+              fxCtx.rotate(angle);
+              fxCtx.scale(size, size);
+              fxCtx.fillStyle = `rgb(${arrowTint[0]},${arrowTint[1]},${arrowTint[2]})`;
+              fxCtx.shadowColor = `rgba(${arrowTint[0]},${arrowTint[1]},${arrowTint[2]},0.7)`;
+              fxCtx.shadowBlur = emphasis ? 14 : 6;
+              fxCtx.beginPath();
+              fxCtx.moveTo(12, 0);
+              fxCtx.lineTo(-7, -6);
+              fxCtx.lineTo(-3, 0);
+              fxCtx.lineTo(-7, 6);
+              fxCtx.closePath();
+              fxCtx.fill();
+              fxCtx.restore();
+              if (emphasis || remainingTargets.length <= 6) {
+                fxCtx.textAlign = 'center';
+                fxCtx.textBaseline = 'middle';
+                fxCtx.fillStyle = `rgba(${indicator.tint[0]},${indicator.tint[1]},${indicator.tint[2]},0.9)`;
+                fxCtx.fillText(indicator.label, -Math.cos(angle) * 20, -Math.sin(angle) * 20);
+              }
+              fxCtx.restore();
             }
           }
-          const compactRadar = width <= 720;
-          const radarSide = compactRadar ? 64 : 58;
-          const radarTop = compactRadar ? 126 : 104;
-          const radarBottom = Math.max(radarTop + 80, height - (compactRadar ? 154 : 150));
-          const radarSafeRect: ViewRect = {
-            x: radarSide,
-            y: radarTop,
-            w: Math.max(40, width - radarSide * 2),
-            h: Math.max(40, radarBottom - radarTop),
-          };
-          const nearestIsVisible =
-            nearest !== null &&
-            nearest.rect.x + nearest.rect.w >= radarSafeRect.x &&
-            nearest.rect.x <= radarSafeRect.x + radarSafeRect.w &&
-            nearest.rect.y + nearest.rect.h >= radarSafeRect.y &&
-            nearest.rect.y <= radarSafeRect.y + radarSafeRect.h;
-          if (nearest && !nearestIsVisible) {
-            const dx = nearest.center.x - width / 2;
-            const dy = nearest.center.y - height / 2;
-            const scaleX =
-              dx > 0
-                ? (radarSafeRect.x + radarSafeRect.w - width / 2) / dx
-                : dx < 0
-                  ? (radarSafeRect.x - width / 2) / dx
-                  : Number.POSITIVE_INFINITY;
-            const scaleY =
-              dy > 0
-                ? (radarSafeRect.y + radarSafeRect.h - height / 2) / dy
-                : dy < 0
-                  ? (radarSafeRect.y - height / 2) / dy
-                  : Number.POSITIVE_INFINITY;
-            const scale = Math.max(0, Math.min(scaleX, scaleY));
-            const radarX = width / 2 + dx * scale;
-            const radarY = height / 2 + dy * scale;
-            const angle = Math.atan2(dy, dx);
+          fxCtx.restore();
+        }
+
+        // Estrella dorada: aparece cada tanto, cruza la vista y se va
+        if (isPlayground && playgroundPhase === 'active') {
+          if (!bonusStar && time >= nextBonusAt && arcade.snapshot().bonuses < PLAYGROUND_MAX_BONUSES) {
+            spawnBonusStar();
+          }
+          if (bonusStar) {
+            const star = bonusStar;
+            const age = time - star.born;
+            if (age >= star.ttl) {
+              bonusStar = null;
+              nextBonusAt = time + 12 + Math.random() * 8;
+            } else {
+              star.x += star.vx * dt;
+              star.y += star.vy * dt + Math.sin(age * 2.4 + star.phase) * 26 * dt;
+              star.trail.push({ x: star.x, y: star.y });
+              if (star.trail.length > 22) star.trail.shift();
+              const sx = star.x - camX;
+              const sy = star.y - camY;
+              const fadeIn = Math.min(1, age / 0.4);
+              const fadeOut = Math.min(1, (star.ttl - age) / 1.4);
+              const blink = fadeOut < 1 ? 0.6 + 0.4 * Math.sin(age * 18) : 1;
+              const alpha = fadeIn * fadeOut * blink;
+              const scale = Math.max(0.8, vscale);
+              const [gr, gg, gb] = PLAYGROUND_BONUS_TINT;
+              fxCtx.save();
+              fxCtx.lineCap = 'round';
+              for (let i = 1; i < star.trail.length; i += 1) {
+                const t = i / star.trail.length;
+                fxCtx.strokeStyle = `rgba(${gr},${gg},${gb},${(t * 0.55 * alpha).toFixed(3)})`;
+                fxCtx.lineWidth = t * 7 * scale;
+                fxCtx.beginPath();
+                fxCtx.moveTo(star.trail[i - 1].x - camX, star.trail[i - 1].y - camY);
+                fxCtx.lineTo(star.trail[i].x - camX, star.trail[i].y - camY);
+                fxCtx.stroke();
+              }
+              fxCtx.translate(sx, sy);
+              fxCtx.globalAlpha = alpha;
+              const halo = fxCtx.createRadialGradient(0, 0, 0, 0, 0, 46 * scale);
+              halo.addColorStop(0, `rgba(${gr},${gg},${gb},0.55)`);
+              halo.addColorStop(1, `rgba(${gr},${gg},${gb},0)`);
+              fxCtx.fillStyle = halo;
+              fxCtx.beginPath();
+              fxCtx.arc(0, 0, 46 * scale, 0, Math.PI * 2);
+              fxCtx.fill();
+              const ringPulse = (age * 1.4) % 1;
+              fxCtx.strokeStyle = `rgba(${gr},${gg},${gb},${((1 - ringPulse) * 0.6).toFixed(3)})`;
+              fxCtx.lineWidth = 1.5;
+              fxCtx.beginPath();
+              fxCtx.arc(0, 0, (18 + ringPulse * 30) * scale, 0, Math.PI * 2);
+              fxCtx.stroke();
+              fxCtx.font = '600 11px "JetBrains Mono Variable", monospace';
+              fxCtx.textAlign = 'center';
+              fxCtx.textBaseline = 'middle';
+              fxCtx.fillStyle = `rgba(${gr},${gg},${gb},0.85)`;
+              fxCtx.fillText('+5 s', 0, 34 * scale);
+              fxCtx.rotate(age * 2.2 + star.phase);
+              const outer = (17 + Math.sin(age * 9) * 2) * scale;
+              const inner = outer * 0.34;
+              fxCtx.fillStyle = '#fff6dc';
+              fxCtx.shadowColor = `rgba(${gr},${gg},${gb},1)`;
+              fxCtx.shadowBlur = 22;
+              fxCtx.beginPath();
+              for (let point = 0; point < 8; point += 1) {
+                const radius = point % 2 === 0 ? outer : inner;
+                const angle = (point / 8) * Math.PI * 2;
+                if (point === 0) fxCtx.moveTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
+                else fxCtx.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
+              }
+              fxCtx.closePath();
+              fxCtx.fill();
+              fxCtx.restore();
+            }
+          }
+        }
+
+        // Esquirlas de letras rotas
+        if (shards.length > 0) {
+          const drag = Math.exp(-2.4 * dt);
+          for (const shard of shards) {
+            shard.vx *= drag;
+            shard.vy *= drag;
+            shard.x += shard.vx * dt;
+            shard.y += shard.vy * dt;
+            shard.angle += shard.spin * dt;
+            shard.life -= dt / 1.15;
+            if (shard.life <= 0) continue;
             fxCtx.save();
-            fxCtx.globalAlpha = sceneProgress;
-            fxCtx.translate(radarX, radarY);
-            fxCtx.rotate(angle);
-            fxCtx.fillStyle = 'rgba(230,204,158,0.82)';
-            fxCtx.shadowColor = 'rgba(201,168,106,0.65)';
-            fxCtx.shadowBlur = 12;
+            fxCtx.globalAlpha = Math.min(1, shard.life * 1.6);
+            fxCtx.fillStyle = `rgb(${shard.rgb[0]},${shard.rgb[1]},${shard.rgb[2]})`;
+            fxCtx.translate(shard.x, shard.y);
+            fxCtx.rotate(shard.angle);
+            const shardSize = shard.size * (0.4 + shard.life * 0.6);
             fxCtx.beginPath();
-            fxCtx.moveTo(12, 0);
-            fxCtx.lineTo(-7, -6);
-            fxCtx.lineTo(-3, 0);
-            fxCtx.lineTo(-7, 6);
+            fxCtx.moveTo(shard.points[0][0] * shardSize, shard.points[0][1] * shardSize);
+            fxCtx.lineTo(shard.points[1][0] * shardSize, shard.points[1][1] * shardSize);
+            fxCtx.lineTo(shard.points[2][0] * shardSize, shard.points[2][1] * shardSize);
             fxCtx.closePath();
             fxCtx.fill();
             fxCtx.restore();
           }
+          shards =shards.filter((shard) => shard.life > 0);
+        }
+
+        // Puntajes flotantes y siluetas fantasma (tamaño negativo = silueta)
+        if (scorePops.length > 0) {
+          fxCtx.save();
+          fxCtx.textAlign = 'center';
+          fxCtx.textBaseline = 'middle';
+          for (const pop of scorePops) {
+            pop.age += dt;
+            const [pr, pg, pb] = pop.rgb;
+            if (pop.size < 0) {
+              const progress = Math.min(1, pop.age / 0.55);
+              const ghostScale = 1 + (1 - Math.pow(1 - progress, 3)) * 0.9;
+              fxCtx.save();
+              fxCtx.globalAlpha = (1 - progress) * 0.7;
+              fxCtx.translate(pop.x, pop.y);
+              fxCtx.scale(ghostScale, ghostScale);
+              fxCtx.font = `700 ${-pop.size}px "Fraunces Variable", Fraunces, serif`;
+              fxCtx.lineWidth = 2;
+              fxCtx.strokeStyle = `rgb(${pr},${pg},${pb})`;
+              fxCtx.shadowColor = `rgba(${pr},${pg},${pb},0.9)`;
+              fxCtx.shadowBlur = 18;
+              fxCtx.strokeText(pop.text, 0, 0);
+              fxCtx.restore();
+              continue;
+            }
+            const life = 1.25;
+            const progress = Math.min(1, pop.age / life);
+            const popIn = Math.min(1, pop.age / 0.14);
+            const scale = popIn < 1 ? 0.6 + popIn * 0.65 : 1.25 - Math.min(1, (pop.age - 0.14) / 0.2) * 0.25;
+            const rise = (1 - Math.pow(1 - progress, 2)) * 46;
+            fxCtx.save();
+            fxCtx.globalAlpha = progress > 0.65 ? (1 - progress) / 0.35 : 1;
+            fxCtx.translate(pop.x, pop.y - rise);
+            fxCtx.scale(scale, scale);
+            fxCtx.font = `700 ${pop.size}px "Fraunces Variable", Fraunces, serif`;
+            fxCtx.lineWidth = 4;
+            fxCtx.strokeStyle = 'rgba(7,7,7,0.75)';
+            fxCtx.strokeText(pop.text, 0, 0);
+            const popFill = mixRGB(pop.rgb, [255, 250, 240], 0.35);
+            fxCtx.fillStyle = `rgb(${popFill[0]},${popFill[1]},${popFill[2]})`;
+            fxCtx.shadowColor = `rgba(${pr},${pg},${pb},0.9)`;
+            fxCtx.shadowBlur = 14;
+            fxCtx.fillText(pop.text, 0, 0);
+            if (pop.detail) {
+              fxCtx.shadowBlur = 8;
+              fxCtx.font = '600 11px "JetBrains Mono Variable", monospace';
+              fxCtx.fillStyle = `rgb(${pr},${pg},${pb})`;
+              fxCtx.fillText(pop.detail, 0, pop.size * 0.95);
+            }
+            fxCtx.restore();
           }
           fxCtx.restore();
+          scorePops = scorePops.filter((pop) => pop.age < (pop.size < 0 ? 0.55 : 1.25));
         }
 
         // Estela del cursor sobre el hero: cinta continua por segmentos con la
@@ -3606,6 +4007,23 @@ export const StarfieldCanvas = ({
             }
           }
 
+          // La estrella dorada se atrapa con cualquier proyectil que la cruce
+          if (
+            bonusStar &&
+            isPlayground &&
+            playgroundPhase === 'active' &&
+            comet.launchPower !== undefined &&
+            comet.layer !== 'studio' &&
+            comet.life > 0
+          ) {
+            const starX = bonusStar.x - camX;
+            const starY = bonusStar.y - camY;
+            const reach = 34 * Math.max(0.8, vscale);
+            if (closestPointOnSegment(starX, starY, prevX, prevY, comet.x, comet.y).dist2 <= reach * reach) {
+              collectBonusStar(starX, starY);
+            }
+          }
+
           // En el playground la carga original fija el daño y los rebotes solo
           // amplían el presupuesto perforante. Los impactos se resuelven en el
           // orden real de entrada para que el daño sobrante pase a la siguiente.
@@ -3666,6 +4084,13 @@ export const StarfieldCanvas = ({
                     Math.max(0.72, vscale);
               hit.target.vx += (comet.vx / impactSpeed) * targetImpulse;
               hit.target.vy += (comet.vy / impactSpeed) * targetImpulse;
+              const matched = projectileAffinity === hit.target.affinity;
+              if (time - hit.target.lastHitAt > 0.3) hit.target.ghostHp = hit.target.hp + appliedDamage;
+              hit.target.lastHitAt = time;
+              hit.target.hitFlash = comet.projectileKind === 'rapid' ? Math.max(hit.target.hitFlash, 0.55) : 1;
+              hit.target.punchV += comet.projectileKind === 'rapid' ? 1.3 : 3 + appliedDamage * 0.12;
+              addTrauma(comet.projectileKind === 'rapid' ? 0.035 : 0.14 + Math.min(0.2, appliedDamage * 0.006));
+              sfx.hit(projectileAffinity, matched);
               const hitTint = affinityTint(hit.target.affinity);
               flashes.push({
                 x: hitX,
@@ -3685,7 +4110,9 @@ export const StarfieldCanvas = ({
               );
 
               if (hit.target.hp <= 0.001) {
+                const scoreBefore = arcade.snapshot().score;
                 arcade.destroy(hit.target.id, projectileAffinity === 'charged' && (comet.bounceCount ?? 0) > 0, hitNowMs);
+                const afterDestroy = arcade.snapshot();
                 hit.target.destroyed = true;
                 hit.target.deathX = hitX;
                 hit.target.deathY = hitY;
@@ -3704,8 +4131,18 @@ export const StarfieldCanvas = ({
                 spawnSparkleBurst(hitX, hitY, 48, 1, 'museum', hitTint);
                 waves.push({ x: hitX, y: hitY, r: 18, alpha: 0.9, grow: 6, decay: 0.9,
                   width: 2, rgb: hitTint, delay: 0, layer: 'museum' });
-                comboLabels.push({ x: hitX, y: hitY - 30, multiplier: arcade.snapshot().combo, life: 1, kind: 'combo' });
-                if (comboLabels.length > 12) comboLabels.splice(0, comboLabels.length - 12);
+                const destroyCenter = playgroundLetterCenter(hit.target);
+                spawnShards(destroyCenter.x, destroyCenter.y, hitTint, comet.vx, comet.vy, 16);
+                // Silueta fantasma de la letra que se expande al romperse
+                pushScorePop(destroyCenter.x, destroyCenter.y, hit.target.character, hitTint, undefined, -playgroundFontSize());
+                pushScorePop(
+                  hitX, hitY - 34, `+${afterDestroy.score - scoreBefore}`, hitTint,
+                  afterDestroy.combo > 1 ? `COMBO \u00d7${afterDestroy.combo}` : undefined,
+                  24 + afterDestroy.combo * 3,
+                );
+                addTrauma(afterDestroy.phase === 'complete' ? 0.9 : 0.42);
+                sfx.destroy(afterDestroy.combo);
+                if (afterDestroy.phase === 'complete') sfx.complete();
               }
 
               const unusedDamage = totalBudget - (comet.damageSpent ?? 0);
@@ -4458,6 +4895,10 @@ export const StarfieldCanvas = ({
     const clampLabTime = (value: number) => Math.max(0.25, Math.min(2.5, value));
     const onKeyDown = (event: KeyboardEvent) => {
       if (isKeyboardInput(event.target) || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (playgroundRef.current) {
+        sfx.muted = playgroundSfxMutedRef.current;
+        sfx.unlock();
+      }
       if (sandboxActive) {
         if (event.code === 'Escape') {
           event.preventDefault();
@@ -4682,6 +5123,7 @@ export const StarfieldCanvas = ({
       }
       document.removeEventListener('visibilitychange', onVisibility);
       document.removeEventListener('selectstart', onSelectStart);
+      sfx.dispose();
     };
   }, [scrollRef]);
 
