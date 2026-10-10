@@ -20,15 +20,14 @@ const QUOTE = 'La naturaleza necesitó miles de millones de años para engendrar
 const SIGNATURE = 'ASTROINGENIERÍA — EXPOSICIÓN PERMANENTE · MUSEO ORBITAL · MMXXVI';
 
 /* Guion del cierre sobre el tramo fijo: primero la cita; luego un punto de
-   luz crece hasta ser una estrella, colapsa, estalla y la visita vuelve a
-   empezar desde ese mismo punto. */
+   luz se carga mientras un anillo de luz se cierra sobre él (implosión),
+   estalla y la visita vuelve a empezar desde ese mismo punto. */
 const T = {
   quote: [0.03, 0.34],
   signature: [0.34, 0.41],
   copyOut: [0.5, 0.58],
   dotIn: [0.52, 0.58],
-  starForm: [0.58, 0.7],
-  collapse: [0.72, 0.86],
+  implode: [0.6, 0.85],
   burst: [0.85, 0.96],
 } satisfies Record<string, [number, number]>;
 // Pasado este punto bajando, se vuelve al inicio
@@ -66,39 +65,44 @@ export const MuseumFinale = ({
   });
   const progress = useSpring(scrollYProgress, { stiffness: 170, damping: 32, mass: 0.4 });
 
-  // La cita se va hacia arriba antes de que nazca la estrella
+  // La cita se va hacia arriba antes de que aparezca el punto
   const copyOpacity = useTransform(progress, T.copyOut, [1, 0]);
   const copyY = useTransform(progress, T.copyOut, [0, -40]);
   const copyFilter = useTransform(progress, T.copyOut, ['blur(0px)', 'blur(6px)']);
   const signatureOpacity = useTransform(progress, T.signature, [0, 1]);
 
-  // Punto de luz → estrella → colapso de vuelta al punto
+  // El punto aparece, se carga durante la implosión y salta en el estallido
   const dotOpacity = useTransform(progress, T.dotIn, [0, 1]);
   const dotScale = useTransform(
     progress,
-    [T.dotIn[0], T.dotIn[1], T.collapse[1], T.burst[0] + 0.03, T.burst[1]],
-    [0, 1, 1, 2.6, 1],
+    [T.dotIn[0], T.dotIn[1], T.implode[1], T.burst[0] + 0.03, T.burst[1]],
+    [0, 1, 1.7, 2.8, 1],
   );
-  const starScale = useTransform(
-    progress,
-    [T.starForm[0], T.starForm[1], T.collapse[0], T.collapse[1]],
-    [0.02, 1, 1, 0.012],
-    { ease: [EASE_OUT, (value) => value, EASE_COLLAPSE] },
-  );
-  const starOpacity = useTransform(
-    progress,
-    [T.starForm[0], T.starForm[0] + 0.03, T.collapse[1] - 0.01, T.collapse[1] + 0.01],
-    [0, 1, 1, 0],
-  );
-  // Al encogerse se calienta: el núcleo blanco la va cubriendo
-  const heatOpacity = useTransform(progress, T.collapse, [0, 1]);
 
-  // Estallido al quedar solo el punto
+  // Implosión: un anillo fino de luz se cierra sobre el punto, acelerando
+  const implodeScale = useTransform(progress, T.implode, [1, 0.006], { ease: EASE_COLLAPSE });
+  const implodeOpacity = useTransform(
+    progress,
+    [T.implode[0], T.implode[0] + 0.04, T.implode[1] - 0.02, T.implode[1]],
+    [0, 0.9, 0.9, 0],
+  );
+
+  // Destello horizontal: se carga con la implosión y se abre en el estallido
+  const flareScale = useTransform(
+    progress,
+    [T.implode[0] + 0.02, T.implode[1], T.burst[0] + 0.03, T.burst[1]],
+    [0, 0.5, 1, 1.6],
+  );
+  const flareOpacity = useTransform(
+    progress,
+    [T.implode[0] + 0.02, T.implode[1], T.burst[0] + 0.02, T.burst[1]],
+    [0, 0.55, 1, 0],
+  );
+
+  // Estallido: destello y onda que se abre (solo existe a partir del estallido)
   const flashOpacity = useTransform(progress, [T.burst[0], T.burst[0] + 0.015, T.burst[1]], [0, 0.85, 0]);
-  const flareScale = useTransform(progress, [T.burst[0], T.burst[0] + 0.03, T.burst[1]], [0, 1, 1.6]);
-  const flareOpacity = useTransform(progress, [T.burst[0], T.burst[0] + 0.02, T.burst[1]], [0, 1, 0]);
   const ringScale = useTransform(progress, T.burst, [0.1, 3.4], { ease: EASE_OUT });
-  const ringOpacity = useTransform(progress, T.burst, [0.95, 0]);
+  const ringOpacity = useTransform(progress, [T.burst[0], T.burst[0] + 0.005, T.burst[1]], [0, 0.95, 0]);
 
   // Sacudida del cielo en el estallido y vuelta al inicio al terminar
   const burst = useRef(false);
@@ -161,9 +165,7 @@ export const MuseumFinale = ({
         <motion.span className="mo-finale-flash" style={{ opacity: flashOpacity }} aria-hidden="true" />
 
         <div className="mo-finale-anchor" aria-hidden="true">
-          <motion.span className="mo-finale-star" style={{ opacity: starOpacity, scale: starScale }}>
-            <motion.span className="mo-finale-heat" style={{ opacity: heatOpacity }} />
-          </motion.span>
+          <motion.span className="mo-finale-ring is-implode" style={{ opacity: implodeOpacity, scale: implodeScale }} />
           <motion.span className="mo-finale-flare" style={{ opacity: flareOpacity, scaleX: flareScale }} />
           <motion.span className="mo-finale-ring" style={{ opacity: ringOpacity, scale: ringScale }} />
           <motion.span className="mo-finale-dot" style={{ opacity: dotOpacity, scale: dotScale }} />
