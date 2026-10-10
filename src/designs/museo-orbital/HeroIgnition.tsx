@@ -58,7 +58,7 @@ export const releaseBootScreen = (fadeMs = 0) => {
 const dispatchWarp = (strength: number) =>
   window.dispatchEvent(new CustomEvent('mo-warp', { detail: { strength, direction: 1 } }));
 
-/* Con la estrella viva (?hero=viva) la estrella nace en el centro de la
+/* Con la estrella viva la estrella nace en el centro de la
    pantalla: el punto colapsa (disco de acreción y anillos que se cierran),
    estalla con onda de choque y rayos, y la escena la lleva después a su
    lugar junto al título. */

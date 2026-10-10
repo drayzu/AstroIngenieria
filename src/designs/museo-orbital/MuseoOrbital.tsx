@@ -68,7 +68,7 @@ import { DysonPlate } from './living/DysonPlate';
 import { LivingGrab } from './living/LivingGrab';
 import './living/livingHero.css';
 
-// Hero experimental (?hero=viva): la escena WebGL se descarga solo si se pide
+// Hero de estrella viva: la escena WebGL se descarga aparte, solo cuando se usa
 const LivingStar = lazy(() => import('./living/LivingStar'));
 const LIVING_TITLE_BREAK = 5;
 /* Las letras se condensan desde la luz de la ignición: llegan desenfocadas,

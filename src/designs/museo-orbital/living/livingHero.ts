@@ -1,4 +1,5 @@
-/* Hero experimental «estrella viva»: se activa con ?hero=viva.
+/* Hero «estrella viva»: es la portada por defecto. El hero clásico queda de
+   respaldo con movimiento reducido o sin WebGL, y con ?hero=clasico.
 
    La estrella en WebGL y la ignición del HTML tienen que coincidir al
    píxel: ambas calculan dónde cae la estrella con starFrame, a partir del
@@ -6,7 +7,7 @@
 
 export const isLivingHero = () => {
   try {
-    if (new URLSearchParams(window.location.search).get('hero') !== 'viva') return false;
+    if (new URLSearchParams(window.location.search).get('hero') === 'clasico') return false;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
     const canvas = document.createElement('canvas');
     return Boolean(canvas.getContext('webgl2') ?? canvas.getContext('webgl'));
