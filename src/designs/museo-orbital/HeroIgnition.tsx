@@ -209,10 +209,29 @@ export const HeroIgnition = ({
       later(finish, 1);
     };
     // Hasta la ignición la página no se desplaza: un scroll accidental no
-    // arrastra el hero ni rompe la escena
+    // arrastra el hero ni rompe la escena. Quien insiste (scroll, teclas de
+    // avance o varios clics) ve aparecer el botón para saltar.
     const scrollKeys = new Set([' ', 'PageDown', 'PageUp', 'ArrowDown', 'ArrowUp', 'Home', 'End']);
-    const blockScroll = (event: Event) => {
-      if (!ignited) event.preventDefault();
+    let wheelIntent = 0;
+    let clickIntent = 0;
+    const offerSkip = () => {
+      if (!ignited) layer.classList.add('is-offering-skip');
+    };
+    const onWheel = (event: WheelEvent) => {
+      if (ignited) return;
+      event.preventDefault();
+      wheelIntent += Math.abs(event.deltaY) + Math.abs(event.deltaX);
+      if (wheelIntent > 150) offerSkip();
+    };
+    const onTouchMove = (event: TouchEvent) => {
+      if (ignited) return;
+      event.preventDefault();
+      offerSkip();
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.target === skipButton) return;
+      clickIntent += 1;
+      if (clickIntent >= 2) offerSkip();
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -220,18 +239,23 @@ export const HeroIgnition = ({
         return;
       }
       if (event.target instanceof HTMLElement && event.target.closest('button, input, textarea, select')) return;
-      if (!ignited && scrollKeys.has(event.key)) event.preventDefault();
+      if (!ignited && scrollKeys.has(event.key)) {
+        event.preventDefault();
+        offerSkip();
+      }
     };
     skipButton.addEventListener('click', skip);
-    window.addEventListener('wheel', blockScroll, { passive: false });
-    window.addEventListener('touchmove', blockScroll, { passive: false });
+    window.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('keydown', onKeyDown);
 
     return () => {
       cancelled = true;
       skipButton.removeEventListener('click', skip);
-      window.removeEventListener('wheel', blockScroll);
-      window.removeEventListener('touchmove', blockScroll);
+      window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('keydown', onKeyDown);
       controls.forEach((control) => control.stop());
       timers.forEach((timer) => window.clearTimeout(timer));

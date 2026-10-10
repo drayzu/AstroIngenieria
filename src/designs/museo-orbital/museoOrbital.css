@@ -75,6 +75,10 @@ body:has(.mo-root) {
   opacity: 0.85;
 }
 
+.mo-cursor:not(.has-moved) {
+  visibility: hidden;
+}
+
 /* Halo estelar */
 .mo-cursor::before {
   content: '';

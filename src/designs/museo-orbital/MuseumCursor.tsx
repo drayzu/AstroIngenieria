@@ -33,6 +33,9 @@ export const MuseumCursor = () => {
     };
 
     const move = (event: MouseEvent) => {
+      // Hasta el primer movimiento no se sabe dónde está el mouse: el cursor
+      // no se muestra en el centro de la pantalla por defecto
+      cursorRef.current?.classList.add('has-moved');
       const now = performance.now();
       const dt = Math.max(8, now - lastMoveT);
       const inst = (Math.hypot(event.clientX - lastX, event.clientY - lastY) / dt) * 1000;

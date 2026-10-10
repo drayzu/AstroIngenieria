@@ -1283,7 +1283,9 @@ const Hero = memo(({
       ref={heroRef}
       className={`mo-hero mo-layer${imageFocus ? ' is-image-focus' : ''}${
         introPhase !== 'off' ? ' is-intro' : ''
-      }${introPhase === 'dark' || introPhase === 'reveal' ? ' is-intro-dark' : ''}`}
+      }${introPhase === 'dark' || introPhase === 'reveal' ? ' is-intro-dark' : ''}${
+        introPhase === 'dark' ? ' is-intro-pre' : ''
+      }`}
       onMouseMove={trackSpotlight}
     >
       {playgroundEntryState !== 'entering' && playgroundEntryState !== 'leaving' && (
