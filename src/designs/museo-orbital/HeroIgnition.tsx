@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, type RefObject } from 'react';
 import { animate, type AnimationPlaybackControls } from 'framer-motion';
+import { lockSmoothScroll } from '../shared/smoothScroll';
 import './heroIgnition.css';
 
 /* Fases de la intro, compartidas con el hero:
@@ -135,6 +136,8 @@ export const HeroIgnition = ({
     let ignited = false;
     let finished = false;
     let cancelled = false;
+    // Hasta la ignición el scroll con inercia queda detenido
+    lockSmoothScroll('intro', true);
 
     const clearIris = () => {
       hero.style.removeProperty('--ignite-r');
@@ -160,6 +163,7 @@ export const HeroIgnition = ({
     const ignite = () => {
       if (ignited || finished) return;
       ignited = true;
+      lockSmoothScroll('intro', false);
       onPhase('reveal');
       // Primero se enciende el disco de la estrella, luego se revela el cielo
       run(animate(radius, starR * 1.06, { duration: T.starOpen, ease: EASE_OUT, onUpdate: setRadius }));
@@ -195,6 +199,7 @@ export const HeroIgnition = ({
       timers.length = 0;
       if (!ignited) {
         ignited = true;
+        lockSmoothScroll('intro', false);
         onPhase('reveal');
       }
       run(animate(radius, coverR, { duration: 0.45, ease: EASE_OUT, onUpdate: setRadius }));
@@ -222,6 +227,7 @@ export const HeroIgnition = ({
 
     return () => {
       cancelled = true;
+      lockSmoothScroll('intro', false);
       window.removeEventListener('wheel', blockScroll);
       window.removeEventListener('touchmove', blockScroll);
       window.removeEventListener('keydown', onKeyDown);

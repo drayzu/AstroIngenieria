@@ -34,6 +34,7 @@ import type { ReadingContext } from '../../data/readingJourney';
 import type { AstroChapter, AstroConcept, SourceRef } from '../../types';
 import { Grain } from '../shared/Grain';
 import { useScrollLock } from '../shared/useScrollLock';
+import { jumpScroll, smoothScrollTo, startSmoothScroll } from '../shared/smoothScroll';
 import { MuseumCursor } from './MuseumCursor';
 import {
   PLAYGROUND_ARRIVAL_END_MS,
@@ -146,7 +147,9 @@ const getVitrineConcepts = (ids: readonly string[], locale: Locale = 'es') =>
 
 const scrollToId = (id: string) => {
   window.dispatchEvent(new CustomEvent('mo-warp'));
-  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const target = document.getElementById(id);
+  if (!target) return;
+  if (!smoothScrollTo(target)) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 const loadPlaygroundRecords = (): Record<PlaygroundControlMode, PlaygroundRecord[]> => {
@@ -2298,7 +2301,7 @@ export default function MuseoOrbital() {
   useLayoutEffect(() => {
     const element = rootRef.current;
     if (element && languageScrollProgress.current !== null) {
-      element.scrollTop = languageScrollProgress.current * Math.max(0, element.scrollHeight - element.clientHeight);
+      jumpScroll(element, languageScrollProgress.current * Math.max(0, element.scrollHeight - element.clientHeight));
       languageScrollProgress.current = null;
     }
   }, [locale]);
@@ -2578,7 +2581,7 @@ export default function MuseoOrbital() {
     const finishLeaving = () => {
       resetPlayground();
       const root = rootRef.current;
-      if (root) root.scrollTop = playgroundScrollTop.current;
+      if (root) jumpScroll(root, playgroundScrollTop.current);
     };
 
     if (reduced) {
@@ -3211,6 +3214,13 @@ export default function MuseoOrbital() {
     if (chapter) tintAtmosphere(chapter);
   }, [activeHallId, chapters, tintAtmosphere]);
 
+  // Scroll con inercia en todo el recorrido (rueda del mouse; táctil nativo)
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    return startSmoothScroll(root);
+  }, []);
+
   // Desde el cierre: la pantalla se funde a negro dejando solo el punto de
   // luz (la misma pantalla de arranque de index.html, en el mismo lugar que
   // el punto del cierre). Detrás se vuelve a la portada y la intro, al
@@ -3219,7 +3229,7 @@ export default function MuseoOrbital() {
     const root = rootRef.current;
     if (!root) return;
     if (reduced) {
-      root.scrollTop = 0;
+      jumpScroll(root, 0);
       return;
     }
     if (document.getElementById('mo-boot')) return;
@@ -3234,7 +3244,7 @@ export default function MuseoOrbital() {
       boot.style.opacity = '1';
     });
     window.setTimeout(() => {
-      root.scrollTop = 0;
+      jumpScroll(root, 0);
       window.dispatchEvent(new CustomEvent('mo-replay-intro'));
       // Si la intro no llegara a montarse, la pantalla no se queda negra
       window.setTimeout(() => releaseBootScreen(450), 1600);
