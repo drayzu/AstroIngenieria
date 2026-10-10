@@ -1,0 +1,201 @@
+/* ============ Portal entre salas ============
+   Tramo alto con un escenario fijo: el scroll recorre el salto (iris,
+   número monumental, título) en vez de desplazar contenido. */
+
+.mo-portal {
+  position: relative;
+  height: 240vh;
+  height: 240svh;
+}
+
+.mo-portal-stage {
+  position: sticky;
+  top: 0;
+  display: grid;
+  grid-template: 100% / 100%;
+  place-items: center;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  contain: layout paint style;
+  pointer-events: none;
+  user-select: none;
+}
+
+.mo-portal-stage > * {
+  grid-area: 1 / 1;
+}
+
+/* Halo de la sala que viene, detrás del iris */
+.mo-portal-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in srgb, var(--accent) 30%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 8%, transparent) 28%,
+    transparent 56%
+  );
+  mix-blend-mode: screen;
+}
+
+.mo-portal-iris {
+  position: absolute;
+  inset: 0;
+  /* Bordes superior e inferior disueltos: al soltarse el escenario la
+     imagen se va sin dejar un corte duro contra el cielo */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 12%, #000 72%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 12%, #000 72%, transparent 100%);
+}
+
+.mo-portal-image {
+  position: absolute;
+  inset: 0;
+  background-color: #0b0b0a;
+  background-size: cover;
+  background-position: center;
+  will-change: transform;
+}
+
+.mo-portal-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(7, 7, 7, 0.55) 100%),
+    linear-gradient(180deg, rgba(7, 7, 7, 0.3), rgba(7, 7, 7, 0.15) 45%, rgba(7, 7, 7, 0.85));
+}
+
+.mo-portal-ring {
+  /* Fuera del flujo: su tamaño crece más allá de la pantalla y no debe
+     estirar la celda que centra al número y al título */
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--accent) 75%, #ffffff);
+  box-shadow:
+    0 0 26px 3px color-mix(in srgb, var(--accent) 55%, transparent),
+    inset 0 0 26px 2px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* Número monumental del capítulo: contorno + relleno que sube con el scroll */
+.mo-portal-no {
+  position: relative;
+  display: inline-block;
+  font-family: var(--mo-serif);
+  font-weight: 600;
+  font-size: min(52vmin, 520px);
+  line-height: 0.78;
+  will-change: transform, opacity;
+}
+
+.mo-portal-no-outline {
+  color: color-mix(in srgb, var(--accent) 12%, transparent);
+  -webkit-text-stroke: 1.7px color-mix(in srgb, var(--accent) 85%, #f5f1e8);
+  filter: drop-shadow(0 0 18px color-mix(in srgb, var(--accent) 32%, transparent));
+}
+
+.mo-portal-no-fill {
+  position: absolute;
+  inset: 0;
+  color: transparent;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 78%, #ffffff),
+    color-mix(in srgb, var(--accent) 42%, #f5f1e8)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.mo-portal-copy {
+  position: relative;
+  width: min(1100px, 92vw);
+  text-align: center;
+  will-change: transform, opacity;
+}
+
+.mo-kicker.mo-portal-kicker {
+  margin-bottom: 22px;
+  color: color-mix(in srgb, var(--accent) 55%, #f5f1e8);
+}
+
+.mo-portal-title {
+  margin: 0;
+  font-family: var(--mo-serif);
+  font-variation-settings: 'opsz' 144;
+  font-weight: 500;
+  font-size: clamp(42px, 7.4vw, 116px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--mo-ink);
+  text-shadow: 0 6px 48px rgba(0, 0, 0, 0.6);
+}
+
+/* Rumbo del salto: sala de origen → sala de destino */
+.mo-portal-hud {
+  position: absolute;
+  left: 50%;
+  bottom: max(30px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  translate: -50% 0;
+  font-family: var(--mo-mono);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--mo-muted);
+}
+
+.mo-portal-hud > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mo-portal-hud em {
+  font-style: normal;
+  opacity: 0.7;
+}
+
+.mo-portal-hud-from > i,
+.mo-portal-hud-to > i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--from-accent);
+  box-shadow: 0 0 10px var(--from-accent);
+}
+
+.mo-portal-hud-to > i {
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
+
+.mo-portal-hud-line {
+  position: relative;
+  width: clamp(70px, 16vw, 240px);
+  height: 1px;
+  background: var(--mo-line);
+}
+
+.mo-portal-hud-line > i {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--from-accent), var(--accent));
+  transform-origin: left center;
+}
+
+@media (max-width: 720px) {
+  .mo-portal {
+    height: 200vh;
+    height: 200svh;
+  }
+
+  .mo-portal-hud em {
+    display: none;
+  }
+}

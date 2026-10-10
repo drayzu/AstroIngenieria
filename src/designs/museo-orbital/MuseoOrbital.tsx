@@ -6,6 +6,7 @@ import '@fontsource-variable/fraunces';
 import '@fontsource-variable/space-grotesk';
 import '@fontsource-variable/jetbrains-mono';
 import {
+  Fragment,
   memo,
   useCallback,
   useEffect,
@@ -50,6 +51,7 @@ import {
   parsePlaygroundRecords, rankPlaygroundRecords, type PlaygroundRecord, type PlaygroundControlMode,
 } from './PlaygroundArcade';
 import { DistortOverlay } from './DistortOverlay';
+import { SalaPortal } from './SalaPortal';
 import './museoOrbital.css';
 
 const totalWorks = chapters.reduce((sum, chapter) => sum + chapter.concepts.length, 0);
@@ -2224,6 +2226,7 @@ export default function MuseoOrbital() {
   const playgroundAudioTrackIndex = useRef(0);
   const playgroundAudioPreloaderRef = useRef<HTMLAudioElement | null>(null);
   const railFillRef = useRef<HTMLSpanElement>(null);
+  const atmosRef = useRef<HTMLDivElement>(null);
   const museumKeyboardVelocityRef = useRef(0);
 
   useScrollLock(Boolean(active));
@@ -3075,6 +3078,18 @@ export default function MuseoOrbital() {
     };
   }, []);
 
+  // Atmósfera: el cielo y el riel toman el color del capítulo. Los portales la
+  // cambian a mitad del salto; la línea de lectura la confirma al llegar.
+  const tintAtmosphere = useCallback((chapter: AstroChapter) => {
+    atmosRef.current?.style.setProperty('--mo-atmos', chapter.color);
+    railFillRef.current?.style.setProperty('--mo-atmos', chapter.color);
+  }, []);
+
+  useEffect(() => {
+    const chapter = chapters.find((item) => item.id === activeHallId);
+    if (chapter) tintAtmosphere(chapter);
+  }, [activeHallId, chapters, tintAtmosphere]);
+
   const openJourneyConcept = useCallback((concept: AstroConcept) => {
     triggerFlight();
     setReadingContext('journey');
@@ -3162,6 +3177,7 @@ export default function MuseoOrbital() {
         }
       }}
     >
+      <div ref={atmosRef} className="mo-atmos" aria-hidden="true" />
       <StarfieldCanvas
         scrollRef={rootRef}
         museumKeyboardVelocityRef={museumKeyboardVelocityRef}
@@ -3397,17 +3413,26 @@ export default function MuseoOrbital() {
       <Marquee />
       <HallIndex activeId={activeHallId} />
 
-      {chapters.map((chapter) => {
+      {chapters.map((chapter, index) => {
         const offset = plateOffset;
         plateOffset += chapter.concepts.length;
         return (
-          <Sala
-            key={chapter.id}
-            chapter={chapter}
-            offset={offset}
-            enableFlight={!reduced}
-            onSelect={openJourneyConcept}
-          />
+          <Fragment key={chapter.id}>
+            {index > 0 && !reduced && (
+              <SalaPortal
+                from={chapters[index - 1]}
+                to={chapter}
+                scrollRef={rootRef}
+                onCross={tintAtmosphere}
+              />
+            )}
+            <Sala
+              chapter={chapter}
+              offset={offset}
+              enableFlight={!reduced}
+              onSelect={openJourneyConcept}
+            />
+          </Fragment>
         );
       })}
 
