@@ -4,6 +4,7 @@ import { translate } from '../../i18n/messages';
 import { CosmicLab, LAB_TOOLS, holeAcceleration, type LabState, type LabCommand } from './CosmicLab';
 import { CosmicLabPanel } from './CosmicLabPanel';
 import { CursorConstellationLayer } from './CursorConstellationLayer';
+import { skyDrift } from './roomShared';
 import {
   PlaygroundArcade, PLAYGROUND_WORD, PLAYGROUND_LETTER_HP, PLAYGROUND_RAPID_LETTER_HP,
   PLAYGROUND_BASE_DAMAGE, PLAYGROUND_RAPID_DAMAGE, PLAYGROUND_RAPID_FIRE_INTERVAL,
@@ -613,6 +614,8 @@ export const StarfieldCanvas = ({
     let nextComet = time + 4 + Math.random() * 5;
     let warpBoost = 0;
     let warpDirection: -1 | 1 = 1;
+    // Dentro de un pasillo el scroll mueve la pared de lado: el cielo la sigue
+    let lateralMix = 0;
     let scriptedWarp: ScriptedWarp | null = null;
     // Cámara libre del playground: posición y velocidad en espacio infinito.
     // Fuera del playground queda quieta (velocidad amortiguada a cero).
@@ -2517,6 +2520,8 @@ export const StarfieldCanvas = ({
       const scrollDirection = Math.sign(effectiveScrollVelocity);
       if (scrollDirection === -1 || scrollDirection === 1) warpDirection = scrollDirection;
       const dir = scrollDirection || warpDirection;
+      lateralMix += (skyDrift.lateral - lateralMix) * 0.08;
+      const lateralGain = lateralMix * skyDrift.gain;
       // Estiramiento por velocidad de la cámara: las estrellas se fugan en
       // sentido contrario al vuelo (efecto hyperspace al cruzar bordes rápido)
       const camSpd = Math.hypot(camVX, camVY);
@@ -2534,8 +2539,8 @@ export const StarfieldCanvas = ({
       const spanW = width + 160;
       const spanH = height + 160;
       for (const [starIndex, star] of stars.entries()) {
-        star.x -= 0.05 * star.z;
-        star.y -= effectiveScrollVelocity * 0.045 * star.z;
+        star.x -= 0.05 * star.z + effectiveScrollVelocity * 0.045 * star.z * lateralGain;
+        star.y -= effectiveScrollVelocity * 0.045 * star.z * (1 - lateralMix);
 
         const bx = wrapSpan(star.x - camX, spanW) - 80;
         const by = wrapSpan(star.y - camY, spanH) - 80;
@@ -2575,8 +2580,8 @@ export const StarfieldCanvas = ({
 
         // Vector de estiramiento: componente vertical por scroll (museo) más
         // componente direccional por la velocidad de la cámara (playground)
-        let stX = 0;
-        let stY = warp * star.z * dir;
+        let stX = warp * star.z * dir * lateralMix * Math.min(2.4, skyDrift.gain);
+        let stY = warp * star.z * dir * (1 - lateralMix);
         if (camStretch > 1.2) {
           const norm = 1 / (camSpd || 1);
           stX += -camVX * norm * camStretch * star.z;
