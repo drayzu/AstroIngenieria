@@ -64,6 +64,7 @@ import { useVelocityWarp } from './useVelocityWarp';
 import { HeroIgnition, releaseBootScreen, shouldPlayIntro, type IntroPhase } from './HeroIgnition';
 import { MuseumFinale } from './MuseumFinale';
 import { isLivingHero, livingSignal } from './living/livingHero';
+import { DysonPlate } from './living/DysonPlate';
 import './living/livingHero.css';
 
 // Hero experimental (?hero=viva): la escena WebGL se descarga solo si se pide
@@ -1369,6 +1370,7 @@ const Hero = memo(({
           <Suspense fallback={null}>
             <LivingStar heroRef={heroRef} paused={!heroVisible || !pageVisible} />
           </Suspense>
+          <DysonPlate heroRef={heroRef} />
         </div>
       ) : (
       <AnimatePresence initial={false}>

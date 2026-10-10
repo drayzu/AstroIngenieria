@@ -26,7 +26,7 @@ export interface StarFrame {
    la izquierda. Vertical: la estrella arriba y el título abajo. */
 export const starFrame = (width: number, height: number): StarFrame => {
   if (width < 720 || width / height < 0.9) {
-    return { x: width * 0.5, y: height * 0.23, r: Math.min(width * 0.33, height * 0.17) };
+    return { x: width * 0.5, y: height * 0.19, r: Math.min(width * 0.3, height * 0.15) };
   }
   return { x: width * 0.725, y: height * 0.43, r: Math.min(height * 0.3, width * 0.2) };
 };
@@ -46,4 +46,6 @@ export const livingSignal = {
     resolveReady = resolve;
   }),
   markReady: () => resolveReady(),
+  /* La cartela escucha el avance de la obra (porcentaje entero) */
+  onProgress: undefined as ((percent: number) => void) | undefined,
 };

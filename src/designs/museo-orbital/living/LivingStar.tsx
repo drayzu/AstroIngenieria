@@ -4,10 +4,12 @@ import { PerformanceMonitor } from '@react-three/drei';
 import * as THREE from 'three';
 import { livingSignal, starFrame } from './livingHero';
 
-/* Estrella viva: granulación que hierve, corona con protuberancias y un
-   enjambre Dyson que se construye mientras miras. Los colectores que
-   pasan delante del disco son siluetas; los de los lados brillan al
-   reflejar la luz, y cerca del cursor giran sus espejos hacia ti.
+/* Estrella viva: granulación que hierve, corona con protuberancias y una
+   esfera de Dyson en construcción. Un domo geodésico fantasma dibuja la
+   obra terminada y los paneles lo van llenando desde un casquete: por
+   delante son siluetas de metal contra la estrella y por detrás espejos
+   encendidos. Colectores sueltos orbitan como tráfico de obra, y cerca
+   del cursor giran sus espejos hacia ti.
 
    Todo el movimiento ocurre en la GPU: cada cuadro solo actualiza unos
    pocos uniforms y la cámara. */
@@ -81,6 +83,7 @@ const STAR_FRAGMENT = /* glsl */ `
 uniform float uTime;
 uniform float uIgnite;
 uniform float uFlash;
+uniform float uDim;
 varying vec3 vObject;
 varying vec3 vViewNormal;
 ${NOISE}
@@ -112,7 +115,7 @@ void main() {
   vec3 color = palette(heat) * limb * 1.12;
   color += vec3(1.0, 0.24, 0.05) * pow(1.0 - mu, 2.4) * 0.38;
   color = mix(color, vec3(1.0, 0.94, 0.86) * 1.5, uFlash);
-  gl_FragColor = vec4(color * uIgnite, 1.0);
+  gl_FragColor = vec4(color * uIgnite * (1.0 - uDim), 1.0);
 }
 `;
 
@@ -162,6 +165,116 @@ void main() {
   gl_FragColor = vec4(color, alpha);
 }
 `;
+
+/* ---------------- Esfera de Dyson: domo y paneles ---------------- */
+
+const SHELL_RADIUS = 1.6;
+const SHELL_DETAIL = 9;
+// Ya hay una parte construida al encenderse y la obra avanza mientras miras
+const SHELL_START = 0.05;
+const SHELL_SPAN = 0.45;
+const SHELL_TAU = 70;
+
+const SHELL_VERTEX = /* glsl */ `
+attribute vec3 aCentroid;
+attribute vec3 aBary;
+attribute float aOrder;
+uniform float uBuilt;
+uniform float uWindow;
+varying vec3 vBary;
+varying float vFresh;
+varying float vShade;
+void main() {
+  float placed = clamp((uBuilt - aOrder) / uWindow, 0.0, 1.0);
+  if (placed <= 0.0) {
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    return;
+  }
+  // El panel llega desde fuera, se despliega y queda con una junta
+  float settle = 1.0 - pow(1.0 - placed, 3.0);
+  vec3 outward = normalize(aCentroid);
+  vec3 p = aCentroid + (position - aCentroid) * 0.9 * (0.35 + 0.65 * settle) + outward * (1.0 - settle) * 0.4;
+  vBary = aBary;
+  vFresh = 1.0 - placed;
+  vShade = fract(sin(dot(aCentroid, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+}
+`;
+
+const SHELL_FRAGMENT = /* glsl */ `
+uniform float uIgnite;
+varying vec3 vBary;
+varying float vFresh;
+varying float vShade;
+void main() {
+  float edge = min(vBary.x, min(vBary.y, vBary.z));
+  float frame = 1.0 - smoothstep(0.02, 0.08, edge);
+  vec3 color;
+  if (gl_FrontFacing) {
+    // Cara exterior: metal oscuro contra la estrella, con el marco encendido
+    color = vec3(0.06, 0.045, 0.038) * (0.7 + 0.6 * vShade) + vec3(1.0, 0.56, 0.3) * frame * 0.32;
+  } else {
+    // Cara interior: el espejo que mira a la estrella, encendido por ella
+    color = vec3(1.0, 0.63, 0.37) * (0.62 + 0.38 * vShade) * (1.0 - frame * 0.55);
+  }
+  // Recién instalado: brilla al rojo blanco y se enfría
+  color = mix(color, vec3(1.0, 0.92, 0.8) * 1.6, vFresh * vFresh);
+  gl_FragColor = vec4(color * uIgnite, 1.0);
+}
+`;
+
+/* Cada panel es un triángulo del domo geodésico. El montaje empieza en el
+   borde superior derecho, abrazando el limbo, y en un segundo frente por
+   detrás: la cara de la estrella queda a la vista mientras la obra avanza */
+const buildShell = () => {
+  const geometry = new THREE.IcosahedronGeometry(SHELL_RADIUS, SHELL_DETAIL);
+  const position = geometry.getAttribute('position').array as Float32Array;
+  const vertices = position.length / 3;
+  const faces = vertices / 3;
+  const centroid = new Float32Array(vertices * 3);
+  const bary = new Float32Array(vertices * 3);
+  const order = new Float32Array(vertices);
+  const front = new THREE.Vector3(0.55, 0.6, 0.58).normalize();
+  const back = new THREE.Vector3(-0.35, -0.45, -0.82).normalize();
+  const center = new THREE.Vector3();
+  const reach: { face: number; value: number }[] = [];
+  for (let face = 0; face < faces; face++) {
+    const base = face * 9;
+    center.set(
+      (position[base] + position[base + 3] + position[base + 6]) / 3,
+      (position[base + 1] + position[base + 4] + position[base + 7]) / 3,
+      (position[base + 2] + position[base + 5] + position[base + 8]) / 3,
+    );
+    for (let corner = 0; corner < 3; corner++) {
+      centroid.set([center.x, center.y, center.z], base + corner * 3);
+      bary.set(corner === 0 ? [1, 0, 0] : corner === 1 ? [0, 1, 0] : [0, 0, 1], base + corner * 3);
+    }
+    const direction = center.clone().normalize();
+    const fromFront = Math.acos(Math.min(1, direction.dot(front)));
+    const fromBack = Math.acos(Math.min(1, direction.dot(back))) + 0.45;
+    reach.push({ face, value: Math.min(fromFront, fromBack) + (seeded(face + 501) - 0.5) * 0.22 });
+  }
+  // Orden por cercanía al frente de obra: la fracción construida es exacta
+  reach.sort((a, b) => a.value - b.value);
+  reach.forEach(({ face }, rank) => {
+    const value = rank / faces;
+    order[face * 3] = value;
+    order[face * 3 + 1] = value;
+    order[face * 3 + 2] = value;
+  });
+  geometry.setAttribute('aCentroid', new THREE.BufferAttribute(centroid, 3));
+  geometry.setAttribute('aBary', new THREE.BufferAttribute(bary, 3));
+  geometry.setAttribute('aOrder', new THREE.BufferAttribute(order, 1));
+  return geometry;
+};
+
+/* Avance de la obra según el tiempo desde la ignición: un primer impulso
+   con muchos paneles llegando a la vez y después un ritmo que se calma */
+const shellBuilt = (since: number) => {
+  if (since < 1.7) return 0;
+  if (since < 2.7) return SHELL_START * (1 - (1 - (since - 1.7)) ** 3);
+  return SHELL_START + SHELL_SPAN * (1 - Math.exp(-(since - 2.7) / SHELL_TAU));
+};
 
 /* ---------------- Enjambre Dyson ---------------- */
 
@@ -283,18 +396,6 @@ const buildSwarm = (count: number) => {
   return { positions, orbit, motion };
 };
 
-const orbitGuide = (radius: number, incline: number, node: number) => {
-  const points = new Float32Array(160 * 3);
-  const rotation = new THREE.Matrix4().makeRotationY(node).multiply(new THREE.Matrix4().makeRotationX(incline));
-  const point = new THREE.Vector3();
-  for (let index = 0; index < 160; index++) {
-    const angle = (index / 160) * Math.PI * 2;
-    point.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius).applyMatrix4(rotation);
-    points.set([point.x, point.y, point.z], index * 3);
-  }
-  return points;
-};
-
 const easeOut = (t: number) => 1 - (1 - t) ** 3;
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
 // Se infla con un pequeño rebote, como si la presión la empujara de más
@@ -310,16 +411,30 @@ interface Pointer {
 const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; count: number }) => {
   const star = useRef<THREE.Mesh>(null);
   const corona = useRef<THREE.Mesh>(null);
-  const guideMaterial = useRef<THREE.LineBasicMaterial>(null);
   const pointer = useRef<Pointer>({ x: 0, y: 0, on: 0 });
   const smooth = useRef<Pointer>({ x: 0, y: 0, on: 0 });
   const readyMarked = useRef(false);
 
   const swarm = useMemo(() => buildSwarm(count), [count]);
-  const guides = useMemo(() => FAMILIES.map((family) => orbitGuide((family.inner + family.outer) / 2, family.incline, family.node)), []);
 
   // Materiales propios: así los uniforms que se actualizan son los que usa la GPU
-  const starUniforms = useMemo(() => ({ uTime: { value: 0 }, uIgnite: { value: 0 }, uFlash: { value: 0 } }), []);
+  const starUniforms = useMemo(() => ({ uTime: { value: 0 }, uIgnite: { value: 0 }, uFlash: { value: 0 }, uDim: { value: 0 } }), []);
+  const shellUniforms = useMemo(() => ({ uBuilt: { value: 0 }, uWindow: { value: 0.01 }, uIgnite: { value: 0 } }), []);
+  const shellGeometry = useMemo(buildShell, []);
+  const ghostGeometry = useMemo(() => new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(SHELL_RADIUS * 0.997, SHELL_DETAIL)), []);
+  const shellMaterial = useMemo(() => new THREE.ShaderMaterial({
+    vertexShader: SHELL_VERTEX,
+    fragmentShader: SHELL_FRAGMENT,
+    uniforms: shellUniforms,
+    side: THREE.DoubleSide,
+  }), [shellUniforms]);
+  const ghostMaterial = useMemo(() => new THREE.LineBasicMaterial({
+    color: '#c8dcff',
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+  }), []);
+  const progress = useRef(-1);
   const coronaUniforms = useMemo(() => ({
     uTime: { value: 0 }, uIgnite: { value: 0 }, uFlareAngle: { value: 0 }, uFlareAge: { value: -1 },
   }), []);
@@ -358,7 +473,11 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
     starMaterial.dispose();
     coronaMaterial.dispose();
     swarmMaterial.dispose();
-  }, [starMaterial, coronaMaterial, swarmMaterial]);
+    shellMaterial.dispose();
+    ghostMaterial.dispose();
+    shellGeometry.dispose();
+    ghostGeometry.dispose();
+  }, [starMaterial, coronaMaterial, swarmMaterial, shellMaterial, ghostMaterial, shellGeometry, ghostGeometry]);
 
   // Puntero y clics se escuchan en la ventana: el lienzo no recibe eventos
   useEffect(() => {
@@ -478,7 +597,20 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
     swarmUniforms.uScroll.value = scroll;
     swarmUniforms.uPointer.value.set(current.x, current.y);
     swarmUniforms.uPointerOn.value = current.on;
-    if (guideMaterial.current) guideMaterial.current.opacity = 0.07 * clamp01((since - 1) / 2);
+    // La obra: el fantasma aparece primero y los paneles lo van llenando
+    const built = since < 0 ? 0 : shellBuilt(since);
+    const rate = since < 0 ? 0 : (shellBuilt(since + 0.05) - built) / 0.05;
+    shellUniforms.uBuilt.value = built;
+    shellUniforms.uWindow.value = Math.max(0.004, rate * 0.55);
+    shellUniforms.uIgnite.value = since < 0 ? 0 : clamp01((since - 1.4) / 0.6);
+    ghostMaterial.opacity = since < 0 ? 0 : 0.14 * easeOut(clamp01((since - 1.3) / 1.4));
+    starUniforms.uDim.value = built * 0.3;
+    coronaUniforms.uIgnite.value *= 1 - built * 0.45;
+    const percent = Math.round(built * 100);
+    if (since > 2.7 && percent !== progress.current) {
+      progress.current = percent;
+      livingSignal.onProgress?.(percent);
+    }
 
     if (!readyMarked.current) {
       readyMarked.current = true;
@@ -496,14 +628,8 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
         <planeGeometry args={[CORONA_RADIUS * 2, CORONA_RADIUS * 2]} />
         <primitive object={coronaMaterial} attach="material" />
       </mesh>
-      {guides.map((points, index) => (
-        <lineLoop key={index} renderOrder={2}>
-          <bufferGeometry>
-            <bufferAttribute attach="attributes-position" args={[points, 3]} />
-          </bufferGeometry>
-          <lineBasicMaterial ref={index === 0 ? guideMaterial : undefined} color="#ffb48a" transparent opacity={0} depthWrite={false} />
-        </lineLoop>
-      ))}
+      <mesh geometry={shellGeometry} material={shellMaterial} frustumCulled={false} />
+      <lineSegments geometry={ghostGeometry} material={ghostMaterial} renderOrder={2} />
       <points frustumCulled={false} renderOrder={3}>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" args={[swarm.positions, 3]} />
@@ -532,7 +658,7 @@ export default function LivingStar({ heroRef, paused }: { heroRef: RefObject<HTM
       camera={{ fov: 30, near: 0.1, far: 100, position: [0, 0, 8] }}
     >
       <PerformanceMonitor onDecline={() => setDpr(1)} />
-      <Scene heroRef={heroRef} count={narrow ? 3600 : 7200} />
+      <Scene heroRef={heroRef} count={narrow ? 1300 : 2600} />
     </Canvas>
   );
 }

@@ -60,6 +60,14 @@
   opacity: 1 !important;
 }
 
+/* A la izquierda, bajo el texto: a la derecha está la cartela de la obra */
+@media (min-width: 721px) {
+  .mo-hero.is-living .mo-sky-hint {
+    right: auto;
+    left: max(24px, calc((100% - min(1280px, 92vw)) / 2 + 24px));
+  }
+}
+
 @media (max-width: 720px) {
   .mo-hero.is-living .mo-hero-title {
     font-size: 12.4vw;
@@ -67,5 +75,118 @@
 
   .mo-hero.is-living .mo-hero-rule {
     width: 70%;
+  }
+}
+
+/* ---------- Cartela de la obra ---------- */
+
+.mo-dyson-plate {
+  position: absolute;
+  top: var(--plate-y, 80%);
+  left: var(--plate-x, 70%);
+  z-index: 2;
+  max-width: 260px;
+  padding-left: 14px;
+  border-left: 1px solid rgba(200, 220, 255, 0.35);
+  color: var(--mo-ink);
+  text-shadow: 0 1px 12px rgba(7, 7, 7, 0.9);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 1.1s ease, transform 1.1s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.mo-dyson-plate.is-on {
+  opacity: 1;
+  transform: none;
+}
+
+/* Trazo que une la cartela con la obra, como en las fichas técnicas */
+.mo-dyson-plate::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: -1px;
+  width: 1px;
+  height: var(--plate-reach, 40px);
+  background: linear-gradient(to top, rgba(200, 220, 255, 0.35), transparent);
+}
+
+.mo-dyson-plate p {
+  margin: 0;
+}
+
+.mo-dyson-plate-kicker {
+  font-family: var(--mo-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(200, 220, 255, 0.78);
+}
+
+.mo-dyson-plate-value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 6px 0 8px !important;
+  font-family: var(--mo-serif);
+  font-style: italic;
+  font-size: clamp(30px, 2.6vw, 40px);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.mo-dyson-plate-unit {
+  font-size: 0.6em;
+}
+
+.mo-dyson-plate-value small {
+  margin-left: 4px;
+  font-family: var(--mo-mono);
+  font-style: normal;
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--mo-muted);
+}
+
+.mo-dyson-plate-note {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: rgba(245, 241, 232, 0.72);
+}
+
+/* Durante la intro y en pantallas verticales solo queda lo esencial */
+.mo-hero.is-intro-dark .mo-dyson-plate {
+  opacity: 0;
+}
+
+/* En vertical no hay espacio bajo la estrella: cartela compacta arriba a la derecha */
+@media (max-width: 720px), (max-aspect-ratio: 9/10) {
+  .mo-dyson-plate {
+    top: 64px;
+    left: auto;
+    right: 16px;
+    max-width: 48vw;
+    padding: 0;
+    border: 0;
+    text-align: right;
+  }
+
+  .mo-dyson-plate::before,
+  .mo-dyson-plate-note,
+  .mo-dyson-plate-value small {
+    display: none;
+  }
+
+  .mo-dyson-plate-kicker {
+    font-size: 8.5px;
+    letter-spacing: 0.2em;
+  }
+
+  .mo-dyson-plate-value {
+    justify-content: flex-end;
+    margin: 4px 0 0 !important;
+    font-size: 24px;
   }
 }
