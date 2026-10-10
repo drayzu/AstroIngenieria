@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef, type RefObject } from 'react';
 import { animate, type AnimationPlaybackControls } from 'framer-motion';
-import { useLocale } from '../../i18n/LocaleProvider';
 import './heroIgnition.css';
 
 /* Fases de la intro, compartidas con el hero:
@@ -66,9 +65,7 @@ export const HeroIgnition = ({
   preload: () => Promise<unknown>;
   onPhase: (phase: IntroPhase) => void;
 }) => {
-  const { t } = useLocale();
   const layerRef = useRef<HTMLDivElement>(null);
-  const skipRef = useRef<HTMLButtonElement>(null);
   const dotRef = useRef<HTMLSpanElement>(null);
   const flareRef = useRef<HTMLSpanElement>(null);
   const ringRef = useRef<HTMLSpanElement>(null);
@@ -88,8 +85,7 @@ export const HeroIgnition = ({
     const ring = ringRef.current;
     const echo = echoRef.current;
     const flash = flashRef.current;
-    const skipButton = skipRef.current;
-    if (!hero || !bg || !layer || !dot || !flare || !ring || !echo || !flash || !skipButton) {
+    if (!hero || !bg || !layer || !dot || !flare || !ring || !echo || !flash) {
       releaseBootScreen();
       onPhase('off');
       return;
@@ -164,7 +160,6 @@ export const HeroIgnition = ({
     const ignite = () => {
       if (ignited || finished) return;
       ignited = true;
-      layer.classList.add('is-lit');
       onPhase('reveal');
       // Primero se enciende el disco de la estrella, luego se revela el cielo
       run(animate(radius, starR * 1.06, { duration: T.starOpen, ease: EASE_OUT, onUpdate: setRadius }));
@@ -192,7 +187,7 @@ export const HeroIgnition = ({
       if (!cancelled) ignite();
     });
 
-    // Solo se salta a propósito (botón o Esc): la estrella se abre de golpe
+    // Esc salta la intro: la estrella se abre de golpe
     const skip = () => {
       if (finished || cancelled) return;
       controls.forEach((control) => control.stop());
@@ -200,7 +195,6 @@ export const HeroIgnition = ({
       timers.length = 0;
       if (!ignited) {
         ignited = true;
-        layer.classList.add('is-lit');
         onPhase('reveal');
       }
       run(animate(radius, coverR, { duration: 0.45, ease: EASE_OUT, onUpdate: setRadius }));
@@ -209,29 +203,10 @@ export const HeroIgnition = ({
       later(finish, 1);
     };
     // Hasta la ignición la página no se desplaza: un scroll accidental no
-    // arrastra el hero ni rompe la escena. Quien insiste (scroll, teclas de
-    // avance o varios clics) ve aparecer el botón para saltar.
+    // arrastra el hero ni rompe la escena
     const scrollKeys = new Set([' ', 'PageDown', 'PageUp', 'ArrowDown', 'ArrowUp', 'Home', 'End']);
-    let wheelIntent = 0;
-    let clickIntent = 0;
-    const offerSkip = () => {
-      if (!ignited) layer.classList.add('is-offering-skip');
-    };
-    const onWheel = (event: WheelEvent) => {
-      if (ignited) return;
-      event.preventDefault();
-      wheelIntent += Math.abs(event.deltaY) + Math.abs(event.deltaX);
-      if (wheelIntent > 150) offerSkip();
-    };
-    const onTouchMove = (event: TouchEvent) => {
-      if (ignited) return;
-      event.preventDefault();
-      offerSkip();
-    };
-    const onPointerDown = (event: PointerEvent) => {
-      if (event.target === skipButton) return;
-      clickIntent += 1;
-      if (clickIntent >= 2) offerSkip();
+    const blockScroll = (event: Event) => {
+      if (!ignited) event.preventDefault();
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -239,23 +214,16 @@ export const HeroIgnition = ({
         return;
       }
       if (event.target instanceof HTMLElement && event.target.closest('button, input, textarea, select')) return;
-      if (!ignited && scrollKeys.has(event.key)) {
-        event.preventDefault();
-        offerSkip();
-      }
+      if (!ignited && scrollKeys.has(event.key)) event.preventDefault();
     };
-    skipButton.addEventListener('click', skip);
-    window.addEventListener('wheel', onWheel, { passive: false });
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
-    window.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('wheel', blockScroll, { passive: false });
+    window.addEventListener('touchmove', blockScroll, { passive: false });
     window.addEventListener('keydown', onKeyDown);
 
     return () => {
       cancelled = true;
-      skipButton.removeEventListener('click', skip);
-      window.removeEventListener('wheel', onWheel);
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('wheel', blockScroll);
+      window.removeEventListener('touchmove', blockScroll);
       window.removeEventListener('keydown', onKeyDown);
       controls.forEach((control) => control.stop());
       timers.forEach((timer) => window.clearTimeout(timer));
@@ -272,14 +240,6 @@ export const HeroIgnition = ({
         <span ref={echoRef} className="mo-ignite-ring is-echo" />
       </span>
       <span ref={dotRef} className="mo-ignite-dot" />
-      <button
-        ref={skipRef}
-        type="button"
-        className="mo-ignite-skip"
-        data-cursor-label={t('Saltar intro')}
-      >
-        {t('Saltar intro')}
-      </button>
     </div>
   );
 };

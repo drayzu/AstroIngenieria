@@ -290,7 +290,6 @@ export const englishMessages = {
   'Colector abierto: una ventana deja escapar la luz.': 'Collector open: a window lets light escape.',
   'Colector cerrado: la energía alimenta el haz.': 'Collector closed: energy feeds the beam.',
   ' · Esc deshace este gesto.': ' · Esc undoes this gesture.',
-  'Saltar intro': 'Skip intro',
 } as const;
 
 export type MessageKey = keyof typeof englishMessages;
