@@ -1,11 +1,12 @@
 /* ============ Cierre del recorrido ============
-   Tramo alto con escenario fijo: la estrella roja de la portada colapsa
-   hasta el punto de luz de la intro y queda la cita final. */
+   Tramo alto con escenario fijo: la cita final, y luego un punto de luz
+   que crece hasta ser estrella, colapsa, estalla y devuelve la visita al
+   comienzo desde ese mismo punto. */
 
 .mo-finale {
   position: relative;
-  height: 320vh;
-  height: 320svh;
+  height: 360vh;
+  height: 360svh;
   border-top: 1px solid var(--mo-line);
 }
 
@@ -17,56 +18,102 @@
   overflow: hidden;
 }
 
-/* Centro de la estrella y del punto (mismo alto que en la intro) */
-.mo-finale-anchor {
-  --star-r: min(28vmin, 260px);
+.mo-finale-copy {
   position: absolute;
   left: 50%;
-  top: 42%;
+  top: 50%;
+  width: min(760px, calc(100% - 48px));
+  translate: -50% -50%;
+  text-align: center;
+  will-change: transform, opacity, filter;
+}
+
+.mo-finale-quote {
+  margin: 0 auto;
+  font-family: var(--mo-serif);
+  font-style: italic;
+  font-weight: 450;
+  font-size: clamp(19px, 2.4vw, 27px);
+  line-height: 1.45;
+  color: rgba(245, 241, 232, 0.88);
+}
+
+.mo-finale-quote > span {
+  display: block;
+  margin-bottom: 0.5em;
+}
+
+.mo-finale-line {
+  margin: clamp(26px, 4.5vh, 46px) 0 0;
+  font-family: var(--mo-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.32em;
+  color: rgba(245, 241, 232, 0.35);
+}
+
+/* Mismo lugar que el punto de #mo-boot (index.html) y de la intro: al
+   fundirse a negro, este punto se convierte en el del comienzo */
+.mo-finale-anchor {
+  --star-r: min(26vmin, 240px);
+  position: absolute;
+  left: 50%;
+  top: calc((100vh - 46px) * 0.4675);
   width: 0;
   height: 0;
 }
 
-.mo-finale-halo {
+/* Estrella dibujada con luz: núcleo blanco, fotosfera naranja, limbo rojo */
+.mo-finale-star {
   position: absolute;
   left: 0;
   top: 0;
-  width: calc(var(--star-r) * 3.4);
-  height: calc(var(--star-r) * 3.4);
+  width: calc(var(--star-r) * 2);
+  height: calc(var(--star-r) * 2);
   translate: -50% -50%;
   border-radius: 50%;
   background: radial-gradient(
-    circle,
-    rgba(255, 96, 44, 0.34) 0%,
-    rgba(255, 64, 24, 0.12) 38%,
-    transparent 68%
+    circle at 46% 44%,
+    #fff8ec 0%,
+    #ffe2b4 12%,
+    #ffaa66 32%,
+    #f0642f 58%,
+    #b8301a 84%,
+    #7a1a10 100%
   );
+  box-shadow:
+    0 0 36px 8px rgba(255, 120, 60, 0.6),
+    0 0 110px 36px rgba(255, 80, 34, 0.28),
+    0 0 220px 90px rgba(255, 60, 24, 0.12);
   will-change: transform, opacity;
 }
 
-/* La imagen de la portada, encuadrada para que el disco de la estrella
-   (centro 49,9 % · 47,14 %, radio 40 % del alto) caiga justo en el ancla */
-.mo-finale-star {
-  --img-h: calc(var(--star-r) / 0.4);
-  --img-w: calc(var(--img-h) * 2.3337);
+/* Superficie viva: manchas suaves e irregulares que giran muy despacio */
+.mo-finale-star::before {
+  content: '';
   position: absolute;
-  left: calc(var(--img-w) * -0.499);
-  top: calc(var(--img-h) * -0.4714);
-  width: var(--img-w);
-  height: var(--img-h);
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  clip-path: circle(calc(var(--star-r) * 1.05) at 49.9% 47.14%);
-  transform-origin: 49.9% 47.14%;
-  will-change: transform, opacity;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 34%, rgba(255, 232, 186, 0.3), transparent 30%),
+    radial-gradient(circle at 68% 58%, rgba(150, 28, 10, 0.3), transparent 36%),
+    radial-gradient(circle at 44% 76%, rgba(255, 196, 132, 0.22), transparent 26%),
+    radial-gradient(circle at 74% 26%, rgba(170, 40, 14, 0.22), transparent 24%);
+  mix-blend-mode: overlay;
+  animation: mo-finale-spin 40s linear infinite;
 }
 
-.mo-finale-spark {
+/* Calor del colapso: el núcleo blanco cubre la estrella mientras se encoge */
+.mo-finale-heat {
   position: absolute;
-  left: 0;
-  top: 0;
-  width: 0;
-  height: 0;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0%, #fff4e4 45%, #ffc890 80%, rgba(255, 150, 90, 0.9) 100%);
+}
+
+@keyframes mo-finale-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Mismo punto de luz que .mo-ignite-dot en la intro */
@@ -121,44 +168,40 @@
   will-change: transform, opacity;
 }
 
-.mo-finale-copy {
+.mo-finale-flash {
   position: absolute;
-  left: 50%;
-  top: 34%;
-  width: min(760px, calc(100% - 48px));
-  translate: -50% 0;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% calc((100vh - 46px) * 0.4675),
+    rgba(255, 238, 218, 0.95) 0%,
+    rgba(255, 140, 80, 0.4) 18%,
+    rgba(255, 80, 40, 0.1) 42%,
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+  pointer-events: none;
+  will-change: opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mo-finale-star::before {
+    animation: none;
+  }
+}
+
+/* Sin movimiento: el cierre es un pie de página quieto con botón */
+.mo-finale.is-static {
+  height: auto;
+  padding: clamp(160px, 24vh, 320px) 24px;
   text-align: center;
 }
 
-.mo-finale-quote {
-  margin: 0 auto;
-  font-family: var(--mo-serif);
-  font-style: italic;
-  font-weight: 450;
-  font-size: clamp(19px, 2.4vw, 27px);
-  line-height: 1.45;
-  color: rgba(245, 241, 232, 0.88);
+.mo-finale.is-static .mo-finale-quote {
+  max-width: 46ch;
 }
 
-.mo-finale-quote > span {
-  display: block;
-  margin-bottom: 0.5em;
-}
-
-.mo-finale-signature {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 26px;
-  margin-top: clamp(28px, 5vh, 52px);
-}
-
-.mo-finale-line {
-  margin: 0;
-  font-family: var(--mo-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.32em;
-  color: rgba(245, 241, 232, 0.35);
+.mo-finale.is-static .mo-finale-line {
+  margin-bottom: 28px;
 }
 
 .mo-finale-restart {
@@ -175,53 +218,19 @@
   border: 1px solid rgba(245, 241, 232, 0.18);
   border-radius: 999px;
   cursor: pointer;
-  transition:
-    color 0.25s ease,
-    border-color 0.25s ease,
-    box-shadow 0.25s ease;
 }
 
-/* El punto de luz, en miniatura, dentro del botón */
 .mo-finale-restart > i {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: #fff1e0;
-  box-shadow:
-    0 0 6px 1px rgba(255, 196, 150, 0.9),
-    0 0 14px 4px rgba(255, 110, 60, 0.4);
-}
-
-.mo-finale-restart:hover,
-.mo-finale-restart:focus-visible {
-  color: #f5f1e8;
-  border-color: rgba(255, 180, 140, 0.5);
-  box-shadow: 0 0 28px -6px rgba(255, 110, 60, 0.5);
-}
-
-/* Sin movimiento: el cierre es un pie de página quieto */
-.mo-finale.is-static {
-  height: auto;
-  padding: clamp(160px, 24vh, 320px) 24px;
-  text-align: center;
-}
-
-.mo-finale.is-static .mo-finale-quote {
-  max-width: 46ch;
-  margin-bottom: 34px;
-}
-
-.mo-finale.is-static .mo-finale-line {
-  margin-bottom: 28px;
+  box-shadow: 0 0 6px 1px rgba(255, 196, 150, 0.9);
 }
 
 @media (max-width: 720px) {
   .mo-finale {
-    height: 280vh;
-    height: 280svh;
-  }
-
-  .mo-finale-copy {
-    top: 31%;
+    height: 320vh;
+    height: 320svh;
   }
 }

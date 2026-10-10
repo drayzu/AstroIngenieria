@@ -3200,31 +3200,34 @@ export default function MuseoOrbital() {
     if (chapter) tintAtmosphere(chapter);
   }, [activeHallId, chapters, tintAtmosphere]);
 
-  // Desde el cierre: el recorrido se rebobina hacia arriba con el cielo en
-  // salto y, al llegar a la portada, la estrella vuelve a encenderse
-  const restartJourney = useCallback(() => {
+  // Desde el cierre: la pantalla se funde a negro dejando solo el punto de
+  // luz (la misma pantalla de arranque de index.html, en el mismo lugar que
+  // el punto del cierre). Detrás se vuelve a la portada y la intro, al
+  // montarse, retira esa pantalla y enciende de nuevo la estrella.
+  const returnToStart = useCallback(() => {
     const root = rootRef.current;
     if (!root) return;
     if (reduced) {
       root.scrollTop = 0;
       return;
     }
-    window.dispatchEvent(new CustomEvent('mo-warp', { detail: { strength: 40, direction: -1 } }));
-    let settled = false;
-    const cleanup = () => {
-      settled = true;
-      root.removeEventListener('scroll', onScroll);
-      window.clearTimeout(giveUp);
-    };
-    const onScroll = () => {
-      if (settled || root.scrollTop > 4) return;
-      cleanup();
+    if (document.getElementById('mo-boot')) return;
+    const boot = document.createElement('div');
+    boot.id = 'mo-boot';
+    boot.setAttribute('aria-hidden', 'true');
+    boot.append(document.createElement('i'));
+    boot.style.opacity = '0';
+    boot.style.transition = 'opacity 0.7s ease';
+    document.body.append(boot);
+    requestAnimationFrame(() => {
+      boot.style.opacity = '1';
+    });
+    window.setTimeout(() => {
+      root.scrollTop = 0;
       window.dispatchEvent(new CustomEvent('mo-replay-intro'));
-    };
-    root.addEventListener('scroll', onScroll, { passive: true });
-    // Si quien visita interrumpe el viaje, no se fuerza nada
-    const giveUp = window.setTimeout(cleanup, 8000);
-    root.scrollTo({ top: 0, behavior: 'smooth' });
+      // Si la intro no llegara a montarse, la pantalla no se queda negra
+      window.setTimeout(() => releaseBootScreen(450), 1600);
+    }, 750);
   }, [reduced]);
 
   const openJourneyConcept = useCallback((concept: AstroConcept) => {
@@ -3575,7 +3578,7 @@ export default function MuseoOrbital() {
 
       <Archivo sources={archiveSources} />
 
-      <MuseumFinale scrollRef={rootRef} onRestart={restartJourney} />
+      <MuseumFinale scrollRef={rootRef} onReturn={returnToStart} />
 
       <nav className="mo-rail" aria-label={t("Navegación por capítulos")}>
         <div className="mo-rail-track" aria-hidden="true">
