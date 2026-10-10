@@ -52,6 +52,7 @@ import {
 import { DistortOverlay } from './DistortOverlay';
 import { SalaPortal } from './SalaPortal';
 import { HeroIgnition, releaseBootScreen, shouldPlayIntro, type IntroPhase } from './HeroIgnition';
+import { MuseumFinale } from './MuseumFinale';
 import './museoOrbital.css';
 import './obraReveal.css';
 
@@ -407,6 +408,20 @@ const Hero = memo(({
   useEffect(() => {
     if (!playIntro) releaseBootScreen(450);
   }, [playIntro]);
+
+  // «Volver al comienzo» desde el cierre: la portada vuelve a la estrella roja
+  // y la ignición se repite, cerrando el círculo del recorrido
+  useEffect(() => {
+    const onReplay = () => {
+      if (reduced) return;
+      imageRequestRef.current += 1;
+      setImageFocus(false);
+      setHeroPosition(0);
+      setIntroPhase((phase) => (phase === 'off' ? 'dark' : phase));
+    };
+    window.addEventListener('mo-replay-intro', onReplay);
+    return () => window.removeEventListener('mo-replay-intro', onReplay);
+  }, [reduced]);
 
   const showHeroAt = useCallback((position: number) => {
     if (position === heroPosition) return;
@@ -1374,7 +1389,7 @@ const Hero = memo(({
           tabIndex={imageFocus ? -1 : 0}
           disabled={playgroundEntryState === 'entering' || playgroundEntryState === 'leaving'}
           initial={{ opacity: 0, y: 8 }}
-          animate={revealed ? { opacity: 1, y: 0 } : undefined}
+          animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 8, transition: { duration: 0 } }}
           transition={{ delay: reduced ? 0 : 1.05, duration: reduced ? 0 : 0.9, ease: EASE_OUT }}
         >
           <span className="mo-hero-playground-word" aria-hidden="true">
@@ -1419,7 +1434,7 @@ const Hero = memo(({
           ref={kickerRef}
           className="mo-kicker"
           initial={{ opacity: 0, y: 18 }}
-          animate={revealed ? { opacity: 1, y: 0 } : undefined}
+          animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 18, transition: { duration: 0 } }}
           transition={{ delay: reduced ? 0 : 0.5, duration: 0.9, ease: EASE_OUT }}
         >{t("Atlas de astroingeniería")}</motion.p>
 
@@ -1440,7 +1455,7 @@ const Hero = memo(({
                     letterRefs.current[index] = el;
                   }}
                   initial={{ y: reduced ? '0%' : '180%' }}
-                  animate={revealed ? { y: '0%' } : undefined}
+                  animate={revealed ? { y: '0%' } : { y: '180%', transition: { duration: 0 } }}
                   transition={{
                     delay: reduced ? 0 : 0.55 + index * 0.038,
                     duration: reduced ? 0 : 1.25,
@@ -1457,7 +1472,7 @@ const Hero = memo(({
         <motion.div
           className="mo-hero-rule"
           initial={{ scaleX: 0 }}
-          animate={revealed ? { scaleX: 1 } : undefined}
+          animate={revealed ? { scaleX: 1 } : { scaleX: 0, transition: { duration: 0 } }}
           transition={{ delay: reduced ? 0 : 1.4, duration: 1.6, ease: EASE_OUT }}
         />
 
@@ -1465,7 +1480,7 @@ const Hero = memo(({
           ref={subRef}
           className="mo-hero-sub"
           initial={{ opacity: 0, y: 22 }}
-          animate={revealed ? { opacity: 1, y: 0 } : undefined}
+          animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 22, transition: { duration: 0 } }}
           transition={{ delay: reduced ? 0 : 1.6, duration: 1, ease: EASE_OUT }}
         >{t("De los hábitats orbitales a las estrellas, exploramos qué podríamos construir, qué haría falta para lograrlo y dónde aparecen los límites físicos.")}</motion.p>
 
@@ -1473,7 +1488,7 @@ const Hero = memo(({
           ref={hintRef}
           className="mo-sky-hint"
           initial={{ opacity: 0 }}
-          animate={revealed ? { opacity: 1 } : undefined}
+          animate={revealed ? { opacity: 1 } : { opacity: 0, transition: { duration: 0 } }}
           transition={{ delay: reduced ? 0 : 2.8, duration: 1 }}
         >
           <span className="mo-sky-action">
@@ -3185,6 +3200,33 @@ export default function MuseoOrbital() {
     if (chapter) tintAtmosphere(chapter);
   }, [activeHallId, chapters, tintAtmosphere]);
 
+  // Desde el cierre: el recorrido se rebobina hacia arriba con el cielo en
+  // salto y, al llegar a la portada, la estrella vuelve a encenderse
+  const restartJourney = useCallback(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    if (reduced) {
+      root.scrollTop = 0;
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('mo-warp', { detail: { strength: 40, direction: -1 } }));
+    let settled = false;
+    const cleanup = () => {
+      settled = true;
+      root.removeEventListener('scroll', onScroll);
+      window.clearTimeout(giveUp);
+    };
+    const onScroll = () => {
+      if (settled || root.scrollTop > 4) return;
+      cleanup();
+      window.dispatchEvent(new CustomEvent('mo-replay-intro'));
+    };
+    root.addEventListener('scroll', onScroll, { passive: true });
+    // Si quien visita interrumpe el viaje, no se fuerza nada
+    const giveUp = window.setTimeout(cleanup, 8000);
+    root.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [reduced]);
+
   const openJourneyConcept = useCallback((concept: AstroConcept) => {
     triggerFlight();
     setReadingContext('journey');
@@ -3533,10 +3575,7 @@ export default function MuseoOrbital() {
 
       <Archivo sources={archiveSources} />
 
-      <footer className="mo-footer mo-layer">
-        <blockquote>{t("La naturaleza necesitó miles de millones de años para engendrar una mente capaz de comprenderla. Bastó una fracción de ese tiempo para que aquella mente aprendiera a crear otras. Y así, de un universo que nunca supo hacia dónde iba, nació algo capaz de elegir hacia dónde irá.")}</blockquote>
-        <p className="mo-footer-line">{t("ASTROINGENIERÍA — EXPOSICIÓN PERMANENTE · MUSEO ORBITAL · MMXXVI")}</p>
-      </footer>
+      <MuseumFinale scrollRef={rootRef} onRestart={restartJourney} />
 
       <nav className="mo-rail" aria-label={t("Navegación por capítulos")}>
         <div className="mo-rail-track" aria-hidden="true">
