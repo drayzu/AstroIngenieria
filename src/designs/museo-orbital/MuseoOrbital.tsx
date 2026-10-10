@@ -421,14 +421,14 @@ const Hero = memo(({
       if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
       const root = heroRef.current?.closest<HTMLElement>('.mo-root');
-      if (!root || root.scrollTop > 2 || playgroundEntryState !== 'idle') return;
+      if (!root || root.scrollTop > 2 || playgroundEntryState !== 'idle' || introPhase !== 'off') return;
       event.preventDefault();
       const direction = event.key === 'ArrowRight' ? 1 : -1;
       showHeroAt((heroPosition + direction + heroOrder.length) % heroOrder.length);
     };
     window.addEventListener('keydown', onArrowKey);
     return () => window.removeEventListener('keydown', onArrowKey);
-  }, [heroOrder.length, heroPosition, heroRef, playgroundEntryState, showHeroAt]);
+  }, [heroOrder.length, heroPosition, heroRef, introPhase, playgroundEntryState, showHeroAt]);
 
   useEffect(() => {
     const hero = heroRef.current;
