@@ -9,8 +9,16 @@ export const isLivingHero = () => {
   try {
     if (new URLSearchParams(window.location.search).get('hero') === 'clasico') return false;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    // Solo con aceleración por hardware: dibujada por software la estrella
+    // vuelve lenta toda la página (incluso esperas de lectura de píxeles)
     const canvas = document.createElement('canvas');
-    return Boolean(canvas.getContext('webgl2') ?? canvas.getContext('webgl'));
+    const options = { failIfMajorPerformanceCaveat: true };
+    const gl = (canvas.getContext('webgl2', options) ?? canvas.getContext('webgl', options)) as WebGLRenderingContext | null;
+    if (!gl) return false;
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    const renderer = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : '';
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    return !/swiftshader|llvmpipe|software|basic render/i.test(renderer);
   } catch {
     return false;
   }
