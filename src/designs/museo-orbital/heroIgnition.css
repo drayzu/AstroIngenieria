@@ -1,0 +1,124 @@
+/* ============ Intro: ignición de la estrella ============
+   Un punto de luz llega desde el hiperespacio, se carga y enciende la
+   estrella roja del hero abriendo un iris desde su centro. */
+
+/* Iris sobre la imagen del hero: --ignite-* los escribe HeroIgnition */
+.mo-hero.is-intro .mo-hero-bg-static {
+  clip-path: circle(var(--ignite-r, 0px) at var(--ignite-x, 50%) var(--ignite-y, 47%));
+}
+
+/* Mientras arde la intro no hay barra, marquesina ni riel */
+.mo-hero.is-intro-dark .mo-hero-toolbar,
+.mo-hero.is-intro-dark .mo-hero-carousel,
+.mo-hero.is-intro-dark ~ .mo-marquee,
+.mo-hero.is-intro-dark ~ .mo-rail {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Animación (no transición) para no pisar las transiciones propias de
+   esos elementos, como la inclinación de la marquesina */
+.mo-hero.is-intro:not(.is-intro-dark) .mo-hero-toolbar,
+.mo-hero.is-intro:not(.is-intro-dark) .mo-hero-carousel,
+.mo-hero.is-intro:not(.is-intro-dark) ~ .mo-marquee,
+.mo-hero.is-intro:not(.is-intro-dark) ~ .mo-rail {
+  animation: mo-intro-chrome-in 0.9s ease both;
+}
+
+@keyframes mo-intro-chrome-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.mo-ignite {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Mismo punto que #mo-boot en index.html, algo más grande */
+.mo-ignite-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: #fff1e0;
+  box-shadow:
+    0 0 8px 2px rgba(255, 196, 150, 0.9),
+    0 0 26px 8px rgba(255, 110, 60, 0.45),
+    0 0 60px 22px rgba(255, 70, 30, 0.16);
+  will-change: transform, opacity;
+}
+
+.mo-ignite-anchor {
+  position: absolute;
+  left: var(--sx);
+  top: var(--sy);
+  width: 0;
+  height: 0;
+}
+
+/* Destello anamórfico horizontal mientras el punto se carga */
+.mo-ignite-flare {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: min(92vw, 1500px);
+  height: 2px;
+  translate: -50% -50%;
+  background: linear-gradient(
+    90deg,
+    transparent 6%,
+    rgba(255, 150, 100, 0.35) 30%,
+    rgba(255, 214, 180, 0.85) 46%,
+    #fff6ea 50%,
+    rgba(255, 214, 180, 0.85) 54%,
+    rgba(255, 150, 100, 0.35) 70%,
+    transparent 94%
+  );
+  box-shadow: 0 0 18px 4px rgba(255, 120, 70, 0.3);
+  opacity: 0;
+  transform: scaleX(0);
+  will-change: transform, opacity;
+}
+
+/* Onda expansiva desde el borde de la estrella */
+.mo-ignite-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--star-d);
+  height: var(--star-d);
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 196, 160, 0.85);
+  box-shadow:
+    0 0 34px 6px rgba(255, 110, 60, 0.42),
+    inset 0 0 34px 6px rgba(255, 110, 60, 0.28);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.mo-ignite-ring.is-echo {
+  border-width: 1px;
+  box-shadow: 0 0 20px 3px rgba(255, 110, 60, 0.3);
+}
+
+.mo-ignite-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--sx) var(--sy),
+    rgba(255, 238, 218, 0.95) 0%,
+    rgba(255, 140, 80, 0.42) 16%,
+    rgba(255, 80, 40, 0.12) 38%,
+    transparent 64%
+  );
+  mix-blend-mode: screen;
+  opacity: 0;
+  will-change: opacity;
+}

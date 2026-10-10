@@ -5,6 +5,9 @@ import { LocaleProvider } from './i18n/LocaleProvider';
 
 const root = createRoot(document.getElementById('root')!);
 
+// Los laboratorios no tienen intro: retiran la pantalla de arranque al montar
+const releaseBoot = () => document.getElementById('mo-boot')?.remove();
+
 const isLabPath = (suffix: string) =>
   window.location.pathname.replace(/\/+$/, '').endsWith(suffix);
 
@@ -16,6 +19,7 @@ if (isLabPath('/disenos')) {
           <DesignLab />
         </StrictMode>,
       );
+      releaseBoot();
     });
   } else {
     void import('./designs/museo-orbital/MuseoOrbital').then(({ default: MuseoOrbital }) => {
@@ -33,6 +37,7 @@ if (isLabPath('/disenos')) {
         <ForjaLab />
       </StrictMode>,
     );
+    releaseBoot();
   });
 } else {
   void import('./designs/museo-orbital/MuseoOrbital').then(({ default: MuseoOrbital }) => {

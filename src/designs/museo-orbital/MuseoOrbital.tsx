@@ -51,6 +51,7 @@ import {
 } from './PlaygroundArcade';
 import { DistortOverlay } from './DistortOverlay';
 import { SalaPortal } from './SalaPortal';
+import { HeroIgnition, releaseBootScreen, shouldPlayIntro, type IntroPhase } from './HeroIgnition';
 import './museoOrbital.css';
 
 const totalWorks = chapters.reduce((sum, chapter) => sum + chapter.concepts.length, 0);
@@ -378,6 +379,10 @@ const Hero = memo(({
   const imageRequestRef = useRef(0);
   const activeHeroIndex = heroOrder[heroPosition];
   const activeHero = HOME_HERO_IMAGES[activeHeroIndex];
+  // Intro de primera visita: el texto del hero espera a que la estrella se encienda
+  const [playIntro] = useState(shouldPlayIntro);
+  const [introPhase, setIntroPhase] = useState<IntroPhase>(playIntro ? 'dark' : 'off');
+  const revealed = introPhase !== 'dark';
 
   const preloadHero = useCallback((index: number) => {
     const cached = imageLoadsRef.current.get(index);
@@ -395,6 +400,12 @@ const Hero = memo(({
     imageLoadsRef.current.set(index, loaded);
     return loaded;
   }, []);
+
+  const preloadFirstHero = useCallback(() => preloadHero(heroOrder[0]), [heroOrder, preloadHero]);
+
+  useEffect(() => {
+    if (!playIntro) releaseBootScreen(450);
+  }, [playIntro]);
 
   const showHeroAt = useCallback((position: number) => {
     if (position === heroPosition) return;
@@ -445,12 +456,12 @@ const Hero = memo(({
   }, [heroOrder, heroPosition, heroVisible, pageVisible, preloadHero]);
 
   useEffect(() => {
-    if (reduced || !heroVisible || !pageVisible || playgroundEntryState !== 'idle') return;
+    if (reduced || introPhase !== 'off' || !heroVisible || !pageVisible || playgroundEntryState !== 'idle') return;
     const timeout = window.setTimeout(() => {
       showHeroAt((heroPosition + 1) % heroOrder.length);
     }, HERO_ROTATION_MS);
     return () => window.clearTimeout(timeout);
-  }, [heroOrder, heroPosition, heroVisible, pageVisible, playgroundEntryState, reduced, showHeroAt]);
+  }, [heroOrder, heroPosition, heroVisible, introPhase, pageVisible, playgroundEntryState, reduced, showHeroAt]);
 
   useEffect(() => {
     if (!imageFocus) return;
@@ -1270,7 +1281,9 @@ const Hero = memo(({
   return (
     <section
       ref={heroRef}
-      className={`mo-hero mo-layer${imageFocus ? ' is-image-focus' : ''}`}
+      className={`mo-hero mo-layer${imageFocus ? ' is-image-focus' : ''}${
+        introPhase !== 'off' ? ' is-intro' : ''
+      }${introPhase === 'dark' || introPhase === 'reveal' ? ' is-intro-dark' : ''}`}
       onMouseMove={trackSpotlight}
     >
       {playgroundEntryState !== 'entering' && playgroundEntryState !== 'leaving' && (
@@ -1301,6 +1314,9 @@ const Hero = memo(({
       </AnimatePresence>
       <div className="mo-hero-scrim" />
       <div className="mo-hero-spot" aria-hidden="true" />
+      {introPhase !== 'off' && (
+        <HeroIgnition heroRef={heroRef} preload={preloadFirstHero} onPhase={setIntroPhase} />
+      )}
       {playgroundEntryState !== 'entering' && playgroundEntryState !== 'leaving' && (
         <div className={`mo-hero-carousel${imageFocus ? ' is-expanded' : ''}`} role="group" aria-label={t("Imágenes de portada")}>
           {imageFocus && (
@@ -1355,7 +1371,7 @@ const Hero = memo(({
           tabIndex={imageFocus ? -1 : 0}
           disabled={playgroundEntryState === 'entering' || playgroundEntryState === 'leaving'}
           initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={revealed ? { opacity: 1, y: 0 } : undefined}
           transition={{ delay: reduced ? 0 : 1.05, duration: reduced ? 0 : 0.9, ease: EASE_OUT }}
         >
           <span className="mo-hero-playground-word" aria-hidden="true">
@@ -1400,7 +1416,7 @@ const Hero = memo(({
           ref={kickerRef}
           className="mo-kicker"
           initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={revealed ? { opacity: 1, y: 0 } : undefined}
           transition={{ delay: reduced ? 0 : 0.5, duration: 0.9, ease: EASE_OUT }}
         >{t("Atlas de astroingeniería")}</motion.p>
 
@@ -1421,7 +1437,7 @@ const Hero = memo(({
                     letterRefs.current[index] = el;
                   }}
                   initial={{ y: reduced ? '0%' : '180%' }}
-                  animate={{ y: '0%' }}
+                  animate={revealed ? { y: '0%' } : undefined}
                   transition={{
                     delay: reduced ? 0 : 0.55 + index * 0.038,
                     duration: reduced ? 0 : 1.25,
@@ -1438,7 +1454,7 @@ const Hero = memo(({
         <motion.div
           className="mo-hero-rule"
           initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
+          animate={revealed ? { scaleX: 1 } : undefined}
           transition={{ delay: reduced ? 0 : 1.4, duration: 1.6, ease: EASE_OUT }}
         />
 
@@ -1446,7 +1462,7 @@ const Hero = memo(({
           ref={subRef}
           className="mo-hero-sub"
           initial={{ opacity: 0, y: 22 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={revealed ? { opacity: 1, y: 0 } : undefined}
           transition={{ delay: reduced ? 0 : 1.6, duration: 1, ease: EASE_OUT }}
         >{t("De los hábitats orbitales a las estrellas, exploramos qué podríamos construir, qué haría falta para lograrlo y dónde aparecen los límites físicos.")}</motion.p>
 
@@ -1454,7 +1470,7 @@ const Hero = memo(({
           ref={hintRef}
           className="mo-sky-hint"
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          animate={revealed ? { opacity: 1 } : undefined}
           transition={{ delay: reduced ? 0 : 2.8, duration: 1 }}
         >
           <span className="mo-sky-action">
