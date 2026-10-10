@@ -2336,6 +2336,7 @@ export default function MuseoOrbital() {
   const playgroundAudioTrackIndex = useRef(0);
   const playgroundAudioPreloaderRef = useRef<HTMLAudioElement | null>(null);
   const railFillRef = useRef<HTMLSpanElement>(null);
+  const railRef = useRef<HTMLElement>(null);
   const atmosRef = useRef<HTMLDivElement>(null);
   const museumKeyboardVelocityRef = useRef(0);
 
@@ -3178,12 +3179,24 @@ export default function MuseoOrbital() {
       if (!frame) frame = window.requestAnimationFrame(syncActiveHall);
     };
 
+    // Mientras se hace scroll (y un momento después) el riel muestra el
+    // nombre del capítulo en curso junto a su punto
+    let scrollingTimer = 0;
+    const markScrolling = () => {
+      railRef.current?.classList.add('is-scrolling');
+      window.clearTimeout(scrollingTimer);
+      scrollingTimer = window.setTimeout(() => railRef.current?.classList.remove('is-scrolling'), 1400);
+    };
+
     requestSync();
     root.addEventListener('scroll', requestSync, { passive: true });
+    root.addEventListener('scroll', markScrolling, { passive: true });
     window.addEventListener('resize', requestSync);
     return () => {
       window.cancelAnimationFrame(frame);
+      window.clearTimeout(scrollingTimer);
       root.removeEventListener('scroll', requestSync);
+      root.removeEventListener('scroll', markScrolling);
       window.removeEventListener('resize', requestSync);
     };
   }, []);
@@ -3580,7 +3593,11 @@ export default function MuseoOrbital() {
 
       <MuseumFinale scrollRef={rootRef} onReturn={returnToStart} />
 
-      <nav className="mo-rail" aria-label={t("Navegación por capítulos")}>
+      <nav
+        ref={railRef}
+        className={`mo-rail${activeHallId ? '' : ' is-idle'}`}
+        aria-label={t("Navegación por capítulos")}
+      >
         <div className="mo-rail-track" aria-hidden="true">
           <span ref={railFillRef} className="mo-rail-fill" />
         </div>
@@ -3589,14 +3606,15 @@ export default function MuseoOrbital() {
             key={chapter.id}
             type="button"
             className={activeHallId === chapter.id ? 'is-eclipsed' : ''}
+            style={{ '--accent': chapter.color } as CSSProperties}
             aria-label={t("Capítulo {0}: {1}", chapter.number.padStart(2, '0'), chapter.title)}
             aria-current={activeHallId === chapter.id ? 'location' : undefined}
             onClick={() => scrollToId(`sala-${chapter.id}`)}
           >
             <span className="mo-rail-disc" aria-hidden="true" />
             <span className="mo-rail-tooltip" aria-hidden="true">
-              <span>{t("Capítulo")} {chapter.number.padStart(2, '0')}</span>
               <strong>{chapter.title}</strong>
+              <span>{chapter.number.padStart(2, '0')}</span>
             </span>
           </button>
         ))}
