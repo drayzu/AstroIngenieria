@@ -10,9 +10,12 @@ const FULL_SPEED = 55;
 const MAX_STRETCH = 0.06;
 const FRAME_LAG = 10;
 const META_LAG = 18;
+// La separación de color solo aparece pasado este umbral de velocidad
+const CHROMA_FROM = 0.2;
 
 interface WarpParts {
   frame: HTMLElement | null;
+  mask: HTMLElement | null;
   zoom: HTMLElement | null;
   meta: HTMLElement | null;
 }
@@ -28,6 +31,7 @@ export const useVelocityWarp = (rootRef: RefObject<HTMLElement | null>, disabled
       if (!found) {
         found = {
           frame: obra.querySelector<HTMLElement>('.mo-frame'),
+          mask: obra.querySelector<HTMLElement>('.mo-frame-mask'),
           zoom: obra.querySelector<HTMLElement>('.mo-frame-zoom'),
           meta: obra.querySelector<HTMLElement>('.mo-obra-meta'),
         };
@@ -37,8 +41,9 @@ export const useVelocityWarp = (rootRef: RefObject<HTMLElement | null>, disabled
     };
 
     const reset = (obra: HTMLElement) => {
-      const { frame, zoom, meta } = partsOf(obra);
+      const { frame, mask, zoom, meta } = partsOf(obra);
       frame?.style.removeProperty('translate');
+      mask?.style.removeProperty('--chroma');
       zoom?.style.removeProperty('scale');
       meta?.style.removeProperty('translate');
     };
@@ -81,11 +86,17 @@ export const useVelocityWarp = (rootRef: RefObject<HTMLElement | null>, disabled
       const stretch = (1 + Math.abs(speed) * MAX_STRETCH).toFixed(4);
       const frameLag = `0 ${(speed * FRAME_LAG).toFixed(2)}px`;
       const metaLag = `0 ${(speed * META_LAG).toFixed(2)}px`;
+      // Separación de color: rojo en el borde que avanza, cian en el que queda
+      const chroma = Math.max(0, (Math.abs(speed) - CHROMA_FROM) / (1 - CHROMA_FROM));
       visible.forEach((obra) => {
-        const { frame, zoom, meta } = partsOf(obra);
+        const { frame, mask, zoom, meta } = partsOf(obra);
         frame?.style.setProperty('translate', frameLag);
         zoom?.style.setProperty('scale', `1 ${stretch}`);
         meta?.style.setProperty('translate', metaLag);
+        if (mask) {
+          mask.style.setProperty('--chroma', chroma.toFixed(3));
+          mask.classList.toggle('is-rising', speed < 0);
+        }
       });
       raf = requestAnimationFrame(loop);
     };
