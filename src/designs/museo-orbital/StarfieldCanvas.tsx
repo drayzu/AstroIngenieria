@@ -1149,10 +1149,14 @@ export const StarfieldCanvas = ({
       );
     };
 
+    // Mientras se hace scroll las constelaciones del cursor se apagan: su
+    // máscara (que evita cruzar textos) se reconstruiría en cada cuadro
+    let lastScrollAt = Number.NEGATIVE_INFINITY;
     const onScroll = () => {
       const top = scrollRef.current?.scrollTop ?? 0;
       scrollVel = scrollVel * 0.82 + (top - lastScroll) * 0.18;
       lastScroll = top;
+      lastScrollAt = performance.now();
       rectsDirty = true;
     };
 
@@ -2518,8 +2522,9 @@ export const StarfieldCanvas = ({
       const camSpd = Math.hypot(camVX, camVY);
       const camStretch = playgroundRef.current ? Math.min(40, camSpd * 2.4) : 0;
 
+      const scrollingRecently = performance.now() - lastScrollAt < 180;
       const cursorEnabled = cursorPresent && !(overHero && !hasPlaygroundScene) && dimLevel > 0.4 &&
-        (hasPlaygroundScene || (!dimRef.current && !cursorLayer.blocked));
+        !scrollingRecently && (hasPlaygroundScene || (!dimRef.current && !cursorLayer.blocked));
       cursorLayer.clear();
       let activeCursorNodes = 0;
 
@@ -2764,7 +2769,8 @@ export const StarfieldCanvas = ({
           right += 12;
           top -= 12;
           bottom += 12;
-          cursorLayer.composite(fxCtx, !hasPlaygroundScene, {
+          // Durante el scroll los trazos ya se están apagando: sin máscara
+          cursorLayer.composite(fxCtx, !hasPlaygroundScene && !scrollingRecently, {
             x: left, y: top,
             w: right - left,
             h: bottom - top,
