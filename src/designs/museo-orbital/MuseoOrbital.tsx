@@ -1407,10 +1407,6 @@ const Hero = memo(({
     >
       {playgroundEntryState !== 'entering' && playgroundEntryState !== 'leaving' && (
         <div className="mo-hero-toolbar">
-          <span className="mo-hero-brand">
-            <i aria-hidden="true" />
-            {t("Museo Orbital")}
-          </span>
           <div className="mo-hero-controls">
             <LanguageSwitch />
             <button
@@ -1495,6 +1491,80 @@ const Hero = memo(({
         </div>
       )}
 
+      <motion.div
+        className="mo-hero-playground-veil"
+        animate={{ opacity: imageFocus ? 0 : 1 }}
+        transition={{
+          duration: reduced ? 0 : 0.65,
+          ease: EASE_OUT,
+        }}
+      >
+        <motion.button
+          type="button"
+          ref={pgButtonRef}
+          className={`mo-hero-playground is-${playgroundEntryState}`}
+          onClick={onOpenPlayground}
+          onPointerEnter={onPlaygroundArm}
+          data-cursor-label={t("Entrar")}
+          aria-label={t("Entrar al Playground")}
+          tabIndex={imageFocus ? -1 : 0}
+          disabled={playgroundEntryState === 'entering' || playgroundEntryState === 'leaving'}
+          initial={{ opacity: 0, y: 8 }}
+          animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 8, transition: { duration: 0 } }}
+          transition={{ delay: reduced ? 0 : living ? 2.45 : 2.05, duration: reduced ? 0 : 0.9, ease: EASE_OUT }}
+        >
+          <span className="mo-hero-playground-star" aria-hidden="true">✦</span>
+              <span className="mo-hero-playground-word" aria-hidden="true">
+            {'PLAYGROUND'.split('').map((letter, index) => (
+              <span
+                key={`${letter}-${index}`}
+                className="mo-pg-letter"
+                style={{ '--i': index } as CSSProperties}
+                ref={(el) => {
+                  pgRefs.current[index] = el;
+                }}
+              >
+                {letter}
+              </span>
+            ))}
+          </span>
+        <span className="mo-hero-playground-charge" aria-hidden="true">
+          <i style={{ transform: `scaleX(${playgroundHoldProgress})` }} />
+        </span>
+        <span ref={pgCometRef} className="mo-pg-comet" aria-hidden="true">
+          <i ref={pgHeadRef} className="mo-pg-comet-head" />
+          {Array.from({ length: PG_TAIL_SEGMENTS }, (_, index) => (
+            <i
+              key={index}
+              ref={(el) => {
+                pgTailRefs.current[index] = el;
+              }}
+              className="mo-pg-comet-tail"
+              style={{
+                background: pgTailColor(1 - (index + 1) / (PG_TAIL_SEGMENTS + 1)),
+                boxShadow: `0 0 6px ${pgTailColor(1 - (index + 1) / (PG_TAIL_SEGMENTS + 1))}`,
+              }}
+            />
+          ))}
+          <i ref={pgFlashRef} className="mo-pg-comet-flash" />
+        </span>
+        </motion.button>
+      </motion.div>
+
+      <motion.button
+        type="button"
+        className="mo-hero-descend"
+        onClick={() => scrollToId('sala-intro')}
+        data-cursor-label={t("Comenzar el recorrido")}
+        tabIndex={imageFocus ? -1 : 0}
+        initial={{ opacity: 0, y: 10 }}
+        animate={revealed ? { opacity: imageFocus ? 0 : 1, y: 0 } : { opacity: 0, y: 10, transition: { duration: 0 } }}
+        transition={{ delay: reduced ? 0 : living ? 2.3 : 1.9, duration: reduced ? 0 : 0.9, ease: EASE_OUT }}
+      >
+        <span>{t("Comenzar el recorrido")}</span>
+        <span className="mo-hero-descend-line" aria-hidden="true"><i /></span>
+      </motion.button>
+
       <div className="mo-hero-copy">
         <motion.p
           ref={kickerRef}
@@ -1557,80 +1627,6 @@ const Hero = memo(({
           transition={{ delay: reduced ? 0 : living ? 2.1 : 1.6, duration: 1, ease: EASE_OUT }}
         >{t("De los hábitats orbitales a las estrellas, exploramos qué podríamos construir, qué haría falta para lograrlo y dónde aparecen los límites físicos.")}</motion.p>
 
-        {/* Dos llamadas: el recorrido como principal y el Playground al lado */}
-        <div className="mo-hero-actions">
-          <motion.button
-            type="button"
-            className="mo-hero-start"
-            onClick={() => scrollToId('sala-intro')}
-            data-cursor-label={t("Comenzar el recorrido")}
-            tabIndex={imageFocus ? -1 : 0}
-            initial={{ opacity: 0, y: 10 }}
-            animate={revealed ? { opacity: imageFocus ? 0 : 1, y: 0 } : { opacity: 0, y: 10, transition: { duration: 0 } }}
-            transition={{ delay: reduced ? 0 : living ? 2.3 : 1.9, duration: reduced ? 0 : 0.9, ease: EASE_OUT }}
-          >
-            {t("Comenzar el recorrido")}
-            <span className="mo-hero-start-line" aria-hidden="true"><i /></span>
-          </motion.button>
-          <motion.div
-            className="mo-hero-playground-veil"
-            animate={{ opacity: imageFocus ? 0 : 1 }}
-            transition={{
-              duration: reduced ? 0 : 0.65,
-              ease: EASE_OUT,
-            }}
-          >
-            <motion.button
-              type="button"
-              ref={pgButtonRef}
-              className={`mo-hero-playground is-${playgroundEntryState}`}
-              onClick={onOpenPlayground}
-              onPointerEnter={onPlaygroundArm}
-              data-cursor-label={t("Entrar")}
-              aria-label={t("Entrar al Playground")}
-              tabIndex={imageFocus ? -1 : 0}
-              disabled={playgroundEntryState === 'entering' || playgroundEntryState === 'leaving'}
-              initial={{ opacity: 0, y: 8 }}
-              animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 8, transition: { duration: 0 } }}
-              transition={{ delay: reduced ? 0 : living ? 2.45 : 2.05, duration: reduced ? 0 : 0.9, ease: EASE_OUT }}
-            >
-              <span className="mo-hero-playground-word" aria-hidden="true">
-                {'PLAYGROUND'.split('').map((letter, index) => (
-                  <span
-                    key={`${letter}-${index}`}
-                    className="mo-pg-letter"
-                    style={{ '--i': index } as CSSProperties}
-                    ref={(el) => {
-                      pgRefs.current[index] = el;
-                    }}
-                  >
-                    {letter}
-                  </span>
-                ))}
-              </span>
-            <span className="mo-hero-playground-charge" aria-hidden="true">
-              <i style={{ transform: `scaleX(${playgroundHoldProgress})` }} />
-            </span>
-            <span ref={pgCometRef} className="mo-pg-comet" aria-hidden="true">
-              <i ref={pgHeadRef} className="mo-pg-comet-head" />
-              {Array.from({ length: PG_TAIL_SEGMENTS }, (_, index) => (
-                <i
-                  key={index}
-                  ref={(el) => {
-                    pgTailRefs.current[index] = el;
-                  }}
-                  className="mo-pg-comet-tail"
-                  style={{
-                    background: pgTailColor(1 - (index + 1) / (PG_TAIL_SEGMENTS + 1)),
-                    boxShadow: `0 0 6px ${pgTailColor(1 - (index + 1) / (PG_TAIL_SEGMENTS + 1))}`,
-                  }}
-                />
-              ))}
-              <i ref={pgFlashRef} className="mo-pg-comet-flash" />
-            </span>
-            </motion.button>
-          </motion.div>
-        </div>
 
         <motion.span
           ref={hintRef}
