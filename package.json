@@ -19,7 +19,7 @@
     "build": "tsc && vite build && node scripts/createSpaFallback.mjs",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist",
+    "deploy": "node scripts/deploy.mjs",
     "release:site": "node scripts/publishSite.mjs"
   },
   "devDependencies": {
