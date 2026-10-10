@@ -753,7 +753,9 @@ body:has(.mo-root) {
 }
 
 /* Al pasar el mouse el riel se despliega como índice: un velo oscuro
-   detrás de los títulos para leerlos sobre cualquier imagen */
+   detrás de los títulos para leerlos sobre cualquier imagen. Con teclado
+   solo mientras se navega con Tab (:focus-visible): el foco que deja un
+   clic no lo mantiene abierto */
 .mo-rail::before {
   content: '';
   position: absolute;
@@ -768,8 +770,9 @@ body:has(.mo-root) {
 }
 
 .mo-rail:hover::before,
-.mo-rail:focus-within::before {
+.mo-rail:has(:focus-visible)::before {
   opacity: 1;
+  transition-delay: 0.12s;
 }
 
 .mo-rail-track {
@@ -889,11 +892,17 @@ body:has(.mo-root) {
 }
 
 .mo-rail:hover .mo-rail-tooltip,
-.mo-rail:focus-within .mo-rail-tooltip,
+.mo-rail:has(:focus-visible) .mo-rail-tooltip,
 .mo-rail.is-scrolling button.is-eclipsed .mo-rail-tooltip {
   opacity: 1;
   visibility: visible;
   transform: translate(0, -50%);
+}
+
+/* Intención: abre tras un instante (pasar rumbo a la barra de scroll no lo
+   despliega) y cierra en cuanto el mouse se va */
+.mo-rail:hover .mo-rail-tooltip {
+  transition-delay: 0.12s;
 }
 
 /* Desplegado, cada título también es clicable */

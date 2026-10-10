@@ -3609,7 +3609,11 @@ export default function MuseoOrbital() {
             style={{ '--accent': chapter.color } as CSSProperties}
             aria-label={t("Capítulo {0}: {1}", chapter.number.padStart(2, '0'), chapter.title)}
             aria-current={activeHallId === chapter.id ? 'location' : undefined}
-            onClick={() => scrollToId(`sala-${chapter.id}`)}
+            onClick={(event) => {
+              // Con mouse no se conserva el foco: el índice se cierra al salir
+              if (event.detail > 0) event.currentTarget.blur();
+              scrollToId(`sala-${chapter.id}`);
+            }}
           >
             <span className="mo-rail-disc" aria-hidden="true" />
             <span className="mo-rail-tooltip" aria-hidden="true">
