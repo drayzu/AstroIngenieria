@@ -625,8 +625,17 @@ export const StarfieldCanvas = ({
     let camVY = 0;
     let charge: { x: number; y: number; t0: number; dx: number; dy: number; layer: EffectLayer } | null = null;
     const museumRoot = scrollEl?.closest<HTMLElement>('.mo-root') ?? null;
+    /* Mientras se apunta la catapulta no se selecciona texto. Se bloquea el
+       evento y no con una clase en el museo: una regla sobre todos sus
+       elementos obligaba a recalcular miles de estilos al presionar y al
+       soltar, y eso se sentía como un tirón en cada clic */
+    let catapultDragging = false;
+    const blockSelection = (event: Event) => event.preventDefault();
     const setCatapultDragging = (dragging: boolean) => {
-      museumRoot?.classList.toggle('is-catapult-dragging', dragging);
+      if (dragging === catapultDragging) return;
+      catapultDragging = dragging;
+      if (dragging) document.addEventListener('selectstart', blockSelection);
+      else document.removeEventListener('selectstart', blockSelection);
     };
     const clearCharge = () => {
       charge = null;

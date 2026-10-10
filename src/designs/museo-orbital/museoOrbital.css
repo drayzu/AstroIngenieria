@@ -41,12 +41,6 @@ body:has(.mo-root) {
   user-select: none;
 }
 
-.mo-root.is-catapult-dragging,
-.mo-root.is-catapult-dragging * {
-  -webkit-user-select: none !important;
-  user-select: none !important;
-}
-
 .mo-kicker {
   margin: 0 0 14px;
   font-family: var(--mo-mono);
