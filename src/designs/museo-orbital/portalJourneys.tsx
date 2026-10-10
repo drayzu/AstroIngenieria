@@ -5,7 +5,16 @@ import { motion, useMotionValueEvent, useTransform, type MotionValue } from 'fra
    distinta, siempre con trazos finos de luz. Comparten el mismo guion:
    la ventana se abre (OPEN) y luego cubre la pantalla (COVER). */
 
-export type JourneyKind = 'iris' | 'torus' | 'blueprint' | 'horizon' | 'starburst' | 'hyperspace' | 'galaxy';
+export type JourneyKind =
+  | 'iris'
+  | 'torus'
+  | 'blueprint'
+  | 'horizon'
+  | 'dyson'
+  | 'starburst'
+  | 'tunnel'
+  | 'galaxy'
+  | 'radar';
 
 export const JOURNEY_OPEN: [number, number] = [0.02, 0.29];
 export const JOURNEY_COVER: [number, number] = [0.34, 0.56];
@@ -14,11 +23,11 @@ const JOURNEYS: Record<string, JourneyKind> = {
   habitats: 'torus',
   infrastructure: 'blueprint',
   planetary: 'horizon',
-  energy: 'starburst',
-  propulsion: 'hyperspace',
+  energy: 'dyson',
+  propulsion: 'tunnel',
   stellar: 'starburst',
   civilizations: 'galaxy',
-  search: 'galaxy',
+  search: 'radar',
 };
 
 export const journeyFor = (chapterId: string): JourneyKind => JOURNEYS[chapterId] ?? 'iris';
@@ -85,7 +94,7 @@ export const journeyClip = (kind: JourneyKind, p: number): string => {
 };
 
 /* Intensidad del salto del cielo durante el viaje */
-export const journeyWarp = (kind: JourneyKind) => (kind === 'hyperspace' ? 2.2 : 1);
+export const journeyWarp = (kind: JourneyKind) => (kind === 'tunnel' ? 2.2 : 1);
 
 // Visible mientras se abre la ventana, desaparece al empezar a cubrir
 const useOverlayOpacity = (progress: MotionValue<number>, fadeAfter = 0.13) =>
@@ -218,30 +227,148 @@ const Starburst = ({ progress }: { progress: MotionValue<number> }) => {
   );
 };
 
-/* ---------------- Hiperespacio: estelas que pasan de largo ---------------- */
+/* ---------------- Enjambre de Dyson: colectores en órbitas inclinadas ---------------- */
 
-const STREAKS = Array.from({ length: 46 }, (_, index) => {
-  const angle = seeded(index + 7) * Math.PI * 2;
-  const from = 44 + seeded(index + 21) * 34;
-  return { angle, from, to: from + 12 + seeded(index + 55) * 34, width: 0.16 + seeded(index + 90) * 0.24 };
-});
+const DYSON_ORBITS = [
+  { tilt: -18, squash: 0.3, radius: 60, count: 10, speed: 1 },
+  { tilt: 26, squash: 0.36, radius: 72, count: 12, speed: -0.72 },
+  { tilt: 4, squash: 0.22, radius: 86, count: 9, speed: 0.5 },
+];
 
-const Hyperspace = ({ progress }: { progress: MotionValue<number> }) => {
-  const scale = useTransform(progress, [JOURNEY_OPEN[0], JOURNEY_OPEN[1], JOURNEY_COVER[1]], [0.25, 1.2, 3.6]);
-  const opacity = useOverlayOpacity(progress, 0.15);
+const DysonSwarm = ({ progress }: { progress: MotionValue<number> }) => {
+  const dotRefs = useRef<(SVGCircleElement | null)[]>([]);
+  const scale = useTransform(progress, [JOURNEY_OPEN[0], JOURNEY_OPEN[1], JOURNEY_COVER[1]], [0.18, 1, 2.3]);
+  const opacity = useOverlayOpacity(progress, 0.13);
+
+  // Cada colector recorre su elipse; los que pasan por detrás de la
+  // estrella se apagan para dar profundidad
+  const place = (p: number) => {
+    let index = 0;
+    for (const orbit of DYSON_ORBITS) {
+      const tilt = (orbit.tilt * Math.PI) / 180;
+      for (let k = 0; k < orbit.count; k += 1) {
+        const dot = dotRefs.current[index];
+        index += 1;
+        if (!dot) continue;
+        const theta = (k / orbit.count) * Math.PI * 2 + p * orbit.speed * Math.PI * 2.4;
+        const x = Math.cos(theta) * orbit.radius;
+        const y = Math.sin(theta) * orbit.radius * orbit.squash;
+        dot.setAttribute('cx', (x * Math.cos(tilt) - y * Math.sin(tilt)).toFixed(2));
+        dot.setAttribute('cy', (x * Math.sin(tilt) + y * Math.cos(tilt)).toFixed(2));
+        dot.setAttribute('opacity', Math.sin(theta) > 0 ? '1' : '0.3');
+      }
+    }
+  };
+  useMotionValueEvent(progress, 'change', place);
+  useEffect(() => place(progress.get()));
+
+  let dotIndex = 0;
   return (
-    <motion.svg className="mo-journey-streaks" viewBox="-100 -100 200 200" style={{ scale, opacity }} aria-hidden="true">
-      {STREAKS.map((streak, index) => (
-        <line
-          key={index}
-          x1={Math.cos(streak.angle) * streak.from}
-          y1={Math.sin(streak.angle) * streak.from}
-          x2={Math.cos(streak.angle) * streak.to}
-          y2={Math.sin(streak.angle) * streak.to}
-          strokeWidth={streak.width}
-        />
+    <motion.svg className="mo-journey-dyson" viewBox="-100 -100 200 200" style={{ scale, opacity }} aria-hidden="true">
+      {DYSON_ORBITS.map((orbit) => (
+        <g key={orbit.tilt}>
+          <ellipse rx={orbit.radius} ry={orbit.radius * orbit.squash} transform={`rotate(${orbit.tilt})`} />
+          {Array.from({ length: orbit.count }, () => {
+            const index = dotIndex;
+            dotIndex += 1;
+            return (
+              <circle
+                key={index}
+                r={1.1}
+                ref={(element) => {
+                  dotRefs.current[index] = element;
+                }}
+              />
+            );
+          })}
+        </g>
       ))}
     </motion.svg>
+  );
+};
+
+/* ---------------- Túnel: anillos de luz que vienen hacia ti ---------------- */
+
+const TUNNEL_RINGS = 10;
+
+const WarpTunnel = ({ progress }: { progress: MotionValue<number> }) => {
+  const ringRefs = useRef<(SVGCircleElement | null)[]>([]);
+
+  // Cada anillo nace en el centro y crece en perspectiva hasta salir de la
+  // pantalla; el scroll los hace avanzar, como cruzar puertas de salto
+  const place = (p: number) => {
+    const envelope =
+      seg(p, [JOURNEY_OPEN[0], JOURNEY_OPEN[0] + 0.05]) * (1 - seg(p, [JOURNEY_COVER[0], JOURNEY_COVER[0] + 0.16]));
+    ringRefs.current.forEach((ring, index) => {
+      if (!ring) return;
+      const phase = (p * 6 + index / TUNNEL_RINGS) % 1;
+      const radius = 4 * 35 ** phase;
+      ring.setAttribute('r', radius.toFixed(2));
+      ring.setAttribute('stroke-width', (0.15 + phase * 1.3).toFixed(2));
+      ring.setAttribute('opacity', (Math.sin(Math.PI * phase) ** 1.5 * envelope).toFixed(3));
+    });
+  };
+  useMotionValueEvent(progress, 'change', place);
+  useEffect(() => place(progress.get()));
+
+  return (
+    <svg className="mo-journey-tunnel" viewBox="-100 -100 200 200" aria-hidden="true">
+      {Array.from({ length: TUNNEL_RINGS }, (_, index) => (
+        <circle
+          key={index}
+          r={0}
+          ref={(element) => {
+            ringRefs.current[index] = element;
+          }}
+        />
+      ))}
+    </svg>
+  );
+};
+
+/* ---------------- Radar: un barrido que escanea el cielo buscando señales ---------------- */
+
+const RADAR_BLIPS = Array.from({ length: 7 }, (_, index) => ({
+  angle: seeded(index + 13) * 360,
+  distance: 32 + seeded(index + 44) * 16,
+}));
+const RADAR_TURNS = 2;
+
+const RadarSweep = ({ progress }: { progress: MotionValue<number> }) => {
+  const blipRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const rotate = useTransform(progress, [0, JOURNEY_COVER[1]], [0, 360 * RADAR_TURNS]);
+  const scale = useTransform(progress, [JOURNEY_OPEN[0], JOURNEY_OPEN[1], JOURNEY_COVER[1]], [0.3, 1, 2.1]);
+  const opacity = useOverlayOpacity(progress, 0.14);
+
+  // Una señal se enciende cuando el barrido pasa por ella y se apaga después
+  useMotionValueEvent(rotate, 'change', (angle) => {
+    RADAR_BLIPS.forEach((blip, index) => {
+      const behind = (((angle - blip.angle) % 360) + 360) % 360;
+      const glow = behind < 70 ? 1 - behind / 70 : 0;
+      const element = blipRefs.current[index];
+      if (element) element.style.opacity = glow.toFixed(3);
+    });
+  });
+
+  return (
+    <motion.span className="mo-journey-radar" style={{ scale, opacity }} aria-hidden="true">
+      <i className="is-range" />
+      <i className="is-range is-far" />
+      <motion.i className="is-sweep" style={{ rotate }} />
+      {RADAR_BLIPS.map((blip, index) => (
+        <span
+          key={index}
+          className="is-blip"
+          style={{
+            left: `${50 + Math.sin((blip.angle * Math.PI) / 180) * blip.distance}%`,
+            top: `${50 - Math.cos((blip.angle * Math.PI) / 180) * blip.distance}%`,
+          }}
+          ref={(element) => {
+            blipRefs.current[index] = element;
+          }}
+        />
+      ))}
+    </motion.span>
   );
 };
 
@@ -288,6 +415,13 @@ export const JourneyOverlay = ({ kind, progress }: { kind: JourneyKind; progress
       return <BlueprintFrame progress={progress} />;
     case 'horizon':
       return <HorizonRim progress={progress} />;
+    case 'dyson':
+      return (
+        <>
+          <IrisRing progress={progress} />
+          <DysonSwarm progress={progress} />
+        </>
+      );
     case 'starburst':
       return (
         <>
@@ -295,15 +429,17 @@ export const JourneyOverlay = ({ kind, progress }: { kind: JourneyKind; progress
           <Starburst progress={progress} />
         </>
       );
-    case 'hyperspace':
+    case 'tunnel':
+      return <WarpTunnel progress={progress} />;
+    case 'galaxy':
+      return <Galaxy progress={progress} />;
+    case 'radar':
       return (
         <>
           <IrisRing progress={progress} />
-          <Hyperspace progress={progress} />
+          <RadarSweep progress={progress} />
         </>
       );
-    case 'galaxy':
-      return <Galaxy progress={progress} />;
     default:
       return <IrisRing progress={progress} />;
   }

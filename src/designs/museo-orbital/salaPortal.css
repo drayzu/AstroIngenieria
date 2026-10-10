@@ -179,10 +179,12 @@
   stroke-width: 1.5;
 }
 
-/* Estrella, hiperespacio y galaxia: dibujos SVG centrados que escalan */
+/* Dyson, estrella, túnel, galaxia y radar: dibujos centrados que escalan */
 .mo-journey-burst,
-.mo-journey-streaks,
-.mo-journey-galaxy {
+.mo-journey-dyson,
+.mo-journey-tunnel,
+.mo-journey-galaxy,
+.mo-journey-radar {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -198,9 +200,74 @@
   stroke-linecap: round;
 }
 
-.mo-journey-streaks line {
-  stroke: color-mix(in srgb, var(--accent) 45%, #ffffff);
-  stroke-linecap: round;
+/* Enjambre de Dyson: órbitas finas y colectores que las recorren */
+.mo-journey-dyson ellipse {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 60%, transparent);
+  stroke-width: 0.32;
+}
+
+.mo-journey-dyson circle {
+  fill: color-mix(in srgb, var(--accent) 50%, #ffffff);
+  filter: drop-shadow(0 0 1.5px color-mix(in srgb, var(--accent) 80%, transparent));
+}
+
+/* Túnel: anillos que crecen en perspectiva hacia quien mira */
+.mo-journey-tunnel {
+  width: min(150vmax, 2200px);
+  height: min(150vmax, 2200px);
+}
+
+.mo-journey-tunnel circle {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 60%, #ffffff);
+}
+
+/* Radar: anillos de alcance, barrido cónico y señales que se encienden.
+   El centro queda libre para la ventana del capítulo */
+.mo-journey-radar {
+  display: block;
+  border-radius: 50%;
+  -webkit-mask-image: radial-gradient(circle, transparent 24%, #000 30%, #000 68%, transparent 72%);
+  mask-image: radial-gradient(circle, transparent 24%, #000 30%, #000 68%, transparent 72%);
+}
+
+.mo-journey-radar > i {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.mo-journey-radar .is-range {
+  inset: 22%;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.mo-journey-radar .is-range.is-far {
+  inset: 6%;
+  border-style: dashed;
+}
+
+.mo-journey-radar .is-sweep {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 290deg,
+    color-mix(in srgb, var(--accent) 22%, transparent) 340deg,
+    color-mix(in srgb, var(--accent) 70%, #ffffff) 359deg,
+    transparent 360deg
+  );
+}
+
+.mo-journey-radar .is-blip {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 10px 3px color-mix(in srgb, var(--accent) 70%, transparent);
+  opacity: 0;
 }
 
 /* Resplandor al entrar en la estrella */
