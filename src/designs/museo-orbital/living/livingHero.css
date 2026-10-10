@@ -234,3 +234,9 @@
 .mo-hero.is-living .mo-kicker {
   width: fit-content;
 }
+
+/* Con el laboratorio cósmico abierto, los clics sobre la estrella son del
+   laboratorio (colocar agujeros, estrellas…), no del giro */
+.mo-root.is-cosmic-lab .mo-living-grab {
+  pointer-events: none;
+}
