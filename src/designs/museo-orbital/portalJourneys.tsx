@@ -6,6 +6,7 @@ import { motion, useMotionValueEvent, useTransform, type MotionValue } from 'fra
    la ventana se abre (OPEN) y luego cubre la pantalla (COVER). */
 
 export type JourneyKind =
+  | 'collapse'
   | 'iris'
   | 'torus'
   | 'blueprint'
@@ -20,6 +21,8 @@ export const JOURNEY_OPEN: [number, number] = [0.02, 0.29];
 export const JOURNEY_COVER: [number, number] = [0.34, 0.56];
 
 const JOURNEYS: Record<string, JourneyKind> = {
+  // De la portada a la primera sala: la estrella vuelve a ser el punto de luz
+  intro: 'collapse',
   habitats: 'torus',
   infrastructure: 'blueprint',
   planetary: 'horizon',
@@ -46,6 +49,16 @@ const seeded = (seed: number) => {
 /* Radio del iris en dos tramos: ventana en vmin y luego cubrir en vmax */
 const irisRadius = (p: number, windowSize = 30) => {
   const min = 0.7 + (windowSize - 0.7) * easeOut(seg(p, JOURNEY_OPEN));
+  const max = 76 * easeInOut(seg(p, JOURNEY_COVER));
+  return `calc(${min.toFixed(3)}vmin + ${max.toFixed(3)}vmax)`;
+};
+
+/* Colapso: la estrella se encoge hasta ser un punto, el punto destella y
+   recién entonces se abre la ventana, primero en vmin y luego cubriendo */
+const COLLAPSE = { shrink: [0, 0.17], flare: [0.14, 0.24], open: [0.2, 0.31] } satisfies Record<string, [number, number]>;
+const collapseRadius = (p: number) => {
+  if (p < COLLAPSE.open[0]) return '0px';
+  const min = 30 * easeOut(seg(p, COLLAPSE.open));
   const max = 76 * easeInOut(seg(p, JOURNEY_COVER));
   return `calc(${min.toFixed(3)}vmin + ${max.toFixed(3)}vmax)`;
 };
@@ -88,6 +101,8 @@ export const journeyClip = (kind: JourneyKind, p: number): string => {
     }
     case 'galaxy':
       return `circle(${irisRadius(p, 22)} at 50% 50%)`;
+    case 'collapse':
+      return `circle(${collapseRadius(p)} at 50% 50%)`;
     default:
       return `circle(${irisRadius(p)} at 50% 50%)`;
   }
@@ -110,6 +125,33 @@ const IrisRing = ({ progress }: { progress: MotionValue<number> }) => {
   const size = useTransform(progress, (p) => `calc(2 * ${irisRadius(p)})`);
   const opacity = useOverlayOpacity(progress);
   return <motion.span className="mo-journey-ring" style={{ width: size, height: size, opacity }} />;
+};
+
+/* ---------------- Colapso: la estrella vuelve a ser el punto de luz ---------------- */
+
+const StarCollapse = ({ progress }: { progress: MotionValue<number> }) => {
+  // La estrella y el contorno de su esfera se encogen hacia el centro
+  const starScale = useTransform(progress, (p) => 1 - 0.97 * seg(p, COLLAPSE.shrink) ** 1.6);
+  const starOpacity = useTransform(progress, [0, 0.02, COLLAPSE.shrink[1], COLLAPSE.flare[1]], [0, 1, 1, 0]);
+  const heat = useTransform(progress, (p) => seg(p, [0.08, COLLAPSE.shrink[1]]));
+  const shellScale = useTransform(progress, (p) => 1 - 0.98 * seg(p, [0, COLLAPSE.shrink[1] - 0.02]) ** 1.3);
+  const shellRotate = useTransform(progress, [0, COLLAPSE.shrink[1]], [0, 140]);
+  // El punto destella con su destello anamórfico justo antes de abrirse
+  const flareOpacity = useTransform(progress, [COLLAPSE.flare[0], COLLAPSE.flare[0] + 0.03, COLLAPSE.open[0] + 0.02, COLLAPSE.open[1]], [0, 1, 1, 0]);
+  const flareScale = useTransform(progress, [COLLAPSE.flare[0], COLLAPSE.open[0], COLLAPSE.open[1]], [0.2, 1, 1.8]);
+  const ringSize = useTransform(progress, (p) => `calc(2 * ${collapseRadius(p)})`);
+  const ringOpacity = useTransform(progress, [COLLAPSE.open[0], COLLAPSE.open[0] + 0.03, JOURNEY_COVER[0], JOURNEY_COVER[0] + 0.12], [0, 1, 1, 0]);
+  return (
+    <span className="mo-journey-collapse" aria-hidden="true">
+      <motion.span className="mo-journey-collapse-shell" style={{ scale: shellScale, rotate: shellRotate, opacity: starOpacity }} />
+      <motion.span className="mo-journey-collapse-star" style={{ scale: starScale, opacity: starOpacity }}>
+        <motion.span className="mo-journey-collapse-heat" style={{ opacity: heat }} />
+      </motion.span>
+      <motion.span className="mo-journey-collapse-flare" style={{ opacity: flareOpacity, scaleX: flareScale }} />
+      <motion.span className="mo-journey-collapse-point" style={{ opacity: flareOpacity }} />
+      <motion.span className="mo-journey-ring" style={{ width: ringSize, height: ringSize, opacity: ringOpacity }} />
+    </span>
+  );
 };
 
 /* ---------------- Toroide: un anillo de canto que gira hasta mirarte ---------------- */
@@ -409,6 +451,8 @@ const Galaxy = ({ progress }: { progress: MotionValue<number> }) => {
 /* Capa decorativa del viaje, encima de la imagen y bajo el número */
 export const JourneyOverlay = ({ kind, progress }: { kind: JourneyKind; progress: MotionValue<number> }) => {
   switch (kind) {
+    case 'collapse':
+      return <StarCollapse progress={progress} />;
     case 'torus':
       return <TorusRims progress={progress} />;
     case 'blueprint':

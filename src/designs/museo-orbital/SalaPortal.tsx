@@ -128,19 +128,22 @@ export const SalaPortal = ({
   const scrimOpacity = useTransform(progress, T.textIn, [0.1, 0.5]);
   const irisOpacity = useTransform(progress, T.imageFade, [1, 0.32]);
 
-  // Número monumental: llega desde el fondo, se rellena y lo atravesamos
+  // Número monumental: llega desde el fondo, se rellena y lo atravesamos.
+  // En el colapso espera a que la estrella sea un punto y destelle
+  const numberIn: [number, number] = journey === 'collapse' ? [0.22, 0.32] : T.numberIn;
+  const numberFill: [number, number] = journey === 'collapse' ? [0.25, 0.34] : T.numberFill;
   const numberScale = useTransform(
     progress,
-    [T.numberIn[0], T.numberIn[1], T.numberFly[0], T.numberFly[1]],
+    [numberIn[0], numberIn[1], T.numberFly[0], T.numberFly[1]],
     [0.3, 1, 1, 2.4],
     { ease: [EASE_OUT, (t) => t, EASE_IN_OUT] },
   );
   const numberOpacity = useTransform(
     progress,
-    [T.numberIn[0], T.numberIn[0] + 0.1, T.numberFly[0], T.numberFly[1]],
+    [numberIn[0], numberIn[0] + 0.1, T.numberFly[0], T.numberFly[1]],
     [0, 1, 1, 0],
   );
-  const numberClip = useTransform(progress, T.numberFill, [
+  const numberClip = useTransform(progress, numberFill, [
     'inset(100% 0% 0% 0%)',
     'inset(-15% -15% -15% -15%)',
   ]);
@@ -159,7 +162,9 @@ export const SalaPortal = ({
 
   const words = to.title.split(' ');
   const image = to.visual?.sectionImage ?? to.visual?.heroImage;
-  const label = (chapter: AstroChapter) => `${t('Capítulo')} ${chapter.number.padStart(2, '0')}`;
+  const label = (chapter: AstroChapter) => chapter.number === '0'
+    ? t('Entrada')
+    : `${t('Capítulo')} ${chapter.number.padStart(2, '0')}`;
   const wordSpan = (T.titleIn[1] - T.titleIn[0]) / (words.length + 1.5);
 
   return (
@@ -224,7 +229,7 @@ export const SalaPortal = ({
           <span className="mo-portal-hud-from">
             <i />
             {label(from)}
-            <em> · {from.title}</em>
+            {from.title && <em> · {from.title}</em>}
           </span>
           <span className="mo-portal-hud-line">
             <motion.i style={{ scaleX: progress }} />

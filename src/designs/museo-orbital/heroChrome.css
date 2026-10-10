@@ -1,0 +1,306 @@
+/* ============ Marco del hero y navegación ============
+   Barra superior única, llamadas bajo el texto, barra de capítulos en una
+   fila y píldora flotante en celular. */
+
+/* ---------- Barra superior: sello del museo, idioma e índice ---------- */
+
+.mo-hero-toolbar {
+  top: 0;
+  left: 0;
+  right: 0;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px clamp(20px, 3vw, 40px);
+  pointer-events: none;
+}
+
+.mo-hero-toolbar > * {
+  pointer-events: auto;
+}
+
+.mo-hero-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--mo-mono);
+  font-size: 10px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: rgba(245, 241, 232, 0.74);
+  white-space: nowrap;
+}
+
+/* El mismo punto de luz con que empieza la visita */
+.mo-hero-brand i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff1e0;
+  box-shadow:
+    0 0 6px 2px rgba(255, 196, 150, 0.8),
+    0 0 16px 5px rgba(255, 110, 60, 0.35);
+}
+
+.mo-hero-controls {
+  display: flex;
+  align-items: center;
+  gap: clamp(14px, 2vw, 26px);
+}
+
+.mo-hero-toolbar .mo-language-switch {
+  order: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  backdrop-filter: none;
+}
+
+.mo-hero-toolbar .mo-language-switch button {
+  min-width: 26px;
+  padding: 6px 4px;
+  border-bottom: 1px solid transparent;
+}
+
+.mo-hero-toolbar .mo-language-switch button[aria-pressed='true'] {
+  background: none;
+  border-bottom-color: rgba(245, 241, 232, 0.7);
+}
+
+.mo-hero-toolbar .mo-hero-index {
+  order: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  backdrop-filter: none;
+  color: rgba(245, 241, 232, 0.82);
+}
+
+.mo-hero-toolbar .mo-hero-index:hover {
+  color: var(--mo-ink);
+}
+
+/* Dos trazos: el segundo se alarga al pasar */
+.mo-hero-index-icon {
+  position: relative;
+  width: 16px;
+  height: 7px;
+  border-top: 1px solid currentColor;
+}
+
+.mo-hero-index-icon::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 10px;
+  height: 1px;
+  background: currentColor;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mo-hero-index:hover .mo-hero-index-icon::after {
+  width: 16px;
+}
+
+/* ---------- Llamadas bajo el texto ---------- */
+
+.mo-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 30px;
+}
+
+.mo-hero-start {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  padding: 15px 22px;
+  border: 1px solid rgba(245, 241, 232, 0.36);
+  background: rgba(245, 241, 232, 0.04);
+  color: var(--mo-ink);
+  font-family: var(--mo-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+.mo-hero-start:hover,
+.mo-hero-start:focus-visible {
+  border-color: rgba(245, 241, 232, 0.8);
+  background: rgba(245, 241, 232, 0.08);
+}
+
+/* Una gota de luz que cae: invita a bajar */
+.mo-hero-start-line {
+  position: relative;
+  width: 1px;
+  height: 18px;
+  overflow: hidden;
+  background: rgba(245, 241, 232, 0.2);
+}
+
+.mo-hero-start-line i {
+  position: absolute;
+  top: -45%;
+  left: 0;
+  width: 1px;
+  height: 45%;
+  background: #fff6ea;
+  box-shadow: 0 0 6px rgba(255, 220, 190, 0.8);
+  animation: mo-hero-start-drop 1.9s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes mo-hero-start-drop {
+  to {
+    top: 100%;
+  }
+}
+
+/* El Playground deja la parte alta y se para junto a la llamada principal;
+   su cometa sigue jugando con la palabra */
+.mo-hero-actions .mo-hero-playground {
+  position: relative;
+  top: auto;
+  left: auto;
+  translate: none;
+  width: auto;
+  align-items: flex-start;
+  padding: 8px 2px 10px;
+}
+
+.mo-hero-actions .mo-hero-playground-word {
+  font-size: clamp(12px, 1.1vw, 16px);
+}
+
+/* ---------- Barra de capítulos en una sola fila ---------- */
+
+.mo-halls {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  gap: 0;
+  padding: 4px clamp(12px, 3vw, 40px);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+}
+
+.mo-halls::-webkit-scrollbar {
+  display: none;
+}
+
+/* Centrada si cabe; si no, se desliza (márgenes automáticos a los lados) */
+.mo-halls > :first-child {
+  margin-left: auto;
+}
+
+.mo-halls > :last-child {
+  margin-right: auto;
+}
+
+.mo-halls .mo-hall-chip {
+  gap: 6px;
+  padding: 9px 7px;
+  font-size: 10.5px;
+}
+
+/* ---------- Píldora flotante en celular ---------- */
+
+.mo-pill {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .mo-halls {
+    display: none;
+  }
+
+  .mo-pill {
+    position: fixed;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    z-index: 36;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: calc(100vw - 32px);
+    padding: 11px 16px 13px;
+    overflow: hidden;
+    border: 1px solid rgba(245, 241, 232, 0.16);
+    border-radius: 999px;
+    background: rgba(10, 10, 10, 0.86);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    color: var(--mo-ink);
+    opacity: 0;
+    translate: -50% 24px;
+    pointer-events: none;
+    transition: opacity 0.4s ease, translate 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .mo-pill.is-on {
+    opacity: 1;
+    translate: -50% 0;
+    pointer-events: auto;
+  }
+
+  .mo-pill-no {
+    flex: none;
+    font-family: var(--mo-serif);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--accent, #c9a86a);
+  }
+
+  .mo-pill-title {
+    overflow: hidden;
+    font-size: 13px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .mo-pill-icon {
+    position: relative;
+    flex: none;
+    width: 14px;
+    height: 6px;
+    margin-left: 4px;
+    border-top: 1px solid rgba(245, 241, 232, 0.7);
+    border-bottom: 1px solid rgba(245, 241, 232, 0.7);
+  }
+
+  /* Avance dentro del capítulo actual */
+  .mo-pill-progress {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 6px;
+    height: 1px;
+    background: rgba(245, 241, 232, 0.12);
+  }
+
+  .mo-pill-progress i {
+    position: absolute;
+    inset: 0;
+    background: var(--accent, #c9a86a);
+    transform: scaleX(0);
+    transform-origin: left center;
+  }
+}
+
+/* La barra superior pasa sobre la esfera: una sombra suave la mantiene legible */
+.mo-hero-toolbar {
+  text-shadow: 0 1px 10px rgba(7, 7, 7, 0.85);
+}
+
+/* En celular la línea de avance de los portales sube sobre la píldora */
+@media (max-width: 720px) {
+  .mo-portal-hud {
+    bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  }
+}
