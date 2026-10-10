@@ -52,6 +52,7 @@ import {
 } from './PlaygroundArcade';
 import { DistortOverlay } from './DistortOverlay';
 import { SalaPortal } from './SalaPortal';
+import { useVelocityWarp } from './useVelocityWarp';
 import { HeroIgnition, releaseBootScreen, shouldPlayIntro, type IntroPhase } from './HeroIgnition';
 import { MuseumFinale } from './MuseumFinale';
 import './museoOrbital.css';
@@ -3220,6 +3221,9 @@ export default function MuseoOrbital() {
     if (!root) return;
     return startSmoothScroll(root);
   }, []);
+
+  // La velocidad del scroll estira las obras y deja atrás sus marcos
+  useVelocityWarp(rootRef, Boolean(reduced));
 
   // Desde el cierre: la pantalla se funde a negro dejando solo el punto de
   // luz (la misma pantalla de arranque de index.html, en el mismo lugar que
