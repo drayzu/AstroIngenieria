@@ -99,9 +99,12 @@
   );
 }
 
-.mo-portal-ring {
-  /* Fuera del flujo: su tamaño crece más allá de la pantalla y no debe
-     estirar la celda que centra al número y al título */
+/* ---------- Viajes de los portales (portalJourneys.tsx) ---------- */
+
+/* Anillos: iris clásico y bordes del toroide. Fuera del flujo: su tamaño
+   crece más allá de la pantalla y no debe estirar la celda que centra al
+   número y al título */
+.mo-journey-ring {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -111,6 +114,129 @@
   box-shadow:
     0 0 26px 3px color-mix(in srgb, var(--accent) 55%, transparent),
     inset 0 0 26px 2px color-mix(in srgb, var(--accent) 35%, transparent);
+  pointer-events: none;
+}
+
+.mo-journey-ring.is-torus {
+  border-width: 1.5px;
+}
+
+/* Borde interior del toroide: el anillo tiene cuerpo */
+.mo-journey-ring.is-torus-inner {
+  scale: 0.78;
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 0 16px 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* Plano: retícula técnica y marco con esquinas que sigue a la ventana */
+.mo-journey-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent) 22%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 22%, transparent) 1px, transparent 1px);
+  background-size: 52px 52px;
+  background-position: center;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, #000 20%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, #000 20%, transparent 75%);
+  pointer-events: none;
+}
+
+.mo-journey-frame {
+  --tick: color-mix(in srgb, var(--accent) 85%, #ffffff);
+  position: absolute;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background:
+    linear-gradient(var(--tick), var(--tick)) top left / 18px 1.5px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) top left / 1.5px 18px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) top right / 18px 1.5px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) top right / 1.5px 18px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) bottom left / 18px 1.5px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) bottom left / 1.5px 18px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) bottom right / 18px 1.5px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) bottom right / 1.5px 18px no-repeat;
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 25%, transparent);
+  pointer-events: none;
+}
+
+/* Horizonte: el borde iluminado del planeta, dibujado en píxeles reales */
+.mo-journey-horizon {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.mo-journey-horizon .is-glow {
+  stroke: color-mix(in srgb, var(--accent) 30%, transparent);
+  stroke-width: 14;
+}
+
+.mo-journey-horizon .is-line {
+  stroke: color-mix(in srgb, var(--accent) 80%, #ffffff);
+  stroke-width: 1.5;
+}
+
+/* Estrella, hiperespacio y galaxia: dibujos SVG centrados que escalan */
+.mo-journey-burst,
+.mo-journey-streaks,
+.mo-journey-galaxy {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(120vmin, 1100px);
+  height: min(120vmin, 1100px);
+  translate: -50% -50%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.mo-journey-burst line {
+  stroke: color-mix(in srgb, var(--accent) 70%, #ffffff);
+  stroke-linecap: round;
+}
+
+.mo-journey-streaks line {
+  stroke: color-mix(in srgb, var(--accent) 45%, #ffffff);
+  stroke-linecap: round;
+}
+
+/* Resplandor al entrar en la estrella */
+.mo-journey-glare {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 250, 240, 0.95) 0%,
+    color-mix(in srgb, var(--accent) 55%, transparent) 30%,
+    transparent 72%
+  );
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* Disco galáctico inclinado; dentro gira la espiral */
+.mo-journey-galaxy {
+  display: block;
+  transform: scaleY(0.56);
+}
+
+.mo-journey-galaxy svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.mo-journey-galaxy circle {
+  fill: color-mix(in srgb, var(--accent) 40%, #ffffff);
+}
+
+.mo-journey-galaxy circle.is-core {
+  fill: color-mix(in srgb, var(--accent) 30%, #fff6ea);
+  opacity: 0.85;
+  filter: blur(3px);
 }
 
 /* Número monumental del capítulo: contorno + relleno que sube con el scroll */

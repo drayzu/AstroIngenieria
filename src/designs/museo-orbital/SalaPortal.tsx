@@ -11,6 +11,7 @@ import {
 } from 'framer-motion';
 import { useLocale } from '../../i18n/LocaleProvider';
 import type { AstroChapter } from '../../types';
+import { JOURNEY_COVER, JOURNEY_OPEN, JourneyOverlay, journeyClip, journeyFor, journeyWarp } from './portalJourneys';
 import './salaPortal.css';
 
 const EASE_OUT = cubicBezier(0.16, 1, 0.3, 1);
@@ -21,9 +22,8 @@ const EASE_IN_OUT = cubicBezier(0.65, 0, 0.35, 1);
 const T = {
   hudIn: [0, 0.06],
   hudOut: [0.9, 0.98],
-  ringIn: [0, 0.04],
-  irisOpen: [0.02, 0.29],
-  irisCover: [0.34, 0.56],
+  irisOpen: JOURNEY_OPEN,
+  irisCover: JOURNEY_COVER,
   numberIn: [0.04, 0.29],
   numberFill: [0.13, 0.32],
   numberFly: [0.35, 0.5],
@@ -73,6 +73,8 @@ export const SalaPortal = ({
   onCross: (chapter: AstroChapter) => void;
 }) => {
   const { t } = useLocale();
+  // Cada capítulo abre su ventana con un viaje propio (toroide, horizonte…)
+  const journey = journeyFor(to.id);
   const portalRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
     container: scrollRef,
@@ -104,28 +106,17 @@ export const SalaPortal = ({
     if (value > T.warp[0] && value < T.warp[1] && Math.abs(delta) > 0.002) {
       window.dispatchEvent(
         new CustomEvent('mo-warp', {
-          detail: { strength: Math.min(9, Math.abs(delta) * 240), direction: delta > 0 ? 1 : -1 },
+          detail: {
+            strength: Math.min(9 * journeyWarp(journey), Math.abs(delta) * 240 * journeyWarp(journey)),
+            direction: delta > 0 ? 1 : -1,
+          },
         }),
       );
     }
   });
 
-  // Iris: un punto de luz que se abre en ventana (vmin) y luego cubre todo (vmax)
-  const irisMin = useTransform(progress, [0, T.irisOpen[0], T.irisOpen[1]], [0.7, 0.7, 30], {
-    ease: EASE_OUT,
-  });
-  const irisMax = useTransform(progress, T.irisCover, [0, 76], { ease: EASE_IN_OUT });
-  const radius = useTransform(
-    [irisMin, irisMax],
-    ([min, max]: number[]) => `calc(${min.toFixed(3)}vmin + ${max.toFixed(3)}vmax)`,
-  );
-  const clipPath = useTransform(radius, (r) => `circle(${r} at 50% 50%)`);
-  const ringSize = useTransform(radius, (r) => `calc(${r} * 2)`);
-  const ringOpacity = useTransform(
-    progress,
-    [T.ringIn[0], T.ringIn[1], T.irisCover[0], T.irisCover[0] + 0.13],
-    [0, 1, 1, 0],
-  );
+  // Ventana del capítulo: se abre y luego cubre la pantalla, con la forma del viaje
+  const clipPath = useTransform(progress, (p) => journeyClip(journey, p));
   const glowOpacity = useTransform(progress, [0, T.irisOpen[1], T.irisCover[1]], [0, 0.75, 0]);
 
   const imageScale = useTransform(
@@ -174,7 +165,7 @@ export const SalaPortal = ({
   return (
     <section
       ref={portalRef}
-      className="mo-portal"
+      className={`mo-portal is-${journey}`}
       aria-hidden="true"
       style={{ '--accent': to.color, '--from-accent': from.color } as CSSProperties}
     >
@@ -193,10 +184,7 @@ export const SalaPortal = ({
           <motion.div className="mo-portal-veil" style={{ opacity: textOpacity }} />
         </motion.div>
 
-        <motion.span
-          className="mo-portal-ring"
-          style={{ width: ringSize, height: ringSize, opacity: ringOpacity }}
-        />
+        <JourneyOverlay kind={journey} progress={progress} />
 
         <motion.span
           className="mo-portal-no"
