@@ -1,0 +1,60 @@
+/* ============ Muros vivos ============
+   Entrada de cada obra (marco → imagen que se abre), deriva de la imagen
+   dentro de su marco al hacer scroll y encabezados de grupo que se trazan. */
+
+/* Capa de la imagen, más alta que la ventana del marco: el zoom de entrada
+   y la deriva con el scroll nunca dejan ver sus bordes */
+.mo-frame-zoom {
+  position: absolute;
+  inset: -7% 0;
+}
+
+.mo-frame-mask {
+  /* clip y no hidden: hidden la convierte en contenedor de scroll y la
+     deriva (view()) se ataría a ella en vez de al recorrido del museo */
+  overflow: clip;
+  /* Ventana oscura mientras la imagen todavía carga */
+  background: #0b0c0d;
+}
+
+/* Deriva con el scroll: animación nativa ligada a la posición de cada obra
+   en pantalla (corre fuera del hilo principal, sin JS por obra). Donde el
+   navegador no la soporta, la imagen simplemente queda quieta. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .mo-frame-zoom {
+      animation: mo-obra-drift linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+    }
+  }
+}
+
+@keyframes mo-obra-drift {
+  from {
+    translate: 0 -5%;
+  }
+  to {
+    translate: 0 5%;
+  }
+}
+
+/* Encabezado de grupo: la línea superior se traza desde el color del capítulo */
+.mo-topic-group > h3 {
+  position: relative;
+  border-top: none;
+}
+
+.mo-topic-rule {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent, #c9a86a) 85%, transparent),
+    var(--mo-line) 38%
+  );
+  transform-origin: left center;
+}

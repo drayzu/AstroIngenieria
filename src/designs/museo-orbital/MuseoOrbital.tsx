@@ -53,6 +53,7 @@ import { DistortOverlay } from './DistortOverlay';
 import { SalaPortal } from './SalaPortal';
 import { HeroIgnition, releaseBootScreen, shouldPlayIntro, type IntroPhase } from './HeroIgnition';
 import './museoOrbital.css';
+import './obraReveal.css';
 
 const totalWorks = chapters.reduce((sum, chapter) => sum + chapter.concepts.length, 0);
 const HOME_HERO_IMAGES = [
@@ -1612,6 +1613,34 @@ const useNearViewportImage = (imageRef: RefObject<HTMLImageElement | null>) => {
   return shouldLoad;
 };
 
+/* Entrada de las obras: primero se cuelga el marco y luego la imagen se
+   abre dentro de él. Tres aperturas alternan por número de placa para dar
+   ritmo al muro: cortina desde abajo, obturador desde el centro y barrido
+   diagonal. Los polígonos comparten número de puntos para interpolarse. */
+const OBRA_REVEALS = [
+  { from: 'inset(100% 0% 0% 0%)', to: 'inset(0% 0% 0% 0%)', zoom: 1.2 },
+  { from: 'inset(0% 50% 0% 50%)', to: 'inset(0% 0% 0% 0%)', zoom: 1.14 },
+  {
+    from: 'polygon(0% 0%, 0% 0%, -35% 100%, -35% 100%)',
+    to: 'polygon(0% 0%, 135% 0%, 100% 100%, -35% 100%)',
+    zoom: 1.18,
+  },
+] as const;
+
+const obraVariants = {
+  hidden: { opacity: 0, y: 40 },
+  shown: { opacity: 1, y: 0, transition: { duration: 0.8, ease: EASE_OUT } },
+};
+
+const obraMetaVariants = {
+  hidden: { opacity: 0, y: 14 },
+  shown: (order: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: 0.5 + order * 0.09, duration: 0.7, ease: EASE_OUT },
+  }),
+};
+
 const Obra = memo(({
   concept,
   plate,
@@ -1633,6 +1662,7 @@ const Obra = memo(({
   const imgRef = useRef<HTMLImageElement>(null);
   const shouldLoadImage = useNearViewportImage(imgRef);
   const reduced = useReducedMotion();
+  const reveal = OBRA_REVEALS[plate % OBRA_REVEALS.length];
 
   useEffect(() => {
     if (!hovered || !shouldLoadImage || !images || images.length < 2 || reduced ||
@@ -1685,10 +1715,10 @@ const Obra = memo(({
     <motion.article
       className={`mo-obra${featured ? ' is-featured' : ''}`}
       data-concept-id={concept.id}
-      initial={{ opacity: 0, y: 60, rotateZ: plate % 2 === 0 ? -1.1 : 1.1 }}
-      whileInView={{ opacity: 1, y: 0, rotateZ: 0 }}
+      variants={obraVariants}
+      initial={reduced ? false : 'hidden'}
+      whileInView="shown"
       viewport={{ once: true, margin: '-60px' }}
-      transition={{ duration: 1, ease: EASE_OUT }}
     >
       <button
         type="button"
@@ -1704,7 +1734,26 @@ const Obra = memo(({
         onClick={() => onSelect(concept)}
       >
         <figure className="mo-frame">
-          <div className="mo-frame-mask">
+          <motion.div
+            className="mo-frame-mask"
+            variants={{
+              hidden: { clipPath: reveal.from },
+              shown: {
+                clipPath: reveal.to,
+                transition: { delay: 0.15, duration: 1.25, ease: EASE_OUT },
+                transitionEnd: { clipPath: 'none' },
+              },
+            }}
+          >
+            {/* Capa más alta que la ventana: el zoom de entrada y la deriva
+                con el scroll nunca dejan ver sus bordes */}
+            <motion.div
+              className="mo-frame-zoom"
+              variants={{
+                hidden: { scale: reveal.zoom },
+                shown: { scale: 1, transition: { delay: 0.15, duration: 1.6, ease: EASE_OUT } },
+              }}
+            >
             {approvedImage ? <motion.img
               ref={imgRef}
               layoutId={enableFlight ? `obra-${concept.id}` : undefined}
@@ -1729,18 +1778,20 @@ const Obra = memo(({
                 />
               )}
             </AnimatePresence>
+            </motion.div>
             {approvedImage && featured && shouldLoadImage && <DistortOverlay imageRef={imgRef} active={hovered && hoverImageIndex === 0} />}
-          </div>
+          </motion.div>
           <span className="mo-frame-glow" aria-hidden="true" />
         </figure>
         <div className="mo-obra-meta">
-          <span className="mo-plate">{t("N.º")} {String(plate).padStart(2, '0')}
-          </span>
-          <h3>{concept.title}</h3>
-          <p>
+          <motion.span className="mo-plate" variants={obraMetaVariants} custom={0}>
+            {t("N.º")} {String(plate).padStart(2, '0')}
+          </motion.span>
+          <motion.h3 variants={obraMetaVariants} custom={1}>{concept.title}</motion.h3>
+          <motion.p variants={obraMetaVariants} custom={2}>
             {concept.category} · {t(scaleLabels[concept.scale])} ·{' '}
             {t(plausibilityLabels[concept.plausibility])}
-          </p>
+          </motion.p>
         </div>
       </button>
     </motion.article>
@@ -1846,6 +1897,7 @@ const Sala = memo(({
   const sectionRef = useRef<HTMLElement>(null);
   const { locale } = useLocale();
   const { conceptById } = getCatalog(locale);
+  const reduced = useReducedMotion();
 
   return (
     <section
@@ -1861,7 +1913,22 @@ const Sala = memo(({
       )}
       <ChapterIntro chapter={chapter} />
       {chapter.groups?.map((group, groupIndex) => <section className="mo-topic-group" key={`${chapter.id}-${groupIndex}`} aria-label={group.title}>
-          <h3>{group.title}</h3>
+          <motion.h3
+            initial={reduced ? false : { opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.8, ease: EASE_OUT }}
+          >
+            <motion.span
+              className="mo-topic-rule"
+              aria-hidden="true"
+              initial={reduced ? false : { scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 1.4, ease: EASE_OUT }}
+            />
+            {group.title}
+          </motion.h3>
           <div className="mo-wall">
             {group.conceptIds.map(id => {
               const concept = conceptById.get(id)!;
