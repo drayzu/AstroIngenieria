@@ -3352,7 +3352,8 @@ export default function MuseoOrbital() {
         playgroundRunId={playgroundRunId}
         onPlaygroundProgress={handlePlaygroundProgress}
       />
-      <Grain opacity={0.06} blend="screen" zIndex={40} />
+      {/* Mezcla normal: igual de sutil y sin forzar la composición de toda la página */}
+      <Grain opacity={0.045} blend="normal" zIndex={40} />
       <MuseumCursor />
       <audio
         ref={playgroundAudioRef}
