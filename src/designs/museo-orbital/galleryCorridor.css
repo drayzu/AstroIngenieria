@@ -1,0 +1,676 @@
+/* ============ Pasillo de galería ============
+   Escenario fijo mientras la pared avanza hacia el lado. Las medidas de
+   cada obra salen de la altura de la banda de cuelgue (--band), así el
+   pasillo conserva su ritmo en cualquier pantalla. */
+
+.mo-corridor {
+  position: relative;
+  /* La altura real la fija GalleryCorridor según el largo de la pared */
+  min-height: 100vh;
+  min-height: 100svh;
+  margin: 0 -24px;
+}
+
+.mo-corridor-stage {
+  --band: min(58vh, 600px);
+  --meta: 104px;
+  --frame-h: calc(var(--band) - var(--meta));
+  --gap: clamp(56px, 6.5vw, 120px);
+  --rail-gap: clamp(30px, 4.5vh, 48px);
+  --edge: clamp(20px, 5vw, 72px);
+  position: sticky;
+  top: 0;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100vh;
+  height: 100svh;
+  padding: clamp(104px, 13vh, 128px) 0 clamp(22px, 4vh, 40px);
+  overflow: clip;
+}
+
+/* Bordes que se funden con el cielo: la pared aparece y se va en penumbra */
+.mo-corridor-stage::before,
+.mo-corridor-stage::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 3;
+  width: clamp(28px, 7vw, 120px);
+  pointer-events: none;
+}
+
+.mo-corridor-stage::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--mo-bg), transparent);
+}
+
+.mo-corridor-stage::after {
+  right: 0;
+  background: linear-gradient(270deg, var(--mo-bg), transparent);
+}
+
+/* ---------- Letra mural de fondo ---------- */
+
+.mo-corridor-backdrop {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  z-index: 0;
+  margin: -0.4em 0 0;
+  padding-left: 38vw;
+  white-space: nowrap;
+  font-family: var(--mo-serif);
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(140px, 34vh, 380px);
+  line-height: 0.8;
+  letter-spacing: -0.02em;
+  color: transparent;
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--accent, #c9a86a) 16%, rgba(245, 241, 232, 0.05));
+  pointer-events: none;
+  user-select: none;
+  will-change: transform;
+}
+
+/* ---------- Pared ---------- */
+
+.mo-corridor-track {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  width: max-content;
+  height: 100%;
+  /* El margen derecho lo ajusta GalleryCorridor para centrar la última obra */
+  padding: 0 14vw 0 9vw;
+  will-change: transform;
+}
+
+/* Riel de cuelgue: una línea a lo largo de toda la pared */
+.mo-corridor-track::before {
+  content: '';
+  position: absolute;
+  top: calc(50% - var(--band) / 2 - var(--rail-gap));
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(245, 241, 232, 0.14) 4%,
+    rgba(245, 241, 232, 0.14) 96%,
+    transparent
+  );
+}
+
+.mo-corridor-room-block {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gap);
+  height: var(--band);
+}
+
+/* ---------- Cartela de cada grupo ---------- */
+
+.mo-corridor-panel {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: flex-end;
+  width: clamp(240px, 23vw, 360px);
+  height: 100%;
+  padding: 0 0 calc(var(--meta) - 34px) 28px;
+}
+
+.mo-corridor-panel::before {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--rail-gap));
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--accent, #c9a86a) 70%, transparent),
+    rgba(245, 241, 232, 0.08) 70%,
+    transparent
+  );
+}
+
+.mo-corridor-panel-numeral {
+  margin-bottom: auto;
+  font-family: var(--mo-serif);
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(96px, 17vh, 190px);
+  line-height: 0.85;
+  color: transparent;
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--accent, #c9a86a) 62%, transparent);
+}
+
+.mo-corridor-panel h3 {
+  margin: 0 0 16px;
+  font-family: var(--mo-serif);
+  font-weight: 400;
+  font-size: clamp(25px, 2.3vw, 36px);
+  line-height: 1.08;
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+}
+
+.mo-corridor-panel p {
+  margin: 0;
+  font-family: var(--mo-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--mo-muted);
+}
+
+/* ---------- Obras colgadas ---------- */
+
+.mo-corridor-work {
+  --ratio: 4 / 5;
+  --scale: 1;
+  --h: calc(var(--frame-h) * var(--scale));
+  --drop: 0px;
+  position: relative;
+  flex: none;
+  width: calc(var(--h) * (var(--ratio)) + 22px);
+  margin-top: var(--drop);
+  transform-origin: 50% 40%;
+  will-change: transform;
+}
+
+.mo-corridor-work.is-wide {
+  --ratio: 16 / 10;
+  --scale: 0.7;
+}
+
+.mo-corridor-work.is-wide-low {
+  --ratio: 16 / 10;
+  --scale: 0.66;
+  --drop: calc(var(--frame-h) - var(--h));
+}
+
+.mo-corridor-work.is-square {
+  --ratio: 1;
+  --scale: 0.82;
+  --drop: calc((var(--frame-h) - var(--h)) / 2);
+}
+
+.mo-corridor-work.is-square-high {
+  --ratio: 1;
+  --scale: 0.76;
+}
+
+/* Alambres desde el riel hasta el marco */
+.mo-corridor-work::before {
+  content: '';
+  position: absolute;
+  top: calc(-1 * (var(--drop) + var(--rail-gap)));
+  left: 22%;
+  right: 22%;
+  height: calc(var(--drop) + var(--rail-gap));
+  border-left: 1px solid rgba(245, 241, 232, 0.13);
+  border-right: 1px solid rgba(245, 241, 232, 0.13);
+  pointer-events: none;
+}
+
+/* Luz sobre el muro: un halo suave detrás del marco que se enciende
+   cuando la obra pasa frente al visitante */
+.mo-corridor-light {
+  position: absolute;
+  top: calc(-1 * var(--rail-gap));
+  left: -32%;
+  right: -32%;
+  height: calc(var(--h) + var(--rail-gap) * 2 + 48px);
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--accent, #c9a86a) 22%, transparent),
+    color-mix(in srgb, var(--accent, #c9a86a) 7%, transparent) 55%,
+    transparent
+  );
+  opacity: var(--focus, 0);
+  pointer-events: none;
+}
+
+.mo-corridor-work .mo-obra {
+  position: relative;
+}
+
+.mo-corridor-work .mo-frame {
+  margin-bottom: 14px;
+}
+
+.mo-corridor-work .mo-frame-mask {
+  aspect-ratio: var(--ratio);
+}
+
+/* La deriva vertical no tiene sentido en una pared que avanza de lado:
+   la capa se ensancha y GalleryCorridor la desplaza en horizontal */
+.mo-corridor .mo-frame-zoom {
+  inset: 0 -8%;
+  animation: none;
+}
+
+.mo-corridor-work .mo-obra-meta {
+  height: calc(var(--meta) - 14px);
+  opacity: calc(0.42 + var(--focus, 0) * 0.58);
+}
+
+.mo-corridor-work .mo-obra-meta h3 {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: clamp(17px, 1.35vw, 20px);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.mo-corridor-work .mo-obra-meta p {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Mientras falta la imagen, el marco guarda una penumbra del color del capítulo */
+.mo-corridor-work .mo-image-pending {
+  padding: 16px;
+  font-size: 9.5px;
+  line-height: 1.8;
+  background:
+    radial-gradient(circle at 30% 22%, color-mix(in srgb, var(--accent, #c9a86a) 16%, transparent), transparent 62%),
+    radial-gradient(circle at 78% 88%, color-mix(in srgb, var(--accent, #c9a86a) 8%, transparent), transparent 55%),
+    linear-gradient(135deg, #121517, #090b0c 55%, #16181a);
+}
+
+/* ---------- Pantallas pequeñas ---------- */
+
+@media (max-width: 1080px) {
+  .mo-corridor-stage {
+    padding-top: clamp(84px, 11vh, 104px);
+  }
+}
+
+@media (max-width: 720px) {
+  .mo-corridor {
+    margin: 0 -24px;
+  }
+
+  .mo-corridor-stage {
+    --band: min(60svh, 520px);
+    --meta: 96px;
+    --gap: 40px;
+    --edge: 20px;
+    padding-top: 72px;
+  }
+
+  .mo-corridor-track {
+    padding: 0 18vw 0 20px;
+  }
+
+  /* En vertical, las obras no pasan del ancho de la pantalla; como el ancho
+     manda, se cuelgan todas centradas y las apaisadas se acercan al cuadrado */
+  .mo-corridor-work {
+    --h: min(calc(var(--frame-h) * var(--scale)), calc((84vw - 22px) / (var(--ratio))));
+    --drop: calc((var(--frame-h) - var(--h)) / 2);
+  }
+
+  .mo-corridor-work.is-wide,
+  .mo-corridor-work.is-wide-low {
+    --ratio: 5 / 4;
+    --scale: 0.8;
+    --drop: calc((var(--frame-h) - var(--h)) / 2);
+  }
+
+  .mo-corridor-work.is-square,
+  .mo-corridor-work.is-square-high {
+    --drop: calc((var(--frame-h) - var(--h)) / 2);
+  }
+
+  .mo-corridor-panel {
+    width: 62vw;
+    padding-left: 20px;
+  }
+
+  .mo-corridor-stage::before,
+  .mo-corridor-stage::after {
+    width: 20px;
+  }
+}
+
+/* ---------- Separación de color lateral ----------
+   useVelocityWarp marca las obras del pasillo con .is-lateral: el borde
+   que avanza es el izquierdo al bajar y el derecho al subir */
+
+.mo-frame-mask.is-lateral::before,
+.mo-frame-mask.is-lateral::after {
+  top: 0;
+  bottom: 0;
+  width: 18%;
+  height: auto;
+}
+
+.mo-frame-mask.is-lateral::before {
+  left: 0;
+  right: auto;
+  background: linear-gradient(to right, rgba(255, 46, 96, 0.5), transparent);
+}
+
+.mo-frame-mask.is-lateral::after {
+  left: auto;
+  right: 0;
+  background: linear-gradient(to left, rgba(40, 206, 255, 0.5), transparent);
+}
+
+.mo-frame-mask.is-lateral.is-rising::before {
+  background: linear-gradient(to right, rgba(40, 206, 255, 0.5), transparent);
+}
+
+.mo-frame-mask.is-lateral.is-rising::after {
+  background: linear-gradient(to left, rgba(255, 46, 96, 0.5), transparent);
+}
+
+/* ======================================================================
+   Viaje interestelar: aceleración, Doppler y empuje
+   ====================================================================== */
+
+/* Al avanzar, lo que viene se corre al azul y lo que queda atrás al rojo;
+   GalleryCorridor les da opacidad según la velocidad real de la pared */
+.mo-doppler {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 3;
+  width: 28vw;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+}
+
+.mo-doppler.is-left {
+  left: 0;
+  background: linear-gradient(90deg, rgba(255, 64, 72, 0.34), rgba(255, 64, 72, 0.08) 45%, transparent);
+}
+
+.mo-doppler.is-right {
+  right: 0;
+  background: linear-gradient(270deg, rgba(72, 150, 255, 0.36), rgba(72, 150, 255, 0.08) 45%, transparent);
+}
+
+.mo-corridor-stage.is-reverse .mo-doppler.is-left {
+  background: linear-gradient(90deg, rgba(72, 150, 255, 0.36), rgba(72, 150, 255, 0.08) 45%, transparent);
+}
+
+.mo-corridor-stage.is-reverse .mo-doppler.is-right {
+  background: linear-gradient(270deg, rgba(255, 64, 72, 0.34), rgba(255, 64, 72, 0.08) 45%, transparent);
+}
+
+/* Empuje: cinco barras que se encienden con la velocidad del tramo */
+.mo-thrust {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 20px;
+  margin-bottom: 7px;
+}
+
+.mo-thrust i {
+  width: 3px;
+  background: rgba(245, 241, 232, 0.16);
+  transition: background-color 0.45s ease, box-shadow 0.45s ease;
+}
+
+.mo-thrust i:nth-child(1) { height: 6px; }
+.mo-thrust i:nth-child(2) { height: 9px; }
+.mo-thrust i:nth-child(3) { height: 12px; }
+.mo-thrust i:nth-child(4) { height: 16px; }
+.mo-thrust i:nth-child(5) { height: 20px; }
+
+.mo-thrust i.is-on {
+  background: var(--accent, #c9a86a);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent, #c9a86a) 55%, transparent);
+}
+
+/* ======================================================================
+   Ingeniería planetaria: el horizonte de un mundo que se terraforma
+   ====================================================================== */
+
+/* Sin riel ni alambres: las obras se paran sobre el suelo del planeta */
+.mo-corridor.is-horizon .mo-corridor-track::before,
+.mo-corridor.is-horizon .mo-corridor-work::before {
+  display: none;
+}
+
+.mo-corridor.is-horizon .mo-corridor-work {
+  --drop: calc(var(--frame-h) - var(--h));
+  transform-origin: 50% calc(var(--h) + 22px);
+}
+
+.mo-corridor.is-horizon .mo-corridor-panel {
+  transform-origin: 50% calc(100% - var(--meta));
+}
+
+.mo-corridor.is-horizon .mo-corridor-panel::before {
+  top: 0;
+  bottom: var(--meta);
+}
+
+.mo-corridor.is-horizon .mo-corridor-light {
+  top: auto;
+  bottom: calc(100% - var(--h) - 22px);
+  height: calc(var(--h) * 1.3);
+  background: radial-gradient(
+    ellipse 50% 60% at 50% 100%,
+    color-mix(in srgb, var(--accent, #c9a86a) 20%, transparent),
+    transparent 75%
+  );
+}
+
+.mo-horizon {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* El aire: un anillo de luz que sigue la curva justo sobre el borde */
+.mo-horizon-air {
+  position: absolute;
+  inset: 0;
+  will-change: opacity;
+}
+
+.mo-horizon-air.is-barren {
+  background: radial-gradient(
+    circle at 50% calc(var(--rim-y, 70%) + var(--rim-r, 1500px)),
+    transparent calc(var(--rim-r, 1500px) - 1px),
+    rgba(255, 176, 128, 0.5) var(--rim-r, 1500px),
+    rgba(200, 104, 62, 0.2) calc(var(--rim-r, 1500px) + 22px),
+    rgba(150, 72, 42, 0.06) calc(var(--rim-r, 1500px) + 110px),
+    transparent calc(var(--rim-r, 1500px) + 230px)
+  );
+}
+
+.mo-horizon-air.is-living {
+  opacity: 0;
+  background: radial-gradient(
+    circle at 50% calc(var(--rim-y, 70%) + var(--rim-r, 1500px)),
+    transparent calc(var(--rim-r, 1500px) - 1px),
+    rgba(206, 244, 255, 0.78) var(--rim-r, 1500px),
+    rgba(86, 172, 255, 0.34) calc(var(--rim-r, 1500px) + 34px),
+    rgba(64, 196, 168, 0.12) calc(var(--rim-r, 1500px) + 190px),
+    rgba(40, 110, 200, 0.04) calc(var(--rim-r, 1500px) + 320px),
+    transparent calc(var(--rim-r, 1500px) + 440px)
+  );
+}
+
+/* Nubes: aparecen en la segunda mitad, pegadas a la curva del horizonte */
+.mo-horizon-clouds {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  -webkit-mask-image: radial-gradient(
+    circle at 50% calc(var(--rim-y, 70%) + var(--rim-r, 1500px)),
+    transparent calc(var(--rim-r, 1500px) - 4px),
+    #000 calc(var(--rim-r, 1500px) + 8px),
+    #000 calc(var(--rim-r, 1500px) + 64px),
+    transparent calc(var(--rim-r, 1500px) + 150px)
+  );
+  mask-image: radial-gradient(
+    circle at 50% calc(var(--rim-y, 70%) + var(--rim-r, 1500px)),
+    transparent calc(var(--rim-r, 1500px) - 4px),
+    #000 calc(var(--rim-r, 1500px) + 8px),
+    #000 calc(var(--rim-r, 1500px) + 64px),
+    transparent calc(var(--rim-r, 1500px) + 150px)
+  );
+  will-change: opacity;
+}
+
+.mo-horizon-cloud-strip {
+  position: absolute;
+  top: calc(var(--rim-y, 70%) - 170px);
+  left: 0;
+  width: calc(100% + 1600px);
+  height: 400px;
+  background:
+    radial-gradient(ellipse 150px 13px at 140px 168px, rgba(255, 255, 255, 0.34), transparent 70%),
+    radial-gradient(ellipse 90px 9px at 330px 150px, rgba(255, 255, 255, 0.24), transparent 70%),
+    radial-gradient(ellipse 210px 16px at 610px 176px, rgba(255, 255, 255, 0.3), transparent 70%),
+    radial-gradient(ellipse 120px 10px at 900px 140px, rgba(255, 255, 255, 0.22), transparent 70%),
+    radial-gradient(ellipse 170px 14px at 1180px 186px, rgba(255, 255, 255, 0.28), transparent 70%),
+    radial-gradient(ellipse 140px 12px at 1420px 250px, rgba(255, 255, 255, 0.26), transparent 70%),
+    radial-gradient(ellipse 180px 14px at 260px 280px, rgba(255, 255, 255, 0.24), transparent 70%),
+    radial-gradient(ellipse 160px 13px at 1010px 300px, rgba(255, 255, 255, 0.22), transparent 70%);
+  background-size: 1600px 100%;
+  background-repeat: repeat-x;
+  will-change: transform;
+}
+
+/* El planeta: un disco enorme cuyo borde superior es el suelo de la sala */
+.mo-horizon-planet {
+  position: absolute;
+  top: var(--rim-y, 70%);
+  left: calc(50% - var(--rim-r, 1500px));
+  width: calc(var(--rim-r, 1500px) * 2);
+  height: calc(var(--rim-r, 1500px) * 2);
+  overflow: hidden;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 0%, #141516 0%, #08090a 14%, #050506 40%);
+  box-shadow: inset 0 1px 0 rgba(245, 241, 232, 0.2);
+}
+
+/* Relieve que gira con el planeta: cráteres aplanados por la perspectiva */
+.mo-horizon-surface {
+  position: absolute;
+  top: 0;
+  left: calc(var(--rim-r, 1500px) - 50vw - 1200px);
+  width: calc(100vw + 2400px);
+  height: 38vh;
+  background:
+    radial-gradient(ellipse 46px 7px at 120px 24px, rgba(245, 241, 232, 0.07), transparent 70%),
+    radial-gradient(ellipse 84px 12px at 430px 58px, rgba(245, 241, 232, 0.05), transparent 70%),
+    radial-gradient(ellipse 28px 5px at 640px 16px, rgba(245, 241, 232, 0.08), transparent 70%),
+    radial-gradient(ellipse 130px 18px at 880px 104px, rgba(245, 241, 232, 0.04), transparent 70%),
+    radial-gradient(ellipse 60px 9px at 1080px 40px, rgba(245, 241, 232, 0.06), transparent 70%);
+  background-size: 1200px 100%;
+  background-repeat: repeat-x;
+  -webkit-mask-image: linear-gradient(to bottom, #000, transparent);
+  mask-image: linear-gradient(to bottom, #000, transparent);
+  will-change: transform;
+}
+
+/* ======================================================================
+   Civilizaciones: pasillo envolvente y la escala de Kardashev al fondo
+   ====================================================================== */
+
+.mo-corridor.is-kardashev .mo-corridor-work {
+  transform-origin: 50% 45%;
+}
+
+.mo-scales {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  color: var(--accent, #c9a86a);
+  pointer-events: none;
+}
+
+.mo-scale {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  width: min(128vmin, 1280px);
+  height: min(128vmin, 1280px);
+  translate: -50% -50%;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.mo-scale svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* El planeta se asoma desde abajo y se pierde en la oscuridad */
+.mo-scale.is-planet svg {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 92%);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent 92%);
+}
+
+.mo-scale-rim {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent, #c9a86a) 45%, #ffcf9a);
+  stroke-width: 0.4;
+  opacity: 0.55;
+}
+
+.mo-scale-city {
+  fill: #ffd38c;
+}
+
+.mo-scale-sun {
+  position: absolute;
+  inset: 39%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 250, 240, 0.85) 0%,
+    color-mix(in srgb, var(--accent, #c9a86a) 55%, rgba(255, 240, 220, 0.6)) 16%,
+    color-mix(in srgb, var(--accent, #c9a86a) 18%, transparent) 42%,
+    transparent 70%
+  );
+}
+
+.mo-scale-shell {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 0.35;
+  stroke-dasharray: 0.9 2.4;
+}
+
+.mo-scale-core {
+  fill: color-mix(in srgb, var(--accent, #c9a86a) 40%, #fff3e6);
+  opacity: 0.4;
+  filter: blur(3px);
+}
+
+.mo-scale-star {
+  fill: color-mix(in srgb, var(--accent, #c9a86a) 25%, #f6efff);
+}
+
+.mo-scale-ember-glow {
+  fill: rgba(255, 92, 60, 0.05);
+}
+
+.mo-scale-ember {
+  fill: #ff6c4c;
+}

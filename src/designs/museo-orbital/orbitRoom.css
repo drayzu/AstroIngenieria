@@ -1,0 +1,224 @@
+/* ============ Energía estelar: la órbita ============
+   La estrella queda fija en el escenario y las obras giran a su alrededor.
+   OrbitRoom solo escribe transformaciones, opacidades y capas. */
+
+.mo-orbit {
+  position: relative;
+  /* La altura real la fija OrbitRoom: un tramo de scroll por obra */
+  min-height: 100vh;
+  min-height: 100svh;
+  margin: 0 -24px;
+}
+
+.mo-orbit-stage {
+  --edge: clamp(20px, 5vw, 72px);
+  --item-w: min(30vw, 480px);
+  position: sticky;
+  top: 0;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100vh;
+  height: 100svh;
+  padding: clamp(104px, 13vh, 128px) 0 clamp(22px, 4vh, 40px);
+  overflow: clip;
+}
+
+.mo-orbit-space {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Centro de la órbita: la estrella y sus anillos cuelgan de este punto */
+.mo-orbit-center {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  width: 0;
+  height: 0;
+}
+
+.mo-orbit-path {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+}
+
+.mo-orbit-path path {
+  fill: none;
+  stroke: rgba(245, 241, 232, 0.12);
+  stroke-width: 1;
+  stroke-dasharray: 2 8;
+}
+
+.mo-orbit-star {
+  position: absolute;
+  top: -15vmin;
+  left: -15vmin;
+  z-index: 15;
+  width: 30vmin;
+  height: 30vmin;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #fffaf0 0%,
+    #fff1c8 9%,
+    color-mix(in srgb, var(--accent, #c9a86a) 82%, #fff) 17%,
+    color-mix(in srgb, var(--accent, #c9a86a) 34%, transparent) 33%,
+    color-mix(in srgb, var(--accent, #c9a86a) 9%, transparent) 52%,
+    transparent 70%
+  );
+  will-change: opacity, transform;
+}
+
+/* Corona que respira */
+.mo-orbit-star::before {
+  content: '';
+  position: absolute;
+  inset: -35%;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent, #c9a86a) 16%, transparent), transparent 62%);
+  animation: mo-orbit-breathe 6s ease-in-out infinite;
+  animation-play-state: paused;
+}
+
+/* Lo que queda cuando el enjambre captura la luz: calor, no brillo */
+.mo-orbit-infrared {
+  position: absolute;
+  top: -24vmin;
+  left: -24vmin;
+  z-index: 14;
+  width: 48vmin;
+  height: 48vmin;
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(
+    circle,
+    rgba(255, 104, 66, 0.46) 0%,
+    rgba(214, 48, 34, 0.24) 26%,
+    rgba(150, 24, 24, 0.09) 50%,
+    transparent 70%
+  );
+  will-change: opacity;
+}
+
+/* Anillos del enjambre: círculos punteados inclinados que giran en su plano */
+.mo-orbit-ring {
+  position: absolute;
+  top: calc(var(--ring-size) / -2);
+  left: calc(var(--ring-size) / -2);
+  z-index: 16;
+  width: var(--ring-size);
+  height: var(--ring-size);
+  opacity: 0;
+  transform: rotateX(74deg) rotate(var(--ring-tilt));
+  will-change: opacity;
+}
+
+.mo-orbit-ring-spin {
+  position: absolute;
+  inset: 0;
+  border: 1.5px dotted color-mix(in srgb, var(--accent, #c9a86a) 78%, #fff);
+  border-radius: 50%;
+  animation: mo-orbit-spin var(--ring-speed) linear infinite;
+  animation-play-state: paused;
+}
+
+.mo-orbit.is-live .mo-orbit-star::before,
+.mo-orbit.is-live .mo-orbit-ring-spin {
+  animation-play-state: running;
+}
+
+@keyframes mo-orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes mo-orbit-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+/* ---------- Obras en órbita ---------- */
+
+.mo-orbit-item {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  width: var(--item-w);
+  translate: -50% -50%;
+  will-change: transform, opacity;
+}
+
+.mo-orbit-glow {
+  position: absolute;
+  inset: -22% -30%;
+  z-index: -1;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--accent, #c9a86a) 22%, transparent),
+    color-mix(in srgb, var(--accent, #c9a86a) 6%, transparent) 60%,
+    transparent
+  );
+  opacity: var(--front, 0);
+  pointer-events: none;
+}
+
+.mo-orbit-item .mo-frame {
+  margin-bottom: 14px;
+}
+
+.mo-orbit-item .mo-frame-mask {
+  aspect-ratio: 16 / 10;
+}
+
+.mo-orbit .mo-frame-zoom {
+  animation: none;
+}
+
+.mo-orbit-item .mo-obra-meta {
+  opacity: var(--front, 0);
+}
+
+.mo-orbit-item .mo-obra-meta h3 {
+  font-size: clamp(18px, 1.5vw, 22px);
+}
+
+.mo-orbit-item .mo-image-pending {
+  background:
+    radial-gradient(circle at 30% 22%, color-mix(in srgb, var(--accent, #c9a86a) 14%, transparent), transparent 62%),
+    linear-gradient(135deg, #121517, #090b0c 55%, #16181a);
+}
+
+@media (max-width: 1080px) {
+  .mo-orbit-stage {
+    padding-top: clamp(84px, 11vh, 104px);
+  }
+}
+
+@media (max-width: 720px) {
+  .mo-orbit-stage {
+    --edge: 20px;
+    --item-w: 74vw;
+    padding-top: 72px;
+  }
+
+  .mo-orbit-star {
+    top: -20vmin;
+    left: -20vmin;
+    width: 40vmin;
+    height: 40vmin;
+  }
+}

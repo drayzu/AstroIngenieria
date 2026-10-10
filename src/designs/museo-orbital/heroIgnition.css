@@ -130,3 +130,93 @@
   opacity: 0;
   will-change: opacity;
 }
+
+/* ---------- Estrella viva: colapso y estallido en el centro ---------- */
+
+/* Anillos que se cierran sobre el punto durante el colapso; terminan del
+   tamaño exacto con que nacerá la estrella */
+.mo-ignite-implode {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--star-d);
+  height: var(--star-d);
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 222, 196, 0.9);
+  box-shadow:
+    0 0 30px 4px rgba(255, 110, 60, 0.4),
+    inset 0 0 30px 4px rgba(255, 110, 60, 0.28);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.mo-ignite-implode.is-echo {
+  border-color: rgba(255, 170, 130, 0.4);
+  box-shadow: 0 0 16px 1px rgba(255, 110, 60, 0.2);
+}
+
+/* Disco de acreción: arcos de gas que giran cada vez más cerca del punto */
+.mo-ignite-swirl {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--star-d) * 1.15);
+  height: calc(var(--star-d) * 1.15);
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(255, 200, 160, 0.95) 28deg,
+    rgba(255, 120, 70, 0.35) 70deg,
+    transparent 100deg,
+    rgba(255, 220, 190, 0.85) 150deg,
+    rgba(255, 130, 80, 0.3) 190deg,
+    transparent 220deg,
+    rgba(255, 180, 130, 0.9) 270deg,
+    rgba(255, 110, 60, 0.3) 310deg,
+    transparent 340deg
+  );
+  -webkit-mask-image: radial-gradient(circle, transparent 38%, #000 44%, #000 47%, transparent 56%);
+  mask-image: radial-gradient(circle, transparent 38%, #000 44%, #000 47%, transparent 56%);
+  filter: blur(1px) drop-shadow(0 0 6px rgba(255, 120, 60, 0.6));
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* Estallido de rayos en el instante de la ignición */
+.mo-ignite-rays {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--star-d) * 2.6);
+  height: calc(var(--star-d) * 2.6);
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(255, 232, 210, 0.75) 0deg 0.7deg,
+    transparent 0.7deg 7deg,
+    rgba(255, 170, 120, 0.4) 7deg 7.4deg,
+    transparent 7.4deg 13deg
+  );
+  -webkit-mask-image: radial-gradient(circle, transparent 18%, #000 26%, rgba(0, 0, 0, 0.5) 46%, transparent 70%);
+  mask-image: radial-gradient(circle, transparent 18%, #000 26%, rgba(0, 0, 0, 0.5) 46%, transparent 70%);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* Onda de choque con separación cromática: un anillo rojo y uno azul que
+   se adelantan y se atrasan apenas respecto del blanco */
+.mo-ignite-ring.is-red {
+  border-color: rgba(255, 70, 70, 0.7);
+  box-shadow: 0 0 22px 3px rgba(255, 50, 50, 0.3);
+  mix-blend-mode: screen;
+}
+
+.mo-ignite-ring.is-blue {
+  border-color: rgba(90, 170, 255, 0.7);
+  box-shadow: 0 0 22px 3px rgba(60, 140, 255, 0.3);
+  mix-blend-mode: screen;
+}

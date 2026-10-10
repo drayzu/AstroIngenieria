@@ -1,0 +1,181 @@
+/* ============ Cabecera y pie de las salas con escenario fijo ============ */
+
+.mo-room-hud {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 0 var(--edge, clamp(20px, 5vw, 72px));
+  pointer-events: none;
+}
+
+.mo-room-hud-group {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  min-width: 0;
+}
+
+.mo-room-hud-index {
+  flex: none;
+  font-family: var(--mo-mono);
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  color: color-mix(in srgb, var(--accent, #c9a86a) 85%, white);
+}
+
+.mo-room-hud-title {
+  overflow: hidden;
+  font-family: var(--mo-serif);
+  font-style: italic;
+  font-size: clamp(16px, 1.5vw, 20px);
+  color: rgba(245, 241, 232, 0.78);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  animation: mo-room-text-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.mo-room-hud-side {
+  display: flex;
+  flex: none;
+  align-items: flex-end;
+  gap: 22px;
+}
+
+.mo-room-count {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.mo-room-count-current {
+  display: inline-block;
+  min-width: 2ch;
+  font-family: var(--mo-serif);
+  font-style: italic;
+  font-size: clamp(30px, 3.2vw, 46px);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--mo-ink);
+  animation: mo-room-text-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.mo-room-count-total {
+  font-family: var(--mo-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--mo-muted);
+}
+
+@keyframes mo-room-text-in {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+}
+
+/* ---------- Pie: indicación y avance ---------- */
+
+.mo-room-foot {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  gap: 16px;
+  padding: 0 var(--edge, clamp(20px, 5vw, 72px));
+}
+
+.mo-room-hint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-family: var(--mo-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--mo-muted);
+  transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mo-room-hint-arrow {
+  display: inline-block;
+  color: var(--accent, #c9a86a);
+  animation: mo-room-nudge 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.mo-room-foot.is-started .mo-room-hint {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+
+.mo-room-foot.is-started .mo-room-hint-arrow {
+  animation: none;
+}
+
+@keyframes mo-room-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(10px);
+  }
+}
+
+.mo-room-progress {
+  position: relative;
+  height: 1px;
+  background: rgba(245, 241, 232, 0.12);
+}
+
+.mo-room-progress-fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent, #c9a86a) 20%, transparent),
+    var(--accent, #c9a86a)
+  );
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+/* Marca de grupo: un trazo fino con un área generosa para tocarla */
+.mo-room-tick {
+  position: absolute;
+  top: -12px;
+  width: 25px;
+  height: 25px;
+  margin-left: -12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.mo-room-tick::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  width: 1px;
+  height: 9px;
+  background: rgba(245, 241, 232, 0.3);
+  transition: background-color 0.5s ease, transform 0.3s ease;
+}
+
+.mo-room-tick:hover::before {
+  transform: scaleY(1.7);
+}
+
+.mo-room-tick.is-passed::before {
+  background: var(--accent, #c9a86a);
+}
+
+@media (max-width: 720px) {
+  .mo-room-hud-side {
+    gap: 14px;
+  }
+}

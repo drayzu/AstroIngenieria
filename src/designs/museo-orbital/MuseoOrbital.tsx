@@ -6,7 +6,9 @@ import '@fontsource-variable/fraunces';
 import '@fontsource-variable/space-grotesk';
 import '@fontsource-variable/jetbrains-mono';
 import {
+  lazy,
   memo,
+  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -15,6 +17,7 @@ import {
   useState,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
+  type ReactNode,
   type RefObject,
 } from 'react';
 import {
@@ -52,9 +55,26 @@ import {
 } from './PlaygroundArcade';
 import { DistortOverlay } from './DistortOverlay';
 import { SalaPortal } from './SalaPortal';
+import { GalleryCorridor, type CorridorGroup } from './GalleryCorridor';
+import { OrbitRoom } from './OrbitRoom';
+import { VerticalRoom } from './VerticalRoom';
+import { TopicHeading } from './TopicHeading';
+import { isCorridor, isVertical, roomFor } from './salaRooms';
 import { useVelocityWarp } from './useVelocityWarp';
 import { HeroIgnition, releaseBootScreen, shouldPlayIntro, type IntroPhase } from './HeroIgnition';
 import { MuseumFinale } from './MuseumFinale';
+import { isLivingHero, livingSignal } from './living/livingHero';
+import { DysonPlate } from './living/DysonPlate';
+import { LivingGrab } from './living/LivingGrab';
+import './living/livingHero.css';
+
+// Hero de estrella viva: la escena WebGL se descarga aparte, solo cuando se usa
+const LivingStar = lazy(() => import('./living/LivingStar'));
+const LIVING_TITLE_BREAK = 5;
+/* Las letras se condensan desde la luz de la ignición: llegan desenfocadas,
+   grandes y abiertas, y se asientan en su sitio */
+const LIVING_LETTER_FROM = { opacity: 0, scale: 1.6, filter: 'blur(18px)', y: '0%' };
+const LIVING_LETTER_TO = { opacity: 1, scale: 1, filter: 'blur(0px)', y: '0%' };
 import './museoOrbital.css';
 import './obraReveal.css';
 
@@ -389,6 +409,13 @@ const Hero = memo(({
   const [playIntro] = useState(shouldPlayIntro);
   const [introPhase, setIntroPhase] = useState<IntroPhase>(playIntro ? 'dark' : 'off');
   const revealed = introPhase !== 'dark';
+  const [living] = useState(() => {
+    const enabled = isLivingHero();
+    // Sin intro (enlace directo a una sala u obra) la estrella ya arde en su lugar
+    if (enabled && !playIntro) livingSignal.ignitedAt = performance.now() - 30_000;
+    return enabled;
+  });
+  const livingReady = useCallback(() => livingSignal.ready, []);
 
   const preloadHero = useCallback((index: number) => {
     const cached = imageLoadsRef.current.get(index);
@@ -441,14 +468,14 @@ const Hero = memo(({
       if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
       const root = heroRef.current?.closest<HTMLElement>('.mo-root');
-      if (!root || root.scrollTop > 2 || playgroundEntryState !== 'idle' || introPhase !== 'off') return;
+      if (living || !root || root.scrollTop > 2 || playgroundEntryState !== 'idle' || introPhase !== 'off') return;
       event.preventDefault();
       const direction = event.key === 'ArrowRight' ? 1 : -1;
       showHeroAt((heroPosition + direction + heroOrder.length) % heroOrder.length);
     };
     window.addEventListener('keydown', onArrowKey);
     return () => window.removeEventListener('keydown', onArrowKey);
-  }, [heroOrder.length, heroPosition, heroRef, introPhase, playgroundEntryState, showHeroAt]);
+  }, [heroOrder.length, heroPosition, heroRef, introPhase, living, playgroundEntryState, showHeroAt]);
 
   useEffect(() => {
     const hero = heroRef.current;
@@ -468,20 +495,40 @@ const Hero = memo(({
   }, []);
 
   useEffect(() => {
-    if (!heroVisible || !pageVisible) return;
+    if (living || !heroVisible || !pageVisible) return;
     const timeout = window.setTimeout(() => {
       void preloadHero(heroOrder[(heroPosition + 1) % heroOrder.length]);
     }, 1_000);
     return () => window.clearTimeout(timeout);
-  }, [heroOrder, heroPosition, heroVisible, pageVisible, preloadHero]);
+  }, [heroOrder, heroPosition, heroVisible, living, pageVisible, preloadHero]);
 
   useEffect(() => {
-    if (reduced || introPhase !== 'off' || !heroVisible || !pageVisible || playgroundEntryState !== 'idle') return;
+    if (living || reduced || introPhase !== 'off' || !heroVisible || !pageVisible || playgroundEntryState !== 'idle') return;
     const timeout = window.setTimeout(() => {
       showHeroAt((heroPosition + 1) % heroOrder.length);
     }, HERO_ROTATION_MS);
     return () => window.clearTimeout(timeout);
-  }, [heroOrder, heroPosition, heroVisible, introPhase, pageVisible, playgroundEntryState, reduced, showHeroAt]);
+  }, [heroOrder, heroPosition, heroVisible, introPhase, living, pageVisible, playgroundEntryState, reduced, showHeroAt]);
+
+  // Estrella viva: las pistas del cielo solo aparecen si el visitante se queda quieto
+  useEffect(() => {
+    const hero = heroRef.current;
+    if (!living || !hero || introPhase !== 'off') return;
+    let timer = 0;
+    const wake = () => {
+      hero.classList.remove('is-idle');
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => hero.classList.add('is-idle'), 6_000);
+    };
+    wake();
+    window.addEventListener('pointermove', wake, { passive: true });
+    window.addEventListener('pointerdown', wake, { passive: true });
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('pointermove', wake);
+      window.removeEventListener('pointerdown', wake);
+    };
+  }, [heroRef, introPhase, living]);
 
   useEffect(() => {
     if (!imageFocus) return;
@@ -1301,7 +1348,7 @@ const Hero = memo(({
   return (
     <section
       ref={heroRef}
-      className={`mo-hero mo-layer${imageFocus ? ' is-image-focus' : ''}${
+      className={`mo-hero mo-layer${living ? ' is-living' : ''}${imageFocus ? ' is-image-focus' : ''}${
         introPhase !== 'off' ? ' is-intro' : ''
       }${introPhase === 'dark' || introPhase === 'reveal' ? ' is-intro-dark' : ''}${
         introPhase === 'dark' ? ' is-intro-pre' : ''
@@ -1319,6 +1366,15 @@ const Hero = memo(({
         >{t("Índice")}</button>
         </div>
       )}
+      {living ? (
+        <div className="mo-living-stage">
+          <Suspense fallback={null}>
+            <LivingStar heroRef={heroRef} paused={!heroVisible || !pageVisible} />
+          </Suspense>
+          <LivingGrab heroRef={heroRef} />
+          <DysonPlate heroRef={heroRef} />
+        </div>
+      ) : (
       <AnimatePresence initial={false}>
         <motion.div
           key={activeHeroIndex}
@@ -1334,12 +1390,18 @@ const Hero = memo(({
           transition={{ duration: reduced ? 0 : 1.2, ease: EASE_OUT }}
         />
       </AnimatePresence>
+      )}
       <div className="mo-hero-scrim" />
       <div className="mo-hero-spot" aria-hidden="true" />
       {introPhase !== 'off' && (
-        <HeroIgnition heroRef={heroRef} preload={preloadFirstHero} onPhase={setIntroPhase} />
+        <HeroIgnition
+          heroRef={heroRef}
+          preload={living ? livingReady : preloadFirstHero}
+          onPhase={setIntroPhase}
+          living={living}
+        />
       )}
-      {playgroundEntryState !== 'entering' && playgroundEntryState !== 'leaving' && (
+      {!living && playgroundEntryState !== 'entering' && playgroundEntryState !== 'leaving' && (
         <div className={`mo-hero-carousel${imageFocus ? ' is-expanded' : ''}`} role="group" aria-label={t("Imágenes de portada")}>
           {imageFocus && (
             <>
@@ -1439,11 +1501,12 @@ const Hero = memo(({
           className="mo-kicker"
           initial={{ opacity: 0, y: 18 }}
           animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 18, transition: { duration: 0 } }}
-          transition={{ delay: reduced ? 0 : 0.5, duration: 0.9, ease: EASE_OUT }}
+          transition={{ delay: reduced ? 0 : living ? 1.5 : 0.5, duration: 0.9, ease: EASE_OUT }}
         >{t("Atlas de astroingeniería")}</motion.p>
 
         <h1 key={locale} className="mo-hero-title" aria-label={t("Astroingeniería")}>
-          {letters.map((letter, index) => (
+          {letters.map((letter, index) => [
+            living && index === LIVING_TITLE_BREAK && <span key="break" className="mo-hero-break" aria-hidden="true" />,
             <span
               className="mo-hero-letterbox"
               key={`${letter}-${index}`}
@@ -1458,9 +1521,15 @@ const Hero = memo(({
                   ref={(el) => {
                     letterRefs.current[index] = el;
                   }}
-                  initial={{ y: reduced ? '0%' : '180%' }}
-                  animate={revealed ? { y: '0%' } : { y: '180%', transition: { duration: 0 } }}
-                  transition={{
+                  initial={living ? LIVING_LETTER_FROM : { y: reduced ? '0%' : '180%' }}
+                  animate={living
+                    ? (revealed ? LIVING_LETTER_TO : { ...LIVING_LETTER_FROM, transition: { duration: 0 } })
+                    : (revealed ? { y: '0%' } : { y: '180%', transition: { duration: 0 } })}
+                  transition={living ? {
+                    delay: 1.15 + Math.abs(index - LIVING_TITLE_BREAK + 0.5) * 0.05,
+                    duration: 1.4,
+                    ease: EASE_OUT,
+                  } : {
                     delay: reduced ? 0 : 0.55 + index * 0.038,
                     duration: reduced ? 0 : 1.25,
                     ease: EASE_OUT,
@@ -1469,15 +1538,15 @@ const Hero = memo(({
                   {letter}
                 </motion.span>
               </span>
-            </span>
-          ))}
+            </span>,
+          ])}
         </h1>
 
         <motion.div
           className="mo-hero-rule"
           initial={{ scaleX: 0 }}
           animate={revealed ? { scaleX: 1 } : { scaleX: 0, transition: { duration: 0 } }}
-          transition={{ delay: reduced ? 0 : 1.4, duration: 1.6, ease: EASE_OUT }}
+          transition={{ delay: reduced ? 0 : living ? 1.9 : 1.4, duration: 1.6, ease: EASE_OUT }}
         />
 
         <motion.p
@@ -1485,7 +1554,7 @@ const Hero = memo(({
           className="mo-hero-sub"
           initial={{ opacity: 0, y: 22 }}
           animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 22, transition: { duration: 0 } }}
-          transition={{ delay: reduced ? 0 : 1.6, duration: 1, ease: EASE_OUT }}
+          transition={{ delay: reduced ? 0 : living ? 2.1 : 1.6, duration: 1, ease: EASE_OUT }}
         >{t("De los hábitats orbitales a las estrellas, exploramos qué podríamos construir, qué haría falta para lograrlo y dónde aparecen los límites físicos.")}</motion.p>
 
         <motion.span
@@ -1665,12 +1734,18 @@ const Obra = memo(({
   plate,
   featured,
   enableFlight,
+  preload = false,
+  overlay,
   onSelect,
 }: {
   concept: AstroConcept;
   plate: number;
   featured: boolean;
   enableFlight: boolean;
+  /* El pasillo avisa cuando la obra está por entrar desde el costado */
+  preload?: boolean;
+  /* Capa propia de la sala dentro de la ventana del marco (plano, luz…) */
+  overlay?: ReactNode;
   onSelect: (concept: AstroConcept) => void;
 }) => {
   const { t } = useLocale();
@@ -1679,7 +1754,8 @@ const Obra = memo(({
   const images = selectedStudyImages[concept.id];
   const approvedImage = images?.[0];
   const imgRef = useRef<HTMLImageElement>(null);
-  const shouldLoadImage = useNearViewportImage(imgRef);
+  const nearViewport = useNearViewportImage(imgRef);
+  const shouldLoadImage = nearViewport || preload;
   const reduced = useReducedMotion();
   const reveal = OBRA_REVEALS[plate % OBRA_REVEALS.length];
 
@@ -1798,6 +1874,7 @@ const Obra = memo(({
               )}
             </AnimatePresence>
             </motion.div>
+            {overlay}
             {approvedImage && featured && shouldLoadImage && <DistortOverlay imageRef={imgRef} active={hovered && hoverImageIndex === 0} />}
           </motion.div>
           <span className="mo-frame-glow" aria-hidden="true" />
@@ -1917,6 +1994,29 @@ const Sala = memo(({
   const { locale } = useLocale();
   const { conceptById } = getCatalog(locale);
   const reduced = useReducedMotion();
+  // Cada capítulo se recorre a su manera; con movimiento reducido, el muro de siempre
+  const room = reduced ? null : roomFor(chapter.id);
+  const roomGroups = useMemo<CorridorGroup[] | null>(() => {
+    if (!room || !chapter.groups) return null;
+    return chapter.groups.map((group) => ({
+      title: group.title,
+      works: group.conceptIds.map((id) => {
+        const concept = conceptById.get(id)!;
+        return { concept, plate: offset + chapter.concepts.indexOf(concept) + 1 };
+      }),
+    }));
+  }, [chapter, conceptById, offset, room]);
+  const renderRoomObra = useCallback((concept: AstroConcept, plate: number, preload = false, overlay?: ReactNode) => (
+    <Obra
+      concept={concept}
+      plate={plate}
+      featured={false}
+      enableFlight={enableFlight}
+      preload={preload}
+      overlay={overlay}
+      onSelect={onSelect}
+    />
+  ), [enableFlight, onSelect]);
 
   return (
     <section
@@ -1931,23 +2031,33 @@ const Sala = memo(({
         <SalaPortal from={previous} to={chapter} scrollRef={scrollRef} onCross={onCross} />
       )}
       <ChapterIntro chapter={chapter} />
-      {chapter.groups?.map((group, groupIndex) => <section className="mo-topic-group" key={`${chapter.id}-${groupIndex}`} aria-label={group.title}>
-          <motion.h3
-            initial={reduced ? false : { opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-40px' }}
-            transition={{ duration: 0.8, ease: EASE_OUT }}
-          >
-            <motion.span
-              className="mo-topic-rule"
-              aria-hidden="true"
-              initial={reduced ? false : { scaleX: 0 }}
-              whileInView={{ scaleX: 1 }}
-              viewport={{ once: true, margin: '-40px' }}
-              transition={{ duration: 1.4, ease: EASE_OUT }}
-            />
-            {group.title}
-          </motion.h3>
+      {roomGroups && isCorridor(room) && (
+        <GalleryCorridor
+          kind={room}
+          chapterTitle={chapter.title}
+          groups={roomGroups}
+          scrollRef={scrollRef}
+          renderObra={renderRoomObra}
+        />
+      )}
+      {roomGroups && room === 'orbit' && (
+        <OrbitRoom
+          chapterTitle={chapter.title}
+          groups={roomGroups}
+          scrollRef={scrollRef}
+          renderObra={renderRoomObra}
+        />
+      )}
+      {roomGroups && isVertical(room) && (
+        <VerticalRoom
+          kind={room}
+          groups={roomGroups}
+          scrollRef={scrollRef}
+          renderObra={renderRoomObra}
+        />
+      )}
+      {!roomGroups && chapter.groups?.map((group, groupIndex) => <section className="mo-topic-group" key={`${chapter.id}-${groupIndex}`} aria-label={group.title}>
+          <TopicHeading title={group.title} />
           <div className="mo-wall">
             {group.conceptIds.map(id => {
               const concept = conceptById.get(id)!;
