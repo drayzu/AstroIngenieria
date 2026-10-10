@@ -88,8 +88,9 @@
     transparent 94%
   );
   box-shadow: 0 0 18px 4px rgba(255, 120, 70, 0.3);
+  /* Sin transform aquí: junto a translate, el minificador del build
+     descartaba el translate y el destello quedaba solo a la derecha */
   opacity: 0;
-  transform: scaleX(0);
   will-change: transform, opacity;
 }
 
