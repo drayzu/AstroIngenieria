@@ -24,6 +24,9 @@ export interface StarFrame {
 
 /* Escritorio: la estrella a la derecha y el título en el espacio negro de
    la izquierda. Vertical: la estrella arriba y el título abajo. */
+/* Radio de la esfera de Dyson respecto del de la estrella */
+export const SHELL_SCALE = 1.6;
+
 export const starFrame = (width: number, height: number): StarFrame => {
   if (width < 720 || width / height < 0.9) {
     return { x: width * 0.5, y: height * 0.19, r: Math.min(width * 0.3, height * 0.15) };
@@ -46,6 +49,9 @@ export const livingSignal = {
     resolveReady = resolve;
   }),
   markReady: () => resolveReady(),
+  /* Giro con el mouse: la zona de agarre escribe aquí y la escena lo integra
+     con inercia; tras un rato sin tocarla vuelve sola a su encuadre */
+  spin: { yaw: 0, pitch: 0, velocityYaw: 0, velocityPitch: 0, dragging: false, touchedAt: 0 },
   /* La cartela escucha el avance de la obra (porcentaje entero) */
   onProgress: undefined as ((percent: number) => void) | undefined,
 };

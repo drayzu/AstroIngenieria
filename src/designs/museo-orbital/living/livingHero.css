@@ -25,15 +25,17 @@
 }
 
 /* ASTRO / INGENIERÍA */
+/* En bloque y no en flex: el salto de línea no ensancha la caja del título,
+   que así no tapa la esfera */
 .mo-hero.is-living .mo-hero-title {
-  flex-wrap: wrap;
+  display: block;
   font-size: clamp(52px, 8vw, 140px);
   line-height: 0.92;
   text-shadow: 0 2px 30px rgba(7, 7, 7, 0.55);
 }
 
 .mo-hero-break {
-  flex-basis: 100%;
+  display: block;
   height: 0;
 }
 
@@ -189,4 +191,46 @@
     margin: 4px 0 0 !important;
     font-size: 24px;
   }
+}
+
+/* ---------- Agarre para girar la obra ---------- */
+
+.mo-living-grab {
+  position: absolute;
+  /* Sobre la escena y el velo; bajo el texto, PLAYGROUND y la barra */
+  z-index: 2;
+  top: var(--grab-y, 43%);
+  left: var(--grab-x, 72%);
+  width: var(--grab-d, 600px);
+  height: var(--grab-d, 600px);
+  translate: -50% -50%;
+  border-radius: 50%;
+  pointer-events: auto;
+  cursor: grab;
+  /* En pantallas táctiles el arrastre vertical sigue siendo scroll */
+  touch-action: pan-y;
+}
+
+.mo-living-grab.is-grabbing {
+  cursor: grabbing;
+}
+
+.mo-hero.is-intro .mo-living-grab {
+  pointer-events: none;
+}
+
+/* El texto queda encima del agarre, pero solo sus piezas reciben el mouse:
+   la caja que las contiene no debe tapar la esfera */
+.mo-hero.is-living .mo-hero-copy {
+  z-index: 3;
+  pointer-events: none;
+}
+
+.mo-hero.is-living .mo-hero-copy > * {
+  pointer-events: auto;
+}
+
+.mo-hero.is-living .mo-hero-title,
+.mo-hero.is-living .mo-kicker {
+  width: fit-content;
 }

@@ -54,6 +54,7 @@ export const englishMessages = {
   'Plano de fabricación': 'Fabrication drawing',
   'Esfera de Dyson · en construcción': 'Dyson sphere · under construction',
   'completada': 'complete',
+  'Arrastra para girar': 'Drag to rotate',
   'Una civilización envuelve su estrella para aprovechar toda su energía.': 'A civilization wraps its star to harness all of its energy.',
   'Sigue bajando: la sala avanza': 'Keep scrolling: the room moves on',
   'Archivo': 'Archive',

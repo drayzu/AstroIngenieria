@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { PerformanceMonitor } from '@react-three/drei';
 import * as THREE from 'three';
-import { livingSignal, starFrame } from './livingHero';
+import { livingSignal, SHELL_SCALE, starFrame } from './livingHero';
 
 /* Estrella viva: granulación que hierve, corona con protuberancias y una
    esfera de Dyson en construcción. Un domo geodésico fantasma dibuja la
@@ -121,7 +121,7 @@ void main() {
 
 /* ---------------- Corona, protuberancias y llamaradas ---------------- */
 
-const CORONA_RADIUS = 3.4;
+const CORONA_RADIUS = 2.7;
 
 const CORONA_VERTEX = /* glsl */ `
 varying vec2 vPlane;
@@ -140,7 +140,7 @@ varying vec2 vPlane;
 ${NOISE}
 void main() {
   float r = length(vPlane);
-  if (r < 0.985) discard;
+  if (r < 0.985 || r > ${CORONA_RADIUS.toFixed(1)}) discard;
   vec2 dir = vPlane / r;
   float ang = atan(vPlane.y, vPlane.x);
   float h = r - 1.0;
@@ -161,14 +161,14 @@ void main() {
   float plume = jet * exp(-uFlareAge * 0.7) * step(0.0, uFlareAge) * smoothstep(0.0, 0.08, uFlareAge);
   float intensity = (glow * (0.42 + 0.78 * streams) + prom * 0.55 + plume * 3.0) * uIgnite;
   vec3 color = mix(vec3(0.95, 0.2, 0.04), vec3(1.0, 0.72, 0.44), clamp(intensity * 0.9 - 0.15, 0.0, 1.0));
-  float alpha = clamp(intensity, 0.0, 1.0) * (1.0 - smoothstep(2.3, ${CORONA_RADIUS.toFixed(1)}, r));
+  float alpha = clamp(intensity, 0.0, 1.0) * (1.0 - smoothstep(1.9, ${CORONA_RADIUS.toFixed(1)}, r));
   gl_FragColor = vec4(color, alpha);
 }
 `;
 
 /* ---------------- Esfera de Dyson: domo y paneles ---------------- */
 
-const SHELL_RADIUS = 1.6;
+const SHELL_RADIUS = SHELL_SCALE;
 const SHELL_DETAIL = 9;
 // Ya hay una parte construida al encenderse y la obra avanza mientras miras
 const SHELL_START = 0.05;
@@ -479,19 +479,43 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
     ghostGeometry.dispose();
   }, [starMaterial, coronaMaterial, swarmMaterial, shellMaterial, ghostMaterial, shellGeometry, ghostGeometry]);
 
+  /* Medidas del hero guardadas: leerlas en cada cuadro o en cada movimiento
+     del mouse obligaría al navegador a recalcular el diseño de la página,
+     porque el resto del hero escribe estilos en cada cuadro */
+  const layout = useRef({ left: 0, top: 0, width: 1, height: 1, scroll: 0 });
+  useEffect(() => {
+    const hero = heroRef.current;
+    const root = hero?.closest<HTMLElement>('.mo-root');
+    if (!hero || !root) return;
+    const measure = () => {
+      const rect = hero.getBoundingClientRect();
+      const scroll = root.scrollTop;
+      layout.current = { left: rect.left, top: rect.top + scroll, width: rect.width, height: rect.height, scroll };
+    };
+    const onScroll = () => {
+      layout.current.scroll = root.scrollTop;
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(hero);
+    root.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      observer.disconnect();
+      root.removeEventListener('scroll', onScroll);
+    };
+  }, [heroRef]);
+
   // Puntero y clics se escuchan en la ventana: el lienzo no recibe eventos
   useEffect(() => {
     const fine = window.matchMedia('(pointer: fine)').matches;
     let down = { x: 0, y: 0, at: 0 };
     const local = (event: PointerEvent) => {
-      const hero = heroRef.current;
-      if (!hero) return null;
-      const rect = hero.getBoundingClientRect();
-      return { rect, x: event.clientX - rect.left, y: event.clientY - rect.top };
+      const box = layout.current;
+      const rect = { width: box.width, height: box.height };
+      return { rect, x: event.clientX - box.left, y: event.clientY - (box.top - box.scroll) };
     };
     const onMove = (event: PointerEvent) => {
       const point = local(event);
-      if (!point) return;
       const inside = point.y >= 0 && point.y <= point.rect.height;
       pointer.current = {
         x: (point.x / point.rect.width) * 2 - 1,
@@ -508,7 +532,7 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
       if (performance.now() - down.at > 320 || Math.hypot(event.clientX - down.x, event.clientY - down.y) > 8) return;
       if (event.target instanceof Element && event.target.closest('button, a, input')) return;
       const point = local(event);
-      if (!point || point.y < 0 || point.y > point.rect.height) return;
+      if (point.y < 0 || point.y > point.rect.height) return;
       const frame = starFrame(point.rect.width, point.rect.height);
       livingSignal.flareAngle = Math.atan2(frame.y - point.y, point.x - frame.x);
       livingSignal.flareAt = performance.now();
@@ -528,14 +552,12 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
     };
   }, [heroRef]);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const { size, viewport } = state;
     const camera = state.camera as THREE.PerspectiveCamera;
     const now = performance.now();
     const time = state.clock.elapsedTime;
-    const hero = heroRef.current;
-    const root = hero?.closest<HTMLElement>('.mo-root');
-    const scroll = hero && root ? clamp01(root.scrollTop / Math.max(1, hero.offsetHeight)) : 0;
+    const scroll = clamp01(layout.current.scroll / Math.max(1, layout.current.height));
 
     // Ignición: la estrella crece desde el punto de luz con un destello blanco
     const since = livingSignal.ignitedAt ? (now - livingSignal.ignitedAt) / 1000 : -1;
@@ -569,8 +591,27 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
     current.x += (target.x - current.x) * 0.045;
     current.y += (target.y - current.y) * 0.045;
     current.on += (target.on - current.on) * 0.08;
-    const azimuth = current.x * 0.1;
-    const elevation = 0.2 + current.y * 0.05 + scroll * 0.25;
+    const spin = livingSignal.spin;
+    const step = Math.min(0.05, delta);
+    if (!spin.dragging) {
+      spin.yaw += spin.velocityYaw * step;
+      spin.pitch += spin.velocityPitch * step;
+      const friction = Math.pow(0.05, step);
+      spin.velocityYaw *= friction;
+      spin.velocityPitch *= friction;
+      // Sin tocarla un rato, vuelve por el camino corto a su encuadre
+      if (now - spin.touchedAt > 5000) {
+        const turn = Math.PI * 2;
+        spin.yaw = ((((spin.yaw + Math.PI) % turn) + turn) % turn) - Math.PI;
+        spin.yaw *= 1 - Math.min(1, step * 0.9);
+        spin.pitch *= 1 - Math.min(1, step * 0.9);
+      }
+    }
+    spin.pitch = Math.max(-1.25, Math.min(1.05, spin.pitch));
+    // Mientras se arrastra, el paralaje del cursor no se suma al giro
+    const parallax = spin.dragging ? 0 : 1;
+    const azimuth = spin.yaw + current.x * 0.1 * parallax;
+    const elevation = Math.max(-1.05, Math.min(1.25, 0.2 + spin.pitch + current.y * 0.05 * parallax + scroll * 0.25));
     camera.position.set(
       Math.sin(azimuth) * Math.cos(elevation) * distance,
       Math.sin(elevation) * distance,
