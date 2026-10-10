@@ -28,6 +28,7 @@ export class CursorConstellationLayer {
   private pixels: ImageData | null = null;
   private readonly root: HTMLElement;
   blocked = false;
+  private syncTimer = 0;
 
   constructor(root: HTMLElement, invalidate: () => void) {
     this.root = root;
@@ -43,8 +44,15 @@ export class CursorConstellationLayer {
       invalidateGeometry();
     }, { root, rootMargin: '32px' });
     this.resizeObserver = new ResizeObserver(invalidateGeometry);
+    // Los cambios de estructura se agrupan: recorrer todo el museo en cada
+    // nodo que cambia (contadores, textos que se reemplazan) es caro
     this.structureObserver = new MutationObserver(records => {
-      if (records.some(record => record.type === 'childList')) this.sync();
+      if (records.some(record => record.type === 'childList') && !this.syncTimer) {
+        this.syncTimer = window.setTimeout(() => {
+          this.syncTimer = 0;
+          this.sync();
+        }, 300);
+      }
       if (records.some(record => record.type !== 'attributes' ||
         (record.target instanceof Element && record.target.matches('.mo-chapter-intro,.mo-hero,.mo-image-lightbox,.mo-menu,.mo-studio')))) invalidateGeometry();
     });
@@ -199,6 +207,7 @@ export class CursorConstellationLayer {
   }
 
   dispose() {
+    window.clearTimeout(this.syncTimer);
     this.observer.disconnect();
     this.resizeObserver.disconnect();
     this.structureObserver.disconnect();

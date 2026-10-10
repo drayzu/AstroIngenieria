@@ -682,6 +682,7 @@ export const StarfieldCanvas = ({
     let textRects: PageTextRect[] = [];
     let studioRect: ViewRect | null = null;
     let rectsDirty = true;
+    let lastRectRefresh = Number.NEGATIVE_INFINITY;
     let nextRectCheck = 0;
     const cursorLayer = new CursorConstellationLayer(scrollEl ?? document.body, () => { rectsDirty = true; });
     const visibleTextTargets = new Set<HTMLElement>();
@@ -2503,10 +2504,16 @@ export const StarfieldCanvas = ({
       }
 
       // Refresco de rects de imágenes: al hacer scroll/resize y de forma
-      // periódica (las imágenes con parallax se desplazan unos píxeles)
-      if (rectsDirty || time > nextRectCheck) {
+      // periódica (las imágenes con parallax se desplazan unos píxeles).
+      // Como mucho cada 150 ms (200 ms durante el scroll): los observadores
+      // marcan la geometría sucia muy seguido (las letras del título cambian
+      // de tamaño al pasar el mouse) y medir en cada cuadro obligaba a
+      // recalcular el diseño de todo el museo a mitad de cuadro.
+      const scrollingNow = performance.now() - lastScrollAt < 140;
+      if ((rectsDirty && time - lastRectRefresh > (scrollingNow ? 0.2 : 0.15)) || time > nextRectCheck) {
         refreshImgRects();
         rectsDirty = false;
+        lastRectRefresh = time;
         nextRectCheck = time + 0.5;
       }
 
@@ -4614,9 +4621,16 @@ export const StarfieldCanvas = ({
     window.addEventListener('pointercancel', onPointerCancel);
     window.addEventListener('blur', onWinBlur);
     scrollEl?.addEventListener('scroll', onScroll, { passive: true });
+    // Cambios en el DOM: se agrupan, porque recorrer todo el museo en cada
+    // cambio (un contador que avanza, un texto que se reemplaza) es caro
+    let structureTimer = 0;
     const structureObserver = new MutationObserver(() => {
-      syncTextTargets();
       rectsDirty = true;
+      if (structureTimer) return;
+      structureTimer = window.setTimeout(() => {
+        structureTimer = 0;
+        syncTextTargets();
+      }, 300);
     });
     if (scrollEl) structureObserver.observe(scrollEl, { childList: true, subtree: true });
     document.addEventListener('visibilitychange', onVisibility);
@@ -4636,6 +4650,7 @@ export const StarfieldCanvas = ({
     raf = requestAnimationFrame(frame);
 
     return () => {
+      window.clearTimeout(structureTimer);
       clearCharge();
       sandboxActive = false;
       cosmicLab.dispose();

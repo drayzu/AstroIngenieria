@@ -916,11 +916,57 @@ const Hero = memo(({
     };
     window.addEventListener('mousemove', onMove, { passive: true });
 
+    /* Posiciones base de las letras y del botón, leídas todas juntas al
+       inicio del cuadro y renovadas como mucho cada 400 ms. Antes se medían
+       intercaladas con las escrituras de cada cuadro, y cada lectura
+       obligaba a recalcular el diseño: unas doce veces por cuadro al mover
+       el mouse. El scroll se descuenta sin volver a medir. */
+    type Center = { x: number; y: number };
+    const scroller = heroRef.current?.closest<HTMLElement>('.mo-root') ?? null;
+    let scrollNow = scroller?.scrollTop ?? 0;
+    const geometry = {
+      letters: [] as Center[],
+      pg: [] as Center[],
+      button: null as { left: number; top: number } | null,
+      scroll: scrollNow,
+      measuredAt: Number.NEGATIVE_INFINITY,
+    };
+    const onRootScroll = () => {
+      scrollNow = scroller?.scrollTop ?? 0;
+    };
+    const markStale = () => {
+      geometry.measuredAt = Number.NEGATIVE_INFINITY;
+    };
+    const measureHero = (now: number) => {
+      geometry.letters = letters.map((_, index) => {
+        const box = boxRefs.current[index];
+        const state = states[index];
+        if (!box || !state) return { x: -9999, y: -9999 };
+        const rect = box.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2 - state.ix, y: rect.top + rect.height / 2 - state.iy };
+      });
+      geometry.pg = pgStates.map((state, index) => {
+        const el = pgRefs.current[index];
+        if (!el) return { x: -9999, y: -9999 };
+        const rect = el.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2 - state.x, y: rect.top + rect.height / 2 - state.y };
+      });
+      const button = pgButtonRef.current?.getBoundingClientRect();
+      geometry.button = button ? { left: button.left, top: button.top } : null;
+      geometry.scroll = scroller?.scrollTop ?? scrollNow;
+      scrollNow = geometry.scroll;
+      geometry.measuredAt = now;
+    };
+    scroller?.addEventListener('scroll', onRootScroll, { passive: true });
+    window.addEventListener('resize', markStale);
+
     const loop = (now: number) => {
       if (!heroVisible) {
         raf = 0;
         return;
       }
+      if (now - geometry.measuredAt > 400) measureHero(now);
+      const shift = geometry.scroll - scrollNow;
       const dt = prevT > 0 ? Math.min(0.032, Math.max(0.008, (now - prevT) / 1000)) : 0.016;
       prevT = now;
       // Lerp independiente del framerate para suavizados por-frame
@@ -937,12 +983,10 @@ const Hero = memo(({
       const push = 1 + speedFactor * 1.6;
 
       const targets = letters.map((_, index) => {
-        const box = boxRefs.current[index];
-        const state = states[index];
-        if (!box || !state) return { x: 0, y: 0 };
-        const rect = box.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2 - state.ix;
-        const cy = rect.top + rect.height / 2 - state.iy;
+        const base = geometry.letters[index];
+        if (!base) return { x: 0, y: 0 };
+        const cx = base.x;
+        const cy = base.y + shift;
         const dx = cx - mouse.x;
         const dy = cy - mouse.y;
         const dist = Math.hypot(dx, dy);
@@ -1228,20 +1272,20 @@ const Hero = memo(({
         seg.style.transform = `translate(${midX.toFixed(1)}px, ${midY.toFixed(1)}px) translate(-50%, -50%) rotate(${angle.toFixed(3)}rad)`;
       }
 
-      const btnRect = pgButtonRef.current ? pgButtonRef.current.getBoundingClientRect() : null;
+      const btnRect = geometry.button;
       const cometActive = btnRect !== null && comet.visible && comet.mode !== 'away' && comet.mode !== 'exit';
       const cometVX = btnRect ? btnRect.left + comet.x : 0;
-      const cometVY = btnRect ? btnRect.top + comet.y : 0;
+      const cometVY = btnRect ? btnRect.top + shift + comet.y : 0;
 
       // Letras de PLAYGROUND: subamortiguado como las cajas del título,
       // con evasión del cursor y del cometa
       pgStates.forEach((state, index) => {
         const el = pgRefs.current[index];
-        if (!el) return;
+        const base = geometry.pg[index];
+        if (!el || !base) return;
 
-        const rect = el.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2 - state.x;
-        const cy = rect.top + rect.height / 2 - state.y;
+        const cx = base.x;
+        const cy = base.y + shift;
 
         if (mouse.x > -999) {
           const dx = cx - mouse.x;
@@ -1311,6 +1355,8 @@ const Hero = memo(({
     raf = requestAnimationFrame(loop);
     return () => {
       heroObserver?.disconnect();
+      scroller?.removeEventListener('scroll', onRootScroll);
+      window.removeEventListener('resize', markStale);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mo-title-hit', onTitleHit);
       window.removeEventListener('mo-pg-hit', onPgHit);
@@ -3258,10 +3304,23 @@ export default function MuseoOrbital() {
       { id: 'vitrina', element: document.getElementById('vitrina') },
       { id: 'archivo', element: document.getElementById('archivo') }];
     let frame = 0;
+    /* Posiciones de las secciones guardadas y renovadas solo cuando algo
+       cambia de tamaño: medirlas en cada cuadro de scroll obligaba a
+       recalcular el diseño de la página a mitad de cuadro */
+    let offsets: number[] = [];
+    let viewport = root.clientHeight;
+    let scrollTop = root.scrollTop;
+    const measure = () => {
+      const rootTop = root.getBoundingClientRect().top;
+      scrollTop = root.scrollTop;
+      viewport = root.clientHeight;
+      offsets = sections.map(({ element }) =>
+        element ? element.getBoundingClientRect().top - rootTop + scrollTop : Number.POSITIVE_INFINITY);
+    };
     const syncActiveHall = () => {
       frame = 0;
-      const readingLine = root.getBoundingClientRect().top + root.clientHeight * 0.45;
-      const sectionTops = sections.map(({ element }) => element?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY);
+      const readingLine = viewport * 0.45;
+      const sectionTops = offsets.map((offset) => offset - scrollTop);
       let nextId: string | null = null;
       let activeIndex = -1;
       for (let index = 0; index < sections.length; index += 1) {
@@ -3292,14 +3351,26 @@ export default function MuseoOrbital() {
     const requestSync = () => {
       if (!frame) frame = window.requestAnimationFrame(syncActiveHall);
     };
+    const onScroll = () => {
+      scrollTop = root.scrollTop;
+      requestSync();
+    };
+    const remeasure = () => {
+      measure();
+      requestSync();
+    };
 
+    measure();
     requestSync();
-    root.addEventListener('scroll', requestSync, { passive: true });
-    window.addEventListener('resize', requestSync);
+    const resizeObserver = new ResizeObserver(remeasure);
+    sections.forEach(({ element }) => element && resizeObserver.observe(element));
+    root.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', remeasure);
     return () => {
       window.cancelAnimationFrame(frame);
-      root.removeEventListener('scroll', requestSync);
-      window.removeEventListener('resize', requestSync);
+      resizeObserver.disconnect();
+      root.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', remeasure);
     };
   }, []);
 
