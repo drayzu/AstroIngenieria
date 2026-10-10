@@ -7,7 +7,6 @@ import {
   useScroll,
   useSpring,
   useTransform,
-  type MotionValue,
 } from 'framer-motion';
 import { useLocale } from '../../i18n/LocaleProvider';
 import type { AstroChapter } from '../../types';
@@ -15,6 +14,7 @@ import './salaPortal.css';
 
 const EASE_OUT = cubicBezier(0.16, 1, 0.3, 1);
 const EASE_IN_OUT = cubicBezier(0.65, 0, 0.35, 1);
+const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
 /* Guion del salto sobre el progreso del tramo fijo (0 = el escenario se
    ancla, 1 = se suelta). Ajustar aquí cambia el ritmo de todos los portales. */
@@ -27,36 +27,13 @@ const T = {
   numberIn: [0.06, 0.42],
   numberFill: [0.18, 0.46],
   numberFly: [0.5, 0.72],
-  kickerIn: [0.56, 0.66],
-  titleIn: [0.58, 0.8],
-  copyOut: [0.88, 1],
-  imageFade: [0.86, 1],
+  shade: [0.8, 0.93],
+  arrive: [0.92, 1],
+  // Fundido corto: la cabecera aún sube bajo el escenario y en un relevo
+  // largo se vería la imagen doble
+  handoff: [0.95, 1],
   warp: [0.4, 0.8],
 } satisfies Record<string, [number, number]>;
-
-/* ---------------- Palabra del título, revelada por scroll ---------------- */
-
-const ScrubWord = ({
-  word,
-  progress,
-  range,
-  last,
-}: {
-  word: string;
-  progress: MotionValue<number>;
-  range: [number, number];
-  last: boolean;
-}) => {
-  const y = useTransform(progress, range, ['112%', '0%'], { ease: EASE_OUT });
-  return (
-    <span className="mo-word-box">
-      <motion.span className="mo-word" style={{ y }}>
-        {word}
-        {last ? '' : ' '}
-      </motion.span>
-    </span>
-  );
-};
 
 /* ---------------- Portal entre capítulos ---------------- */
 
@@ -132,8 +109,20 @@ export const SalaPortal = ({
     [T.irisOpen[0], T.irisCover[0], T.irisCover[1]],
     [1.45, 1.15, 1],
   );
-  const scrimOpacity = useTransform(progress, T.irisCover, [0.12, 0.58]);
-  const irisOpacity = useTransform(progress, T.imageFade, [1, 0.32]);
+  const scrimOpacity = useTransform(progress, T.irisCover, [0.12, 0.3]);
+  // Sombra de la cabecera: el último cuadro del portal ya luce como ella
+  const shadeOpacity = useTransform(progress, T.shade, [0, 1]);
+
+  // Relevo: la última pantalla del portal se superpone a la cabecera del
+  // capítulo, que ya está debajo con la misma imagen. El escenario se
+  // disuelve y los textos de la cabecera llegan en ese mismo tramo.
+  const stageOpacity = useTransform(progress, T.handoff, [1, 0]);
+  const salaRef = useRef<HTMLElement | null>(null);
+  useMotionValueEvent(progress, 'change', (value) => {
+    salaRef.current ??= document.getElementById(`sala-${to.id}`);
+    const arrive = clamp01((value - T.arrive[0]) / (T.arrive[1] - T.arrive[0]));
+    salaRef.current?.style.setProperty('--arrive', arrive.toFixed(3));
+  });
 
   // Número monumental: llega desde el fondo, se rellena y lo atravesamos
   const numberScale = useTransform(
@@ -152,20 +141,14 @@ export const SalaPortal = ({
     'inset(-15% -15% -15% -15%)',
   ]);
 
-  const kickerOpacity = useTransform(progress, T.kickerIn, [0, 1]);
-  const copyOpacity = useTransform(progress, T.copyOut, [1, 0]);
-  const copyY = useTransform(progress, T.copyOut, [0, -48]);
-
   const hudOpacity = useTransform(
     progress,
     [T.hudIn[0], T.hudIn[1], T.hudOut[0], T.hudOut[1]],
     [0, 1, 1, 0],
   );
 
-  const words = to.title.split(' ');
   const image = to.visual?.sectionImage ?? to.visual?.heroImage;
   const label = (chapter: AstroChapter) => `${t('Capítulo')} ${chapter.number.padStart(2, '0')}`;
-  const wordSpan = (T.titleIn[1] - T.titleIn[0]) / (words.length + 1.5);
 
   return (
     <section
@@ -174,10 +157,10 @@ export const SalaPortal = ({
       aria-hidden="true"
       style={{ '--accent': to.color, '--from-accent': from.color } as CSSProperties}
     >
-      <div className="mo-portal-stage">
+      <motion.div className="mo-portal-stage" style={{ opacity: stageOpacity }}>
         <motion.div className="mo-portal-glow" style={{ opacity: glowOpacity }} />
 
-        <motion.div className="mo-portal-iris" style={{ clipPath, opacity: irisOpacity }}>
+        <motion.div className="mo-portal-iris" style={{ clipPath }}>
           <motion.div
             className="mo-portal-image"
             style={{
@@ -186,6 +169,7 @@ export const SalaPortal = ({
             }}
           />
           <motion.div className="mo-portal-scrim" style={{ opacity: scrimOpacity }} />
+          <motion.div className="mo-portal-shade" style={{ opacity: shadeOpacity }} />
         </motion.div>
 
         <motion.span
@@ -203,25 +187,6 @@ export const SalaPortal = ({
           </motion.span>
         </motion.span>
 
-        <motion.div className="mo-portal-copy" style={{ opacity: copyOpacity, y: copyY }}>
-          <motion.p className="mo-kicker mo-portal-kicker" style={{ opacity: kickerOpacity }}>
-            {label(to)} · {to.concepts.length} {to.concepts.length === 1 ? t('tema') : t('temas')}
-          </motion.p>
-          <p className="mo-portal-title">
-            {words.map((word, index) => {
-              const start = T.titleIn[0] + index * wordSpan;
-              return (
-                <ScrubWord
-                  key={`${word}-${index}`}
-                  word={word}
-                  progress={progress}
-                  range={[start, start + wordSpan * 2.5]}
-                  last={index === words.length - 1}
-                />
-              );
-            })}
-          </p>
-        </motion.div>
 
         <motion.div className="mo-portal-hud" style={{ opacity: hudOpacity }}>
           <span className="mo-portal-hud-from">
@@ -238,7 +203,7 @@ export const SalaPortal = ({
             <i />
           </span>
         </motion.div>
-      </div>
+      </motion.div>
     </section>
   );
 };
