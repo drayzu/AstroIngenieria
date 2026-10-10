@@ -6,8 +6,8 @@
   position: relative;
   /* Sangra el relleno lateral de la sala para ocupar todo el ancho */
   margin: 0 -24px clamp(60px, 10vh, 120px);
-  height: 240vh;
-  height: 240svh;
+  height: 300vh;
+  height: 300svh;
 }
 
 /* El portal reemplaza a la cabecera del capítulo; ésta queda accesible
@@ -24,10 +24,10 @@
 }
 
 /* Saltar a un capítulo desde el índice aterriza con título y texto ya a la
-   vista (≈85 % del tramo fijo) en vez de en el punto de luz inicial */
+   vista (≈92 % del tramo fijo) en vez de en el punto de luz inicial */
 .mo-sala.has-portal {
-  scroll-margin-top: calc(-0.85 * 140vh);
-  scroll-margin-top: calc(-0.85 * 140svh);
+  scroll-margin-top: calc(-0.92 * 200vh);
+  scroll-margin-top: calc(-0.92 * 200svh);
 }
 
 .mo-portal-stage {
@@ -248,8 +248,8 @@
 
 @media (max-width: 720px) {
   .mo-portal {
-    height: 200vh;
-    height: 200svh;
+    height: 250vh;
+    height: 250svh;
   }
 
   .mo-portal-hud em {
@@ -257,7 +257,7 @@
   }
 
   .mo-sala.has-portal {
-    scroll-margin-top: calc(-0.85 * 100vh);
-    scroll-margin-top: calc(-0.85 * 100svh);
+    scroll-margin-top: calc(-0.92 * 150vh);
+    scroll-margin-top: calc(-0.92 * 150svh);
   }
 }

@@ -19,19 +19,20 @@ const EASE_IN_OUT = cubicBezier(0.65, 0, 0.35, 1);
 /* Guion del salto sobre el progreso del tramo fijo (0 = el escenario se
    ancla, 1 = se suelta). Ajustar aquí cambia el ritmo de todos los portales. */
 const T = {
-  hudIn: [0, 0.08],
-  hudOut: [0.86, 0.97],
-  ringIn: [0, 0.05],
-  irisOpen: [0.03, 0.42],
-  irisCover: [0.48, 0.8],
-  numberIn: [0.06, 0.42],
-  numberFill: [0.18, 0.46],
-  numberFly: [0.5, 0.72],
-  kickerIn: [0.56, 0.66],
-  titleIn: [0.58, 0.76],
-  textIn: [0.72, 0.88],
-  imageFade: [0.88, 1],
-  warp: [0.4, 0.8],
+  hudIn: [0, 0.06],
+  hudOut: [0.9, 0.98],
+  ringIn: [0, 0.04],
+  irisOpen: [0.02, 0.29],
+  irisCover: [0.34, 0.56],
+  numberIn: [0.04, 0.29],
+  numberFill: [0.13, 0.32],
+  numberFly: [0.35, 0.5],
+  kickerIn: [0.39, 0.46],
+  titleIn: [0.41, 0.53],
+  // Pausa 0.53–0.76: imagen limpia con el título, acercándose despacio
+  textIn: [0.76, 0.88],
+  imageFade: [0.9, 1],
+  warp: [0.28, 0.56],
 } satisfies Record<string, [number, number]>;
 
 /* ---------------- Palabra del título, revelada por scroll ---------------- */
@@ -122,17 +123,18 @@ export const SalaPortal = ({
   const ringSize = useTransform(radius, (r) => `calc(${r} * 2)`);
   const ringOpacity = useTransform(
     progress,
-    [T.ringIn[0], T.ringIn[1], T.irisCover[0], T.irisCover[0] + 0.18],
+    [T.ringIn[0], T.ringIn[1], T.irisCover[0], T.irisCover[0] + 0.13],
     [0, 1, 1, 0],
   );
   const glowOpacity = useTransform(progress, [0, T.irisOpen[1], T.irisCover[1]], [0, 0.75, 0]);
 
   const imageScale = useTransform(
     progress,
-    [T.irisOpen[0], T.irisCover[0], T.irisCover[1]],
-    [1.45, 1.15, 1],
+    [T.irisOpen[0], T.irisCover[0], T.irisCover[1], T.textIn[1]],
+    [1.45, 1.15, 1.07, 1],
   );
-  const scrimOpacity = useTransform(progress, T.irisCover, [0.12, 0.58]);
+  // La imagen se oscurece recién cuando llega el texto, no durante la pausa
+  const scrimOpacity = useTransform(progress, T.textIn, [0.1, 0.5]);
   const irisOpacity = useTransform(progress, T.imageFade, [1, 0.32]);
 
   // Número monumental: llega desde el fondo, se rellena y lo atravesamos
