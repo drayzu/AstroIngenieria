@@ -6,7 +6,6 @@ import '@fontsource-variable/fraunces';
 import '@fontsource-variable/space-grotesk';
 import '@fontsource-variable/jetbrains-mono';
 import {
-  Fragment,
   memo,
   useCallback,
   useEffect,
@@ -1811,13 +1810,19 @@ const ChapterIntro = memo(({ chapter }: { chapter: AstroChapter }) => {
 
 const Sala = memo(({
   chapter,
+  previous,
   offset,
   enableFlight,
+  scrollRef,
+  onCross,
   onSelect,
 }: {
   chapter: AstroChapter;
+  previous: AstroChapter | null;
   offset: number;
   enableFlight: boolean;
+  scrollRef: RefObject<HTMLDivElement | null>;
+  onCross: (chapter: AstroChapter) => void;
   onSelect: (concept: AstroConcept) => void;
 }) => {
   const sectionRef = useRef<HTMLElement>(null);
@@ -1827,10 +1832,15 @@ const Sala = memo(({
   return (
     <section
       id={`sala-${chapter.id}`}
-      className="mo-sala mo-layer"
+      className={`mo-sala mo-layer${previous ? ' has-portal' : ''}`}
       ref={sectionRef}
       style={{ '--accent': chapter.color } as CSSProperties}
     >
+      {/* Con portal, el propio salto es la introducción del capítulo: la
+          cabecera queda solo para lectores de pantalla */}
+      {previous && (
+        <SalaPortal from={previous} to={chapter} scrollRef={scrollRef} onCross={onCross} />
+      )}
       <ChapterIntro chapter={chapter} />
       {chapter.groups?.map((group, groupIndex) => <section className="mo-topic-group" key={`${chapter.id}-${groupIndex}`} aria-label={group.title}>
           <h3>{group.title}</h3>
@@ -3417,22 +3427,16 @@ export default function MuseoOrbital() {
         const offset = plateOffset;
         plateOffset += chapter.concepts.length;
         return (
-          <Fragment key={chapter.id}>
-            {index > 0 && !reduced && (
-              <SalaPortal
-                from={chapters[index - 1]}
-                to={chapter}
-                scrollRef={rootRef}
-                onCross={tintAtmosphere}
-              />
-            )}
-            <Sala
-              chapter={chapter}
-              offset={offset}
-              enableFlight={!reduced}
-              onSelect={openJourneyConcept}
-            />
-          </Fragment>
+          <Sala
+            key={chapter.id}
+            chapter={chapter}
+            previous={index > 0 && !reduced ? chapters[index - 1] : null}
+            offset={offset}
+            enableFlight={!reduced}
+            scrollRef={rootRef}
+            onCross={tintAtmosphere}
+            onSelect={openJourneyConcept}
+          />
         );
       })}
 
