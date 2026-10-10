@@ -858,8 +858,8 @@ body:has(.mo-root) {
 }
 
 /* Etiqueta: título y número a la izquierda del punto. Se ven todas al
-   pasar el mouse por el riel; mientras se hace scroll, solo la del
-   capítulo en curso */
+   pasar el mouse por el riel; al entrar en un capítulo, solo la suya y
+   por un momento */
 .mo-rail-tooltip {
   position: absolute;
   right: calc(100% + 4px);
@@ -893,7 +893,7 @@ body:has(.mo-root) {
 
 .mo-rail:hover .mo-rail-tooltip,
 .mo-rail:has(:focus-visible) .mo-rail-tooltip,
-.mo-rail.is-scrolling button.is-eclipsed .mo-rail-tooltip {
+.mo-rail.is-announcing button.is-eclipsed .mo-rail-tooltip {
   opacity: 1;
   visibility: visible;
   transform: translate(0, -50%);

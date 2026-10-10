@@ -23,13 +23,6 @@
   white-space: nowrap;
 }
 
-/* Saltar a un capítulo desde el índice aterriza con título y texto ya a la
-   vista (≈92 % del tramo fijo) en vez de en el punto de luz inicial */
-.mo-sala.has-portal {
-  scroll-margin-top: calc(-0.92 * 200vh);
-  scroll-margin-top: calc(-0.92 * 200svh);
-}
-
 .mo-portal-stage {
   position: sticky;
   top: 0;
@@ -447,10 +440,5 @@
 
   .mo-portal-hud em {
     display: none;
-  }
-
-  .mo-sala.has-portal {
-    scroll-margin-top: calc(-0.92 * 150vh);
-    scroll-margin-top: calc(-0.92 * 150svh);
   }
 }

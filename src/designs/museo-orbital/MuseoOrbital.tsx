@@ -3179,27 +3179,25 @@ export default function MuseoOrbital() {
       if (!frame) frame = window.requestAnimationFrame(syncActiveHall);
     };
 
-    // Mientras se hace scroll (y un momento después) el riel muestra el
-    // nombre del capítulo en curso junto a su punto
-    let scrollingTimer = 0;
-    const markScrolling = () => {
-      railRef.current?.classList.add('is-scrolling');
-      window.clearTimeout(scrollingTimer);
-      scrollingTimer = window.setTimeout(() => railRef.current?.classList.remove('is-scrolling'), 1400);
-    };
-
     requestSync();
     root.addEventListener('scroll', requestSync, { passive: true });
-    root.addEventListener('scroll', markScrolling, { passive: true });
     window.addEventListener('resize', requestSync);
     return () => {
       window.cancelAnimationFrame(frame);
-      window.clearTimeout(scrollingTimer);
       root.removeEventListener('scroll', requestSync);
-      root.removeEventListener('scroll', markScrolling);
       window.removeEventListener('resize', requestSync);
     };
   }, []);
+
+  // Al entrar en un capítulo, el riel anuncia su nombre un momento y lo
+  // oculta aunque se siga haciendo scroll
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail || !activeHallId) return;
+    rail.classList.add('is-announcing');
+    const timer = window.setTimeout(() => rail.classList.remove('is-announcing'), 1800);
+    return () => window.clearTimeout(timer);
+  }, [activeHallId]);
 
   // Atmósfera: el cielo y el riel toman el color del capítulo. Los portales la
   // cambian a mitad del salto; la línea de lectura la confirma al llegar.
