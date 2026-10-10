@@ -15,6 +15,7 @@ import {
   useState,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
+  type ReactNode,
   type RefObject,
 } from 'react';
 import {
@@ -52,6 +53,11 @@ import {
 } from './PlaygroundArcade';
 import { DistortOverlay } from './DistortOverlay';
 import { SalaPortal } from './SalaPortal';
+import { GalleryCorridor, type CorridorGroup } from './GalleryCorridor';
+import { OrbitRoom } from './OrbitRoom';
+import { VerticalRoom } from './VerticalRoom';
+import { TopicHeading } from './TopicHeading';
+import { isCorridor, isVertical, roomFor } from './salaRooms';
 import { useVelocityWarp } from './useVelocityWarp';
 import { HeroIgnition, releaseBootScreen, shouldPlayIntro, type IntroPhase } from './HeroIgnition';
 import { MuseumFinale } from './MuseumFinale';
@@ -1665,12 +1671,18 @@ const Obra = memo(({
   plate,
   featured,
   enableFlight,
+  preload = false,
+  overlay,
   onSelect,
 }: {
   concept: AstroConcept;
   plate: number;
   featured: boolean;
   enableFlight: boolean;
+  /* El pasillo avisa cuando la obra está por entrar desde el costado */
+  preload?: boolean;
+  /* Capa propia de la sala dentro de la ventana del marco (plano, luz…) */
+  overlay?: ReactNode;
   onSelect: (concept: AstroConcept) => void;
 }) => {
   const { t } = useLocale();
@@ -1679,7 +1691,8 @@ const Obra = memo(({
   const images = selectedStudyImages[concept.id];
   const approvedImage = images?.[0];
   const imgRef = useRef<HTMLImageElement>(null);
-  const shouldLoadImage = useNearViewportImage(imgRef);
+  const nearViewport = useNearViewportImage(imgRef);
+  const shouldLoadImage = nearViewport || preload;
   const reduced = useReducedMotion();
   const reveal = OBRA_REVEALS[plate % OBRA_REVEALS.length];
 
@@ -1798,6 +1811,7 @@ const Obra = memo(({
               )}
             </AnimatePresence>
             </motion.div>
+            {overlay}
             {approvedImage && featured && shouldLoadImage && <DistortOverlay imageRef={imgRef} active={hovered && hoverImageIndex === 0} />}
           </motion.div>
           <span className="mo-frame-glow" aria-hidden="true" />
@@ -1917,6 +1931,29 @@ const Sala = memo(({
   const { locale } = useLocale();
   const { conceptById } = getCatalog(locale);
   const reduced = useReducedMotion();
+  // Cada capítulo se recorre a su manera; con movimiento reducido, el muro de siempre
+  const room = reduced ? null : roomFor(chapter.id);
+  const roomGroups = useMemo<CorridorGroup[] | null>(() => {
+    if (!room || !chapter.groups) return null;
+    return chapter.groups.map((group) => ({
+      title: group.title,
+      works: group.conceptIds.map((id) => {
+        const concept = conceptById.get(id)!;
+        return { concept, plate: offset + chapter.concepts.indexOf(concept) + 1 };
+      }),
+    }));
+  }, [chapter, conceptById, offset, room]);
+  const renderRoomObra = useCallback((concept: AstroConcept, plate: number, preload = false, overlay?: ReactNode) => (
+    <Obra
+      concept={concept}
+      plate={plate}
+      featured={false}
+      enableFlight={enableFlight}
+      preload={preload}
+      overlay={overlay}
+      onSelect={onSelect}
+    />
+  ), [enableFlight, onSelect]);
 
   return (
     <section
@@ -1931,23 +1968,33 @@ const Sala = memo(({
         <SalaPortal from={previous} to={chapter} scrollRef={scrollRef} onCross={onCross} />
       )}
       <ChapterIntro chapter={chapter} />
-      {chapter.groups?.map((group, groupIndex) => <section className="mo-topic-group" key={`${chapter.id}-${groupIndex}`} aria-label={group.title}>
-          <motion.h3
-            initial={reduced ? false : { opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-40px' }}
-            transition={{ duration: 0.8, ease: EASE_OUT }}
-          >
-            <motion.span
-              className="mo-topic-rule"
-              aria-hidden="true"
-              initial={reduced ? false : { scaleX: 0 }}
-              whileInView={{ scaleX: 1 }}
-              viewport={{ once: true, margin: '-40px' }}
-              transition={{ duration: 1.4, ease: EASE_OUT }}
-            />
-            {group.title}
-          </motion.h3>
+      {roomGroups && isCorridor(room) && (
+        <GalleryCorridor
+          kind={room}
+          chapterTitle={chapter.title}
+          groups={roomGroups}
+          scrollRef={scrollRef}
+          renderObra={renderRoomObra}
+        />
+      )}
+      {roomGroups && room === 'orbit' && (
+        <OrbitRoom
+          chapterTitle={chapter.title}
+          groups={roomGroups}
+          scrollRef={scrollRef}
+          renderObra={renderRoomObra}
+        />
+      )}
+      {roomGroups && isVertical(room) && (
+        <VerticalRoom
+          kind={room}
+          groups={roomGroups}
+          scrollRef={scrollRef}
+          renderObra={renderRoomObra}
+        />
+      )}
+      {!roomGroups && chapter.groups?.map((group, groupIndex) => <section className="mo-topic-group" key={`${chapter.id}-${groupIndex}`} aria-label={group.title}>
+          <TopicHeading title={group.title} />
           <div className="mo-wall">
             {group.conceptIds.map(id => {
               const concept = conceptById.get(id)!;
