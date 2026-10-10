@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, type RefObject } from 'react';
 import { animate, type AnimationPlaybackControls } from 'framer-motion';
 import { lockSmoothScroll } from '../shared/smoothScroll';
+import { livingSignal, starFrame } from './living/livingHero';
 import './heroIgnition.css';
 
 /* Fases de la intro, compartidas con el hero:
@@ -57,14 +58,22 @@ export const releaseBootScreen = (fadeMs = 0) => {
 const dispatchWarp = (strength: number) =>
   window.dispatchEvent(new CustomEvent('mo-warp', { detail: { strength, direction: 1 } }));
 
+/* Con la estrella viva (?hero=viva) la estrella nace en el centro de la
+   pantalla: el punto colapsa (disco de acreción y anillos que se cierran),
+   estalla con onda de choque y rayos, y la escena la lleva después a su
+   lugar junto al título. */
+const LIVING_IGNITE_MIN = 1.95;
+
 export const HeroIgnition = ({
   heroRef,
   preload,
   onPhase,
+  living = false,
 }: {
   heroRef: RefObject<HTMLElement | null>;
   preload: () => Promise<unknown>;
   onPhase: (phase: IntroPhase) => void;
+  living?: boolean;
 }) => {
   const layerRef = useRef<HTMLDivElement>(null);
   const dotRef = useRef<HTMLSpanElement>(null);
@@ -72,6 +81,12 @@ export const HeroIgnition = ({
   const ringRef = useRef<HTMLSpanElement>(null);
   const echoRef = useRef<HTMLSpanElement>(null);
   const flashRef = useRef<HTMLSpanElement>(null);
+  const implodeRef = useRef<HTMLSpanElement>(null);
+  const implodeEchoRef = useRef<HTMLSpanElement>(null);
+  const swirlRef = useRef<HTMLSpanElement>(null);
+  const raysRef = useRef<HTMLSpanElement>(null);
+  const redRef = useRef<HTMLSpanElement>(null);
+  const blueRef = useRef<HTMLSpanElement>(null);
 
   // Layout effect: el punto de React se pinta en el mismo cuadro en que se
   // retira el de index.html, sin parpadeo entre ambos.
@@ -80,26 +95,44 @@ export const HeroIgnition = ({
     // Al montar, el ref del padre aún no está asignado (React asigna los refs
     // de los hijos primero): se busca el hero desde la propia capa.
     const hero = heroRef.current ?? layer?.closest<HTMLElement>('.mo-hero') ?? null;
-    const bg = hero?.querySelector<HTMLElement>('.mo-hero-bg-static');
+    const bg = hero?.querySelector<HTMLElement>(living ? '.mo-living-stage' : '.mo-hero-bg-static');
     const dot = dotRef.current;
     const flare = flareRef.current;
     const ring = ringRef.current;
     const echo = echoRef.current;
     const flash = flashRef.current;
-    if (!hero || !bg || !layer || !dot || !flare || !ring || !echo || !flash) {
+    const implode = implodeRef.current;
+    const implodeEcho = implodeEchoRef.current;
+    const swirl = swirlRef.current;
+    const rays = raysRef.current;
+    const red = redRef.current;
+    const blue = blueRef.current;
+    if (!hero || !bg || !layer || !dot || !flare || !ring || !echo || !flash || !implode || !implodeEcho || !swirl || !rays || !red || !blue) {
       releaseBootScreen();
       onPhase('off');
       return;
     }
 
-    // Dónde cae la estrella con background-size: cover y posición 50% 50%
+    // Dónde cae la estrella: en la imagen (cover, 50% 50%) o en la escena viva
     const rect = bg.getBoundingClientRect();
-    const wide = rect.width / rect.height > STAR.aspect;
-    const rw = wide ? rect.width : rect.height * STAR.aspect;
-    const rh = wide ? rect.width / STAR.aspect : rect.height;
-    const lx = (rect.width - rw) / 2 + STAR.fx * rw;
-    const ly = (rect.height - rh) / 2 + STAR.fy * rh;
-    const starR = STAR.fr * rh;
+    let lx: number;
+    let ly: number;
+    let starR: number;
+    if (living) {
+      // Nace en el centro, donde aparece el punto de arranque, algo más grande
+      lx = rect.width / 2;
+      ly = (window.innerHeight - 46) * 0.4675 - rect.top;
+      starR = starFrame(rect.width, rect.height).r * 1.12;
+      livingSignal.intro = { fx: lx / rect.width, fy: ly / rect.height, fr: starR / rect.height };
+      livingSignal.ignitedAt = 0;
+    } else {
+      const wide = rect.width / rect.height > STAR.aspect;
+      const rw = wide ? rect.width : rect.height * STAR.aspect;
+      const rh = wide ? rect.width / STAR.aspect : rect.height;
+      lx = (rect.width - rw) / 2 + STAR.fx * rw;
+      ly = (rect.height - rh) / 2 + STAR.fy * rh;
+      starR = STAR.fr * rh;
+    }
     const coverR = Math.max(
       Math.hypot(lx, ly),
       Math.hypot(rect.width - lx, ly),
@@ -157,26 +190,52 @@ export const HeroIgnition = ({
     later(() => dispatchWarp(12), 0.5);
 
     run(animate(dot, { x: [bootX, sx], y: [bootY, sy] }, { duration: T.glide, ease: EASE_OUT }));
-    run(animate(dot, { scale: [1, 2.2, 1.5] }, { duration: 0.9, delay: T.chargeAt, ease: 'easeInOut' }));
-    run(animate(flare, { scaleX: [0, 1], opacity: [0, 0.9] }, { duration: 0.9, delay: T.chargeAt + 0.1, ease: EASE_OUT }));
+    if (living) {
+      // Colapso: el latido se acelera, el disco de acreción gira y se encoge
+      // y dos anillos se cierran hasta el tamaño exacto de la estrella
+      run(animate(dot, { scale: [1, 1.8, 1.3, 2.1, 1.5, 2.6, 1.8] }, { duration: 1.4, delay: 0.45, ease: 'easeInOut' }));
+      run(animate(flare, { scaleX: [0, 0.55, 0.85], opacity: [0, 0.7, 0.95] }, { duration: 1.3, delay: 0.55, ease: EASE_OUT }));
+      run(animate(swirl, { scale: [1.5, 0.75], opacity: [0, 0.85, 1], rotate: [0, 720] }, { duration: 1.45, delay: 0.5, ease: 'easeIn' }));
+      run(animate(implode, { scale: [3.4, 1], opacity: [0, 0.95] }, { duration: 1.35, delay: 0.6, ease: [0.55, 0, 0.9, 0.5] }));
+      run(animate(implodeEcho, { scale: [4.6, 1.05], opacity: [0, 0.55] }, { duration: 1.25, delay: 0.75, ease: [0.55, 0, 0.9, 0.5] }));
+    } else {
+      run(animate(dot, { scale: [1, 2.2, 1.5] }, { duration: 0.9, delay: T.chargeAt, ease: 'easeInOut' }));
+      run(animate(flare, { scaleX: [0, 1], opacity: [0, 0.9] }, { duration: 0.9, delay: T.chargeAt + 0.1, ease: EASE_OUT }));
+    }
 
     const ignite = () => {
       if (ignited || finished) return;
       ignited = true;
       lockSmoothScroll('intro', false);
       onPhase('reveal');
-      // Primero se enciende el disco de la estrella, luego se revela el cielo
-      run(animate(radius, starR * 1.06, { duration: T.starOpen, ease: EASE_OUT, onUpdate: setRadius }));
-      later(() => {
-        run(animate(radius, coverR, { duration: T.cover, ease: EASE_IN_OUT, onUpdate: setRadius }));
-      }, T.coverAt);
+      if (living) {
+        // Estalla: la escena infla la estrella, la onda de choque se separa en
+        // colores, los rayos se abren y el cielo sale empujado
+        livingSignal.ignitedAt = performance.now();
+        dispatchWarp(40);
+        later(() => dispatchWarp(24), 0.18);
+        run(animate([implode, implodeEcho, swirl], { opacity: 0 }, { duration: 0.18 }));
+        run(animate(rays, { scale: [0.35, 2.4], opacity: [0, 0.9, 0], rotate: [0, 14] }, { duration: 1.1, times: [0, 0.18, 1], ease: EASE_OUT }));
+        run(animate(red, { scale: [0.15, 3.1], opacity: [0.8, 0] }, { duration: 1.5, delay: 0.03, ease: EASE_OUT }));
+        run(animate(blue, { scale: [0.15, 2.85], opacity: [0.8, 0] }, { duration: 1.5, delay: 0.07, ease: EASE_OUT }));
+        run(animate(ring, { scale: [0.15, 3], opacity: [1, 0] }, { duration: 1.5, ease: EASE_OUT }));
+        run(animate(echo, { scale: [0.15, 2.2], opacity: [0.7, 0] }, { duration: 1.6, delay: 0.16, ease: EASE_OUT }));
+      } else {
+        // Primero se enciende el disco de la estrella, luego se revela el cielo
+        run(animate(radius, starR * 1.06, { duration: T.starOpen, ease: EASE_OUT, onUpdate: setRadius }));
+        later(() => {
+          run(animate(radius, coverR, { duration: T.cover, ease: EASE_IN_OUT, onUpdate: setRadius }));
+        }, T.coverAt);
+      }
       run(animate(dot, { scale: 5, opacity: 0 }, { duration: 0.4, ease: EASE_OUT }));
-      run(animate(flare, { scaleX: 1.8, opacity: 0 }, { duration: 1, ease: EASE_OUT }));
-      run(animate(flash, { opacity: [0, 1, 0] }, { duration: 1, times: [0, 0.12, 1] }));
-      run(animate(ring, { scale: [1, 2.8], opacity: [0.95, 0] }, { duration: 1.4, ease: EASE_OUT }));
-      run(animate(echo, { scale: [1, 2], opacity: [0.6, 0] }, { duration: 1.4, delay: 0.14, ease: EASE_OUT }));
-      later(() => onPhase('chrome'), T.chromeAt);
-      later(finish, T.coverAt + T.cover + 0.1);
+      run(animate(flare, { scaleX: living ? 2.6 : 1.8, opacity: 0 }, { duration: living ? 1.2 : 1, ease: EASE_OUT }));
+      run(animate(flash, { opacity: [0, 1, 0] }, { duration: living ? 1.3 : 1, times: [0, 0.1, 1] }));
+      if (!living) {
+        run(animate(ring, { scale: [1, 2.8], opacity: [0.95, 0] }, { duration: 1.4, ease: EASE_OUT }));
+        run(animate(echo, { scale: [1, 2], opacity: [0.6, 0] }, { duration: 1.4, delay: 0.14, ease: EASE_OUT }));
+      }
+      later(() => onPhase('chrome'), living ? 1.5 : T.chromeAt);
+      later(finish, living ? 2.8 : T.coverAt + T.cover + 0.1);
     };
 
     const fontsReady = document.fonts
@@ -185,7 +244,7 @@ export const HeroIgnition = ({
           document.fonts.load('1em "Space Grotesk Variable"'),
         ]).catch(() => undefined)
       : Promise.resolve();
-    const minWait = new Promise<void>((resolve) => later(resolve, T.igniteMin));
+    const minWait = new Promise<void>((resolve) => later(resolve, living ? LIVING_IGNITE_MIN : T.igniteMin));
     const maxWait = new Promise<void>((resolve) => later(resolve, T.igniteMax));
     void Promise.race([Promise.all([preload(), fontsReady, minWait]), maxWait]).then(() => {
       if (!cancelled) ignite();
@@ -201,8 +260,10 @@ export const HeroIgnition = ({
         ignited = true;
         lockSmoothScroll('intro', false);
         onPhase('reveal');
+        // Saltada: la estrella aparece ya en su lugar
+        if (living) livingSignal.ignitedAt = performance.now() - 3000;
       }
-      run(animate(radius, coverR, { duration: 0.45, ease: EASE_OUT, onUpdate: setRadius }));
+      if (!living) run(animate(radius, coverR, { duration: 0.45, ease: EASE_OUT, onUpdate: setRadius }));
       run(animate(layer, { opacity: 0 }, { duration: 0.25 }));
       later(() => onPhase('chrome'), 0.15);
       later(finish, 1);
@@ -235,7 +296,7 @@ export const HeroIgnition = ({
       timers.forEach((timer) => window.clearTimeout(timer));
       if (finished) clearIris();
     };
-  }, [heroRef, onPhase, preload]);
+  }, [heroRef, onPhase, preload, living]);
 
   return (
     <div ref={layerRef} className="mo-ignite" aria-hidden="true">
@@ -244,6 +305,12 @@ export const HeroIgnition = ({
         <span ref={flareRef} className="mo-ignite-flare" />
         <span ref={ringRef} className="mo-ignite-ring" />
         <span ref={echoRef} className="mo-ignite-ring is-echo" />
+        <span ref={redRef} className="mo-ignite-ring is-red" />
+        <span ref={blueRef} className="mo-ignite-ring is-blue" />
+        <span ref={raysRef} className="mo-ignite-rays" />
+        <span ref={swirlRef} className="mo-ignite-swirl" />
+        <span ref={implodeRef} className="mo-ignite-implode" />
+        <span ref={implodeEchoRef} className="mo-ignite-implode is-echo" />
       </span>
       <span ref={dotRef} className="mo-ignite-dot" />
     </div>
