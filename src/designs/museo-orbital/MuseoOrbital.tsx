@@ -71,12 +71,16 @@ import './living/livingHero.css';
 // Hero de estrella viva: la escena WebGL se descarga aparte, solo cuando se usa
 const LivingStar = lazy(() => import('./living/LivingStar'));
 const LIVING_TITLE_BREAK = 5;
+/* Origen del portal de la primera sala: la entrada del museo, con el color
+   de la estrella de la portada */
+const MUSEUM_ENTRANCE = { id: 'entrada', number: '0', title: '', color: '#ff7a3c', concepts: [] } as unknown as AstroChapter;
 /* Las letras se condensan desde la luz de la ignición: llegan desenfocadas,
    grandes y abiertas, y se asientan en su sitio */
 const LIVING_LETTER_FROM = { opacity: 0, scale: 1.6, filter: 'blur(18px)', y: '0%' };
 const LIVING_LETTER_TO = { opacity: 1, scale: 1, filter: 'blur(0px)', y: '0%' };
 import './museoOrbital.css';
 import './obraReveal.css';
+import './heroChrome.css';
 
 const totalWorks = chapters.reduce((sum, chapter) => sum + chapter.concepts.length, 0);
 const HOME_HERO_IMAGES = [
@@ -1403,13 +1407,22 @@ const Hero = memo(({
     >
       {playgroundEntryState !== 'entering' && playgroundEntryState !== 'leaving' && (
         <div className="mo-hero-toolbar">
-        <LanguageSwitch />
-        <button
-          type="button"
-          className="mo-index-button mo-hero-index"
-          onClick={onOpenIndex}
-          data-cursor-label={t("Índice")}
-        >{t("Índice")}</button>
+          <span className="mo-hero-brand">
+            <i aria-hidden="true" />
+            {t("Museo Orbital")}
+          </span>
+          <div className="mo-hero-controls">
+            <LanguageSwitch />
+            <button
+              type="button"
+              className="mo-index-button mo-hero-index"
+              onClick={onOpenIndex}
+              data-cursor-label={t("Índice")}
+            >
+              <span className="mo-hero-index-icon" aria-hidden="true" />
+              {t("Índice")}
+            </button>
+          </div>
         </div>
       )}
       {living ? (
@@ -1482,65 +1495,6 @@ const Hero = memo(({
         </div>
       )}
 
-      <motion.div
-        className="mo-hero-playground-veil"
-        animate={{ opacity: imageFocus ? 0 : 1 }}
-        transition={{
-          duration: reduced ? 0 : 0.65,
-          ease: EASE_OUT,
-        }}
-      >
-        <motion.button
-          type="button"
-          ref={pgButtonRef}
-          className={`mo-hero-playground is-${playgroundEntryState}`}
-          onClick={onOpenPlayground}
-          onPointerEnter={onPlaygroundArm}
-          data-cursor-label={t("Entrar")}
-          aria-label={t("Entrar al Playground")}
-          tabIndex={imageFocus ? -1 : 0}
-          disabled={playgroundEntryState === 'entering' || playgroundEntryState === 'leaving'}
-          initial={{ opacity: 0, y: 8 }}
-          animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 8, transition: { duration: 0 } }}
-          transition={{ delay: reduced ? 0 : 1.05, duration: reduced ? 0 : 0.9, ease: EASE_OUT }}
-        >
-          <span className="mo-hero-playground-word" aria-hidden="true">
-            {'PLAYGROUND'.split('').map((letter, index) => (
-              <span
-                key={`${letter}-${index}`}
-                className="mo-pg-letter"
-                style={{ '--i': index } as CSSProperties}
-                ref={(el) => {
-                  pgRefs.current[index] = el;
-                }}
-              >
-                {letter}
-              </span>
-            ))}
-          </span>
-        <span className="mo-hero-playground-charge" aria-hidden="true">
-          <i style={{ transform: `scaleX(${playgroundHoldProgress})` }} />
-        </span>
-        <span ref={pgCometRef} className="mo-pg-comet" aria-hidden="true">
-          <i ref={pgHeadRef} className="mo-pg-comet-head" />
-          {Array.from({ length: PG_TAIL_SEGMENTS }, (_, index) => (
-            <i
-              key={index}
-              ref={(el) => {
-                pgTailRefs.current[index] = el;
-              }}
-              className="mo-pg-comet-tail"
-              style={{
-                background: pgTailColor(1 - (index + 1) / (PG_TAIL_SEGMENTS + 1)),
-                boxShadow: `0 0 6px ${pgTailColor(1 - (index + 1) / (PG_TAIL_SEGMENTS + 1))}`,
-              }}
-            />
-          ))}
-          <i ref={pgFlashRef} className="mo-pg-comet-flash" />
-        </span>
-        </motion.button>
-      </motion.div>
-
       <div className="mo-hero-copy">
         <motion.p
           ref={kickerRef}
@@ -1603,6 +1557,81 @@ const Hero = memo(({
           transition={{ delay: reduced ? 0 : living ? 2.1 : 1.6, duration: 1, ease: EASE_OUT }}
         >{t("De los hábitats orbitales a las estrellas, exploramos qué podríamos construir, qué haría falta para lograrlo y dónde aparecen los límites físicos.")}</motion.p>
 
+        {/* Dos llamadas: el recorrido como principal y el Playground al lado */}
+        <div className="mo-hero-actions">
+          <motion.button
+            type="button"
+            className="mo-hero-start"
+            onClick={() => scrollToId('sala-intro')}
+            data-cursor-label={t("Comenzar el recorrido")}
+            tabIndex={imageFocus ? -1 : 0}
+            initial={{ opacity: 0, y: 10 }}
+            animate={revealed ? { opacity: imageFocus ? 0 : 1, y: 0 } : { opacity: 0, y: 10, transition: { duration: 0 } }}
+            transition={{ delay: reduced ? 0 : living ? 2.3 : 1.9, duration: reduced ? 0 : 0.9, ease: EASE_OUT }}
+          >
+            {t("Comenzar el recorrido")}
+            <span className="mo-hero-start-line" aria-hidden="true"><i /></span>
+          </motion.button>
+          <motion.div
+            className="mo-hero-playground-veil"
+            animate={{ opacity: imageFocus ? 0 : 1 }}
+            transition={{
+              duration: reduced ? 0 : 0.65,
+              ease: EASE_OUT,
+            }}
+          >
+            <motion.button
+              type="button"
+              ref={pgButtonRef}
+              className={`mo-hero-playground is-${playgroundEntryState}`}
+              onClick={onOpenPlayground}
+              onPointerEnter={onPlaygroundArm}
+              data-cursor-label={t("Entrar")}
+              aria-label={t("Entrar al Playground")}
+              tabIndex={imageFocus ? -1 : 0}
+              disabled={playgroundEntryState === 'entering' || playgroundEntryState === 'leaving'}
+              initial={{ opacity: 0, y: 8 }}
+              animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 8, transition: { duration: 0 } }}
+              transition={{ delay: reduced ? 0 : living ? 2.45 : 2.05, duration: reduced ? 0 : 0.9, ease: EASE_OUT }}
+            >
+              <span className="mo-hero-playground-word" aria-hidden="true">
+                {'PLAYGROUND'.split('').map((letter, index) => (
+                  <span
+                    key={`${letter}-${index}`}
+                    className="mo-pg-letter"
+                    style={{ '--i': index } as CSSProperties}
+                    ref={(el) => {
+                      pgRefs.current[index] = el;
+                    }}
+                  >
+                    {letter}
+                  </span>
+                ))}
+              </span>
+            <span className="mo-hero-playground-charge" aria-hidden="true">
+              <i style={{ transform: `scaleX(${playgroundHoldProgress})` }} />
+            </span>
+            <span ref={pgCometRef} className="mo-pg-comet" aria-hidden="true">
+              <i ref={pgHeadRef} className="mo-pg-comet-head" />
+              {Array.from({ length: PG_TAIL_SEGMENTS }, (_, index) => (
+                <i
+                  key={index}
+                  ref={(el) => {
+                    pgTailRefs.current[index] = el;
+                  }}
+                  className="mo-pg-comet-tail"
+                  style={{
+                    background: pgTailColor(1 - (index + 1) / (PG_TAIL_SEGMENTS + 1)),
+                    boxShadow: `0 0 6px ${pgTailColor(1 - (index + 1) / (PG_TAIL_SEGMENTS + 1))}`,
+                  }}
+                />
+              ))}
+              <i ref={pgFlashRef} className="mo-pg-comet-flash" />
+            </span>
+            </motion.button>
+          </motion.div>
+        </div>
+
         <motion.span
           ref={hintRef}
           className="mo-sky-hint"
@@ -1648,7 +1677,15 @@ const Marquee = memo(() => {
 const HallIndex = memo(({ activeId }: { activeId: string | null }) => {
   const { locale, t } = useLocale();
   const { chapters } = getCatalog(locale);
-  return <nav className="mo-halls mo-layer" aria-label={t('Capítulos de la exposición')}>
+  const navRef = useRef<HTMLElement>(null);
+  // En una sola fila puede no caber: el capítulo activo se desliza al centro
+  useEffect(() => {
+    const nav = navRef.current;
+    const chip = nav?.querySelector<HTMLElement>('.mo-hall-chip.is-active');
+    if (!nav || !chip || nav.scrollWidth <= nav.clientWidth) return;
+    nav.scrollTo({ left: chip.offsetLeft - nav.clientWidth / 2 + chip.offsetWidth / 2, behavior: 'smooth' });
+  }, [activeId]);
+  return <nav ref={navRef} className="mo-halls mo-layer" aria-label={t('Capítulos de la exposición')}>
     {chapters.map((chapter) => (
       <button
         key={chapter.id}
@@ -1681,6 +1718,42 @@ const HallIndex = memo(({ activeId }: { activeId: string | null }) => {
       {t('Archivo')}
     </button>
   </nav>
+});
+
+/* ---------------- Píldora de capítulo (celular) ---------------- */
+
+const ChapterPill = memo(({
+  activeId,
+  fillRef,
+  onOpen,
+  hidden,
+}: {
+  activeId: string | null;
+  fillRef: RefObject<HTMLElement | null>;
+  onOpen: () => void;
+  hidden: boolean;
+}) => {
+  const { locale, t } = useLocale();
+  const { chapters } = getCatalog(locale);
+  const chapter = chapters.find((item) => item.id === activeId);
+  const extra = activeId === 'vitrina' ? { mark: '✦', title: t('Vitrina') } : activeId === 'archivo' ? { mark: '§', title: t('Archivo') } : null;
+  const mark = chapter ? chapter.number.padStart(2, '0') : extra?.mark;
+  const title = chapter?.title ?? extra?.title;
+  return (
+    <button
+      type="button"
+      className={`mo-pill${title && !hidden ? ' is-on' : ''}`}
+      style={{ '--accent': chapter?.color } as CSSProperties}
+      onClick={onOpen}
+      aria-label={t("Abrir índice de capítulos")}
+      tabIndex={title && !hidden ? 0 : -1}
+    >
+      <span className="mo-pill-no" aria-hidden="true">{mark}</span>
+      <span className="mo-pill-title">{title}</span>
+      <span className="mo-pill-icon" aria-hidden="true" />
+      <span className="mo-pill-progress" aria-hidden="true"><i ref={fillRef} /></span>
+    </button>
+  );
 });
 
 /* ---------------- Reveals por palabras ---------------- */
@@ -2496,6 +2569,7 @@ export default function MuseoOrbital() {
   const playgroundAudioTrackIndex = useRef(0);
   const playgroundAudioPreloaderRef = useRef<HTMLAudioElement | null>(null);
   const railFillRef = useRef<HTMLSpanElement>(null);
+  const pillFillRef = useRef<HTMLElement>(null);
   const railRef = useRef<HTMLElement>(null);
   const atmosRef = useRef<HTMLDivElement>(null);
   const museumKeyboardVelocityRef = useRef(0);
@@ -3343,6 +3417,7 @@ export default function MuseoOrbital() {
           const lastChapter = activeIndex === chapters.length - 1;
           const segmentLength = lastChapter ? 0.5 : 1;
           progress = (activeIndex + chapterFraction * segmentLength) / (chapters.length - 0.5);
+          pillFillRef.current?.style.setProperty('transform', `scaleX(${chapterFraction.toFixed(4)})`);
         }
         fill.style.transform = `scaleY(${progress})`;
       }
@@ -3777,7 +3852,7 @@ export default function MuseoOrbital() {
           <Sala
             key={chapter.id}
             chapter={chapter}
-            previous={index > 0 && !reduced ? chapters[index - 1] : null}
+            previous={reduced ? null : index > 0 ? chapters[index - 1] : MUSEUM_ENTRANCE}
             offset={offset}
             enableFlight={!reduced}
             scrollRef={rootRef}
@@ -3827,6 +3902,8 @@ export default function MuseoOrbital() {
           </button>
         ))}
       </nav>
+
+      <ChapterPill activeId={activeHallId} fillRef={pillFillRef} onOpen={openMenu} hidden={menuOpen || Boolean(active)} />
 
       <AnimatePresence>
         {menuOpen && (
