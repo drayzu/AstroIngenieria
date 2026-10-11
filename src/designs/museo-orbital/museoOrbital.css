@@ -835,21 +835,16 @@ body:has(.mo-root) {
   transform: scale(1.25);
 }
 
-/* Capítulo en curso: el punto se enciende en su color */
+/* Capítulo en curso: el punto se enciende en su color. El núcleo es un
+   gradiente del propio disco (no un ::after con inset): así queda centrado
+   aunque el riel caiga en medios píxeles y el disco esté escalado */
 .mo-rail button.is-eclipsed .mo-rail-disc {
+  background: radial-gradient(circle closest-side, var(--accent, #c9a86a) 46%, var(--mo-bg) 58%);
   border-color: color-mix(in srgb, var(--accent, #c9a86a) 70%, #ffffff);
   box-shadow:
     0 0 0 3px color-mix(in srgb, var(--accent, #c9a86a) 22%, transparent),
     0 0 16px color-mix(in srgb, var(--accent, #c9a86a) 65%, transparent);
   transform: scale(1.3);
-}
-
-.mo-rail button.is-eclipsed .mo-rail-disc::after {
-  content: '';
-  position: absolute;
-  inset: 2.5px;
-  border-radius: 50%;
-  background: var(--accent, #c9a86a);
 }
 
 /* Etiqueta: título y número a la izquierda del punto. Se ven todas al
