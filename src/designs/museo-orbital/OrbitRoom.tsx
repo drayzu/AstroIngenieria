@@ -189,7 +189,25 @@ export const OrbitRoom = memo(({
               <path d={path} />
             </svg>
             <span className="mo-orbit-infrared" ref={infraredRef} />
-            <span className="mo-orbit-star" ref={starRef} />
+            <span className="mo-orbit-star" ref={starRef}>
+              <span className="mo-sun-corona" />
+              <span className="mo-sun-corona is-slow" />
+              <span className="mo-sun-wave" />
+              <span className="mo-sun-disc">
+                <span className="mo-sun-cells" />
+                <span className="mo-sun-cells is-counter" />
+              </span>
+              {/* Protuberancias: arcos de plasma anclados al borde */}
+              <svg className="mo-sun-loops" viewBox="-50 -50 100 100">
+                <path className="is-glow" d="M -11.5 -13.9 Q -14 -34 -2.8 -17.8" />
+                <path d="M -11.5 -13.9 Q -14 -34 -2.8 -17.8" />
+                <path className="is-glow is-b" d="M 17.4 4.6 Q 33 4 16.3 7.8" />
+                <path className="is-b" d="M 17.4 4.6 Q 33 4 16.3 7.8" />
+                <path className="is-glow is-c" d="M -14.6 10.6 Q -22 27 -8.2 16.1" />
+                <path className="is-c" d="M -14.6 10.6 Q -22 27 -8.2 16.1" />
+              </svg>
+              <span className="mo-sun-flare" />
+            </span>
             {DYSON_RINGS.map((ring, index) => (
               <span
                 key={ring.size}
