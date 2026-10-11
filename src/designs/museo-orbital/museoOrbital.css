@@ -2247,18 +2247,50 @@ body:has(.mo-root) {
   initial-value: #c9a86a;
 }
 
+/* Cada mancha de la nebulosa tiene su color. En los capítulos las tres
+   siguen a --mo-atmos; en la portada recorren la paleta del museo */
+@property --mo-neb-a {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: #c9a86a;
+}
+
+@property --mo-neb-b {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: #c9a86a;
+}
+
+@property --mo-neb-c {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: #c9a86a;
+}
+
 .mo-atmos {
+  --mo-neb-a: var(--mo-atmos);
+  --mo-neb-b: var(--mo-atmos);
+  --mo-neb-c: var(--mo-atmos);
   position: fixed;
   inset: -12%;
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(48% 42% at 16% 22%, color-mix(in srgb, var(--mo-atmos) 19%, transparent), transparent 72%),
-    radial-gradient(46% 50% at 86% 78%, color-mix(in srgb, var(--mo-atmos) 14%, transparent), transparent 74%),
-    radial-gradient(30% 26% at 62% 38%, color-mix(in srgb, var(--mo-atmos) 8%, transparent), transparent 70%);
-  transition: --mo-atmos 1.6s ease;
+    radial-gradient(48% 42% at 16% 22%, color-mix(in srgb, var(--mo-neb-a) 19%, transparent), transparent 72%),
+    radial-gradient(46% 50% at 86% 78%, color-mix(in srgb, var(--mo-neb-b) 14%, transparent), transparent 74%),
+    radial-gradient(30% 26% at 62% 38%, color-mix(in srgb, var(--mo-neb-c) 8%, transparent), transparent 70%);
+  transition: --mo-atmos 1.6s ease, --mo-neb-a 1.6s ease, --mo-neb-b 1.6s ease, --mo-neb-c 1.6s ease;
   animation: mo-atmos-drift 38s ease-in-out infinite alternate;
   will-change: transform;
+}
+
+/* Portada: los colores se funden largo, casi sin que se note el cambio */
+.mo-atmos.is-hero {
+  background:
+    radial-gradient(48% 42% at 16% 22%, color-mix(in srgb, var(--mo-neb-a) 26%, transparent), transparent 72%),
+    radial-gradient(46% 50% at 86% 78%, color-mix(in srgb, var(--mo-neb-b) 22%, transparent), transparent 74%),
+    radial-gradient(30% 26% at 62% 38%, color-mix(in srgb, var(--mo-neb-c) 12%, transparent), transparent 70%);
+  transition: --mo-neb-a 7s ease-in-out, --mo-neb-b 7s ease-in-out 1.2s, --mo-neb-c 7s ease-in-out 2.4s;
 }
 
 @keyframes mo-atmos-drift {

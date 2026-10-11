@@ -3527,6 +3527,35 @@ export default function MuseoOrbital() {
     if (chapter) tintAtmosphere(chapter);
   }, [activeHallId, chapters, tintAtmosphere]);
 
+  // En la portada la nebulosa no tiene capítulo: recorre despacio la paleta
+  // de todo el museo, con tres manchas de colores distintos a la vez y un
+  // punto de partida al azar en cada visita
+  const inHero = activeHallId === null;
+  useEffect(() => {
+    const atmos = atmosRef.current;
+    if (!atmos || !inHero) return;
+    const palette = [...new Set(chapters.map((chapter) => chapter.color))];
+    if (palette.length === 0) return;
+    let step = Math.floor(Math.random() * palette.length);
+    const paint = () => {
+      const pick = (offset: number) => palette[(step + offset) % palette.length];
+      atmos.style.setProperty('--mo-neb-a', pick(0));
+      atmos.style.setProperty('--mo-neb-b', pick(2));
+      atmos.style.setProperty('--mo-neb-c', pick(4));
+    };
+    atmos.classList.add('is-hero');
+    paint();
+    const timer = reduced ? 0 : window.setInterval(() => {
+      step += 1;
+      paint();
+    }, 9000);
+    return () => {
+      window.clearInterval(timer);
+      atmos.classList.remove('is-hero');
+      ['--mo-neb-a', '--mo-neb-b', '--mo-neb-c'].forEach((name) => atmos.style.removeProperty(name));
+    };
+  }, [inHero, chapters, reduced]);
+
   // Scroll con inercia en todo el recorrido (rueda del mouse; táctil nativo)
   useEffect(() => {
     const root = rootRef.current;
