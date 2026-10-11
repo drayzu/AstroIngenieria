@@ -110,17 +110,6 @@
   pointer-events: none;
 }
 
-.mo-journey-ring.is-torus {
-  border-width: 1.5px;
-}
-
-/* Borde interior del toroide: el anillo tiene cuerpo */
-.mo-journey-ring.is-torus-inner {
-  scale: 0.78;
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  box-shadow: 0 0 16px 1px color-mix(in srgb, var(--accent) 30%, transparent);
-}
-
 /* Plano: retícula técnica y marco con esquinas que sigue a la ventana */
 .mo-journey-grid {
   position: absolute;
@@ -173,8 +162,6 @@
 }
 
 /* Dyson, estrella, túnel, galaxia y radar: dibujos centrados que escalan */
-.mo-journey-burst,
-.mo-journey-dyson,
 .mo-journey-tunnel,
 .mo-journey-galaxy,
 .mo-journey-radar {
@@ -188,21 +175,108 @@
   pointer-events: none;
 }
 
-.mo-journey-burst line {
+/* Viajes dibujados en píxeles reales sobre todo el escenario */
+.mo-journey-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* Hábitat toroidal: banda con volumen, costillas, radios y bordes de luz */
+.mo-journey-stage.is-torus .is-band {
+  fill: url(#mo-torus-band);
+}
+
+.mo-journey-stage.is-torus line {
   stroke: color-mix(in srgb, var(--accent) 70%, #ffffff);
+  stroke-width: 1;
+}
+
+.mo-journey-stage.is-torus .is-spoke {
+  stroke-width: 1.5;
+}
+
+.mo-journey-stage.is-torus ellipse {
+  fill: none;
+}
+
+.mo-journey-stage.is-torus .is-rim {
+  stroke: color-mix(in srgb, var(--accent) 70%, #ffffff);
+  stroke-width: 1.5;
+}
+
+.mo-journey-stage.is-torus .is-rim.is-outer {
+  stroke: color-mix(in srgb, var(--accent) 55%, transparent);
+  stroke-width: 1;
+}
+
+.mo-journey-stage.is-torus .is-glow {
+  stroke: color-mix(in srgb, var(--accent) 30%, transparent);
+  stroke-width: 14;
+}
+
+/* Agujero negro: halo lensado, anillo de fotones y disco de acreción en capas */
+.mo-journey-stage.is-blackhole path,
+.mo-journey-stage.is-blackhole .is-photon {
+  fill: none;
+}
+
+.mo-journey-stage.is-blackhole .is-halo {
+  fill: url(#mo-bh-halo);
+}
+
+.mo-journey-stage.is-blackhole .is-photon {
+  stroke: #fff6ea;
+  stroke-width: 1.5;
+}
+
+.mo-journey-stage.is-blackhole .is-disk {
+  stroke: url(#mo-bh-disk);
   stroke-linecap: round;
 }
 
-/* Enjambre de Dyson: órbitas finas y colectores que las recorren */
-.mo-journey-dyson ellipse {
-  fill: none;
-  stroke: color-mix(in srgb, var(--accent) 60%, transparent);
-  stroke-width: 0.32;
+.mo-journey-stage.is-blackhole .is-layer-0 {
+  opacity: 0.12;
 }
 
-.mo-journey-dyson circle {
-  fill: color-mix(in srgb, var(--accent) 50%, #ffffff);
-  filter: drop-shadow(0 0 1.5px color-mix(in srgb, var(--accent) 80%, transparent));
+.mo-journey-stage.is-blackhole .is-layer-1 {
+  opacity: 0.3;
+}
+
+.mo-journey-stage.is-blackhole .is-back {
+  opacity: 0.6;
+}
+
+.mo-journey-stage.is-blackhole .is-streaks {
+  stroke: #fff8ee;
+  stroke-linecap: round;
+  opacity: 0.32;
+}
+
+/* Enjambre de Dyson: placas que brillan de frente y eclipsan la estrella */
+.mo-journey-stage.is-dyson line {
+  stroke-width: 3;
+}
+
+.mo-journey-stage.is-dyson .is-front {
+  stroke: color-mix(in srgb, var(--accent) 60%, #ffffff);
+}
+
+.mo-journey-stage.is-dyson .is-back {
+  stroke: color-mix(in srgb, var(--accent) 55%, transparent);
+  opacity: 0.45;
+}
+
+.mo-journey-stage.is-dyson .is-shadow {
+  stroke: #140c05;
+  opacity: 0.92;
+}
+
+.mo-journey-stage.is-dyson .is-hidden {
+  opacity: 0;
 }
 
 /* Hiperespacio: estelas que nacen cerca del centro y salen disparadas */
@@ -263,40 +337,51 @@
   opacity: 0;
 }
 
-/* Resplandor al entrar en la estrella */
-.mo-journey-glare {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    circle at 50% 50%,
-    rgba(255, 250, 240, 0.95) 0%,
-    color-mix(in srgb, var(--accent) 55%, transparent) 30%,
-    transparent 72%
-  );
-  mix-blend-mode: screen;
-  pointer-events: none;
-}
-
-/* Disco galáctico inclinado; dentro gira la espiral */
+/* Disco galáctico inclinado; dentro gira la espiral. Queda detrás de la
+   ventana: el capítulo se abre como un hueco en el núcleo de la galaxia */
 .mo-journey-galaxy {
   display: block;
+  z-index: -1;
+  width: min(160vmin, 1500px);
+  height: min(160vmin, 1500px);
   transform: scaleY(0.56);
 }
 
-.mo-journey-galaxy svg {
+.mo-journey-galaxy-disc {
+  position: absolute;
+  inset: 0;
+  display: block;
+  will-change: transform, opacity;
+}
+
+.mo-journey-galaxy-disc canvas,
+.mo-journey-galaxy-disc svg {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   overflow: visible;
 }
 
-.mo-journey-galaxy circle {
-  fill: color-mix(in srgb, var(--accent) 40%, #ffffff);
+/* El disco se disuelve en los bordes: el lienzo cuadrado nunca se ve */
+.mo-journey-galaxy-disc canvas {
+  -webkit-mask-image: radial-gradient(circle closest-side, #000 72%, transparent 100%);
+  mask-image: radial-gradient(circle closest-side, #000 72%, transparent 100%);
 }
 
-.mo-journey-galaxy circle.is-core {
-  fill: color-mix(in srgb, var(--accent) 30%, #fff6ea);
-  opacity: 0.85;
-  filter: blur(3px);
+/* Rutas de colonización: hilos de luz entre sistemas */
+.mo-journey-galaxy .is-route {
+  stroke: color-mix(in srgb, var(--accent) 65%, #ffffff);
+  stroke-width: 0.14;
+  stroke-opacity: 0.75;
+  stroke-linecap: round;
+}
+
+.mo-journey-galaxy .is-colony {
+  fill: #ffffff;
+  stroke: var(--accent);
+  stroke-width: 0.5;
+  stroke-opacity: 0.4;
 }
 
 /* Número monumental del capítulo: contorno + relleno que sube con el scroll */
