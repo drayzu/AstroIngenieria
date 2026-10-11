@@ -208,6 +208,56 @@
   color: rgba(245, 241, 232, 0.72);
 }
 
+/* Mientras el visitante acelera la obra (llamaradas o giro), un aviso breve */
+.mo-dyson-plate-rush {
+  font-family: var(--mo-mono);
+  font-style: normal;
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #ffc58a;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.mo-dyson-plate.is-rushing .mo-dyson-plate-rush {
+  opacity: 1;
+  transform: none;
+}
+
+.mo-dyson-plate.is-rushing .mo-dyson-plate-value > span:first-child {
+  text-shadow: 0 0 18px rgba(255, 170, 100, 0.55), 0 1px 12px rgba(7, 7, 7, 0.9);
+}
+
+/* Obra terminada: la cartela toma el rojo del calor que irradia el casco */
+.mo-dyson-plate.is-complete {
+  border-left-color: rgba(255, 150, 100, 0.55);
+  animation: mo-dyson-plate-sealed 1.4s ease-out;
+}
+
+.mo-dyson-plate.is-complete::before {
+  background: linear-gradient(to top, rgba(255, 150, 100, 0.55), transparent);
+}
+
+.mo-dyson-plate.is-complete .mo-dyson-plate-kicker {
+  color: #ffb48a;
+}
+
+.mo-dyson-plate.is-complete .mo-dyson-plate-value {
+  color: #ffd9b8;
+  text-shadow: 0 0 22px rgba(255, 120, 70, 0.45), 0 1px 12px rgba(7, 7, 7, 0.9);
+}
+
+@keyframes mo-dyson-plate-sealed {
+  0% {
+    filter: brightness(2.2);
+  }
+  100% {
+    filter: none;
+  }
+}
+
 /* Durante la intro y en pantallas verticales solo queda lo esencial */
 .mo-hero.is-intro-dark .mo-dyson-plate {
   opacity: 0;

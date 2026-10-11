@@ -136,6 +136,7 @@ uniform float uTime;
 uniform float uIgnite;
 uniform float uFlareAngle;
 uniform float uFlareAge;
+uniform float uSealed;
 varying vec2 vPlane;
 ${NOISE}
 void main() {
@@ -161,7 +162,11 @@ void main() {
   float plume = jet * exp(-uFlareAge * 0.7) * step(0.0, uFlareAge) * smoothstep(0.0, 0.08, uFlareAge);
   float intensity = (glow * (0.42 + 0.78 * streams) + prom * 0.55 + plume * 3.0) * uIgnite;
   vec3 color = mix(vec3(0.95, 0.2, 0.04), vec3(1.0, 0.72, 0.44), clamp(intensity * 0.9 - 0.15, 0.0, 1.0));
-  float alpha = clamp(intensity, 0.0, 1.0) * (1.0 - smoothstep(1.9, ${CORONA_RADIUS.toFixed(1)}, r));
+  // Esfera cerrada: el calor que irradia el casco la rodea de un halo rojo
+  float halo = exp(-abs(r - ${SHELL_SCALE.toFixed(2)}) * 3.2) * (0.75 + 0.25 * streams) * uSealed * 0.85;
+  float total = intensity + halo;
+  color = (color * intensity + vec3(0.92, 0.2, 0.07) * halo) / max(total, 0.001);
+  float alpha = clamp(total, 0.0, 1.0) * (1.0 - smoothstep(1.9, ${CORONA_RADIUS.toFixed(1)}, r));
   gl_FragColor = vec4(color, alpha);
 }
 `;
@@ -170,10 +175,14 @@ void main() {
 
 const SHELL_RADIUS = SHELL_SCALE;
 const SHELL_DETAIL = 9;
-// Ya hay una parte construida al encenderse y la obra avanza mientras miras
+// Ya hay una parte construida al encenderse y la obra avanza mientras miras.
+// Solo mirando se termina en unos dos minutos y medio; cada llamarada la
+// empuja y girar la estrella la acelera mientras dura el arrastre
 const SHELL_START = 0.05;
-const SHELL_SPAN = 0.45;
-const SHELL_TAU = 70;
+const BUILD_TOTAL = 150;
+const FLARE_BOOST = 4;
+const DRAG_BOOST = 3;
+const BOOST_TAU = 1.5;
 
 const SHELL_VERTEX = /* glsl */ `
 attribute vec3 aCentroid;
@@ -181,9 +190,14 @@ attribute vec3 aBary;
 attribute float aOrder;
 uniform float uBuilt;
 uniform float uWindow;
+uniform float uTime;
+uniform float uSealed;
 varying vec3 vBary;
+varying vec3 vDir;
+varying vec3 vSurface;
 varying float vFresh;
 varying float vShade;
+varying float vOpen;
 void main() {
   float placed = clamp((uBuilt - aOrder) / uWindow, 0.0, 1.0);
   if (placed <= 0.0) {
@@ -193,8 +207,18 @@ void main() {
   // El panel llega desde fuera, se despliega y queda con una junta
   float settle = 1.0 - pow(1.0 - placed, 3.0);
   vec3 outward = normalize(aCentroid);
-  vec3 p = aCentroid + (position - aCentroid) * 0.9 * (0.35 + 0.65 * settle) + outward * (1.0 - settle) * 0.4;
+  // Terminada, algunos paneles se abren un instante como obturadores y dejan
+  // escapar la luz de la estrella
+  float open = 0.0;
+  if (uSealed > 0.0) {
+    float phase = fract(sin(dot(aCentroid, vec3(7.13, 3.71, 5.29))) * 9187.31) * 50.0;
+    open = smoothstep(0.993, 1.0, sin(uTime * 0.35 + phase)) * uSealed;
+  }
+  vec3 p = aCentroid + (position - aCentroid) * 0.9 * (0.35 + 0.65 * settle) * (1.0 - open * 0.7) + outward * (1.0 - settle) * 0.4;
   vBary = aBary;
+  vDir = outward;
+  vSurface = normalize(p);
+  vOpen = open;
   vFresh = 1.0 - placed;
   vShade = fract(sin(dot(aCentroid, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
   gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
@@ -203,22 +227,61 @@ void main() {
 
 const SHELL_FRAGMENT = /* glsl */ `
 uniform float uIgnite;
+uniform float uTime;
+uniform float uSealed;
+uniform float uWave;
+uniform vec3 uWaveAxis;
 varying vec3 vBary;
+varying vec3 vDir;
+varying vec3 vSurface;
 varying float vFresh;
 varying float vShade;
+varying float vOpen;
+// Receptores: la energía recogida por el casco corre por las juntas hacia ellos
+const vec3 NODE_A = vec3(-0.52, 0.5, 0.69);
+const vec3 NODE_B = vec3(0.78, -0.18, 0.6);
+const vec3 NODE_C = vec3(0.08, -0.86, 0.5);
+const vec3 NODE_D = vec3(0.3, 0.75, -0.59);
+float harvest(vec3 node, out float core) {
+  float angle = acos(clamp(dot(vSurface, normalize(node)), -1.0, 1.0));
+  core = exp(-angle * angle / 0.006) * 1.6 + exp(-angle * angle / 0.06) * 0.45;
+  // Anillos que avanzan hacia el receptor y se apagan lejos de él
+  return pow(0.5 + 0.5 * sin(angle * 12.0 + uTime * 1.8), 10.0) * (1.0 - smoothstep(0.7, 1.4, angle));
+}
 void main() {
   float edge = min(vBary.x, min(vBary.y, vBary.z));
   float frame = 1.0 - smoothstep(0.02, 0.08, edge);
   vec3 color;
   if (gl_FrontFacing) {
-    // Cara exterior: metal oscuro contra la estrella, con el marco encendido
-    color = vec3(0.06, 0.045, 0.038) * (0.7 + 0.6 * vShade) + vec3(1.0, 0.56, 0.3) * frame * 0.32;
+    // Cara exterior: metal oscuro contra la estrella, con el marco encendido.
+    // Terminada, las juntas respiran y el casco irradia el calor que atrapa:
+    // desde fuera una esfera de Dyson solo se vería en infrarrojo
+    float joints = 0.32 - uSealed * (0.14 - 0.06 * sin(uTime * 0.7 + vShade * 6.2832));
+    color = vec3(0.06, 0.045, 0.038) * (0.7 + 0.6 * vShade) + vec3(1.0, 0.56, 0.3) * frame * joints;
+    color += vec3(0.36, 0.05, 0.022) * uSealed * (0.3 + 0.35 * vShade) * (1.0 - frame);
+    if (uSealed > 0.0) {
+      float coreA; float coreB; float coreC; float coreD;
+      float flow = harvest(NODE_A, coreA) + harvest(NODE_B, coreB) + harvest(NODE_C, coreC) + harvest(NODE_D, coreD);
+      float core = coreA + coreB + coreC + coreD;
+      color += vec3(1.0, 0.78, 0.46) * flow * frame * 3.0 * uSealed;
+      color += vec3(1.0, 0.86, 0.62) * core * (0.45 + frame) * 1.4 * uSealed;
+    }
+    // Obturador abierto: el panel encoge y destella con la luz que deja pasar
+    color = mix(color, vec3(1.0, 0.9, 0.72) * 1.7, vOpen * 0.85);
   } else {
     // Cara interior: el espejo que mira a la estrella, encendido por ella
     color = vec3(1.0, 0.63, 0.37) * (0.62 + 0.38 * vShade) * (1.0 - frame * 0.55);
   }
   // Recién instalado: brilla al rojo blanco y se enfría
   color = mix(color, vec3(1.0, 0.92, 0.8) * 1.6, vFresh * vFresh);
+  // Cierre de la obra: una onda de luz recorre el casco desde el punto que
+  // mira al visitante hasta el lado opuesto
+  if (uWave >= 0.0) {
+    float angle = acos(clamp(dot(vDir, uWaveAxis), -1.0, 1.0));
+    float front = uWave * 1.5;
+    float band = exp(-pow(angle - front, 2.0) / 0.035) * (1.0 - smoothstep(3.0, 3.6, front));
+    color += vec3(1.0, 0.86, 0.62) * band * 1.5;
+  }
   gl_FragColor = vec4(color * uIgnite, 1.0);
 }
 `;
@@ -268,13 +331,18 @@ const buildShell = () => {
   return geometry;
 };
 
-/* Avance de la obra según el tiempo desde la ignición: un primer impulso
-   con muchos paneles llegando a la vez y después un ritmo que se calma */
-const shellBuilt = (since: number) => {
+/* Avance de la obra: un primer impulso con muchos paneles llegando a la vez
+   (según el tiempo desde la ignición) y después el trabajo acumulado, que
+   va rápido al principio y se calma hacia el cierre sin dejar de llegar */
+const SHELL_KICKOFF = 2.7;
+const shellKickoff = (since: number) => {
   if (since < 1.7) return 0;
-  if (since < 2.7) return SHELL_START * (1 - (1 - (since - 1.7)) ** 3);
-  return SHELL_START + SHELL_SPAN * (1 - Math.exp(-(since - 2.7) / SHELL_TAU));
+  if (since < SHELL_KICKOFF) return SHELL_START * (1 - (1 - (since - 1.7)) ** 3);
+  return SHELL_START;
 };
+const shellFromWork = (work: number) => SHELL_START + (1 - SHELL_START) * (1 - (1 - work) ** 1.6);
+// Velocidad de la fracción construida por unidad de trabajo
+const shellWorkSlope = (work: number) => (1 - SHELL_START) * 1.6 * (1 - work) ** 0.6;
 
 /* ---------------- Enjambre Dyson ---------------- */
 
@@ -419,7 +487,15 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
 
   // Materiales propios: así los uniforms que se actualizan son los que usa la GPU
   const starUniforms = useMemo(() => ({ uTime: { value: 0 }, uIgnite: { value: 0 }, uFlash: { value: 0 }, uDim: { value: 0 } }), []);
-  const shellUniforms = useMemo(() => ({ uBuilt: { value: 0 }, uWindow: { value: 0.01 }, uIgnite: { value: 0 } }), []);
+  const shellUniforms = useMemo(() => ({
+    uBuilt: { value: 0 },
+    uWindow: { value: 0.01 },
+    uIgnite: { value: 0 },
+    uTime: { value: 0 },
+    uSealed: { value: 0 },
+    uWave: { value: -1 },
+    uWaveAxis: { value: new THREE.Vector3(0, 0, 1) },
+  }), []);
   const shellGeometry = useMemo(buildShell, []);
   const ghostGeometry = useMemo(() => new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(SHELL_RADIUS * 0.997, SHELL_DETAIL)), []);
   const shellMaterial = useMemo(() => new THREE.ShaderMaterial({
@@ -434,9 +510,19 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
     opacity: 0,
     depthWrite: false,
   }), []);
-  const progress = useRef(-1);
+  const progress = useRef({ percent: -1, rushing: false });
+  /* Estado de la obra entre cuadros. Se reinicia con cada ignición (al volver
+     a la portada desde el cierre la estrella se enciende de nuevo) */
+  const build = useRef({
+    ignitedAt: 0,
+    work: 0,
+    boost: 0,
+    flareSeen: 0,
+    window: 0.004,
+    completeAt: 0,
+  });
   const coronaUniforms = useMemo(() => ({
-    uTime: { value: 0 }, uIgnite: { value: 0 }, uFlareAngle: { value: 0 }, uFlareAge: { value: -1 },
+    uTime: { value: 0 }, uIgnite: { value: 0 }, uFlareAngle: { value: 0 }, uFlareAge: { value: -1 }, uSealed: { value: 0 },
   }), []);
   const swarmUniforms = useMemo(() => ({
     uTime: { value: 0 },
@@ -638,19 +724,60 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
     swarmUniforms.uScroll.value = scroll;
     swarmUniforms.uPointer.value.set(current.x, current.y);
     swarmUniforms.uPointerOn.value = current.on;
-    // La obra: el fantasma aparece primero y los paneles lo van llenando
-    const built = since < 0 ? 0 : shellBuilt(since);
-    const rate = since < 0 ? 0 : (shellBuilt(since + 0.05) - built) / 0.05;
-    shellUniforms.uBuilt.value = built;
-    shellUniforms.uWindow.value = Math.max(0.004, rate * 0.55);
+    // La obra: el fantasma aparece primero y los paneles lo van llenando.
+    // Avanza solo mientras la escena se dibuja, es decir, con el hero a la vista
+    const work = build.current;
+    if (work.ignitedAt !== livingSignal.ignitedAt) {
+      work.ignitedAt = livingSignal.ignitedAt;
+      work.work = 0;
+      work.boost = 0;
+      work.flareSeen = livingSignal.flareAt;
+      work.window = 0.004;
+      work.completeAt = 0;
+    }
+    if (livingSignal.flareAt !== work.flareSeen) {
+      work.flareSeen = livingSignal.flareAt;
+      if (since > SHELL_KICKOFF) work.boost += FLARE_BOOST;
+    }
+    work.boost *= Math.exp(-step / BOOST_TAU);
+    const rush = work.boost + (spin.dragging ? DRAG_BOOST : 0);
+    const building = since > SHELL_KICKOFF && !work.completeAt;
+    if (building) work.work = Math.min(1, work.work + (step * (1 + rush)) / BUILD_TOTAL);
+    const built = since < 0 ? 0 : since < SHELL_KICKOFF ? shellKickoff(since) : shellFromWork(work.work);
+    const rate = since < 0
+      ? 0
+      : since < SHELL_KICKOFF
+        ? (shellKickoff(since + 0.05) - built) / 0.05
+        : building ? (shellWorkSlope(work.work) * (1 + rush)) / BUILD_TOTAL : 0;
+    // Ventana de montaje suavizada: si saltara con la aceleración, los paneles
+    // a medio colocar retrocederían
+    work.window += (Math.max(0.004, rate * 0.55) - work.window) * Math.min(1, step * 3);
+
+    // Último panel: la obra se sella desde el punto que mira al visitante
+    if (building && work.work >= 1) {
+      work.completeAt = now;
+      shellUniforms.uWaveAxis.value.copy(camera.position).normalize();
+    }
+    const sealedAge = work.completeAt ? (now - work.completeAt) / 1000 : -1;
+    const sealed = sealedAge < 0 ? 0 : easeInOut(clamp01(sealedAge / 4));
+
+    // Pasado el cierre los últimos paneles terminan de asentarse
+    shellUniforms.uBuilt.value = work.completeAt ? 1 + Math.min(0.2, sealedAge * 0.06) : built;
+    shellUniforms.uWindow.value = work.window;
     shellUniforms.uIgnite.value = since < 0 ? 0 : clamp01((since - 1.4) / 0.6);
-    ghostMaterial.opacity = since < 0 ? 0 : 0.14 * easeOut(clamp01((since - 1.3) / 1.4));
+    shellUniforms.uTime.value = time;
+    shellUniforms.uSealed.value = sealed;
+    coronaUniforms.uSealed.value = sealed;
+    shellUniforms.uWave.value = sealedAge < 0 || sealedAge > 3 ? -1 : sealedAge;
+    ghostMaterial.opacity = since < 0 ? 0 : 0.14 * easeOut(clamp01((since - 1.3) / 1.4)) * (1 - sealed);
     starUniforms.uDim.value = built * 0.3;
-    coronaUniforms.uIgnite.value *= 1 - built * 0.45;
-    const percent = Math.round(built * 100);
-    if (since > 2.7 && percent !== progress.current) {
-      progress.current = percent;
-      livingSignal.onProgress?.(percent);
+    // Con la esfera cerrada la corona queda tapada: solo asoma un resplandor
+    coronaUniforms.uIgnite.value *= (1 - built * 0.45) * (1 - sealed * 0.75);
+    const percent = Math.floor(built * 100);
+    const rushing = building && rush > 0.4;
+    if (since > SHELL_KICKOFF && (percent !== progress.current.percent || rushing !== progress.current.rushing)) {
+      progress.current = { percent, rushing };
+      livingSignal.onProgress?.(percent, rushing);
     }
 
     if (!readyMarked.current) {

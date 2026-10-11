@@ -61,6 +61,7 @@ export const livingSignal = {
   /* Giro con el mouse: la zona de agarre escribe aquí y la escena lo integra
      con inercia; tras un rato sin tocarla vuelve sola a su encuadre */
   spin: { yaw: 0, pitch: 0, velocityYaw: 0, velocityPitch: 0, dragging: false, touchedAt: 0 },
-  /* La cartela escucha el avance de la obra (porcentaje entero) */
-  onProgress: undefined as ((percent: number) => void) | undefined,
+  /* La cartela escucha el avance de la obra (porcentaje entero; 100 solo al
+     cerrarse) y si el visitante la está acelerando */
+  onProgress: undefined as ((percent: number, rushing: boolean) => void) | undefined,
 };
