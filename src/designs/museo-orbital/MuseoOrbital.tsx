@@ -1596,7 +1596,7 @@ const Hero = memo(({
           initial={{ opacity: 0, y: 18 }}
           animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 18, transition: { duration: 0 } }}
           transition={{ delay: reduced ? 0 : living ? 1.5 : 0.5, duration: 0.9, ease: EASE_OUT }}
-        >{t("Atlas de astroingeniería")}</motion.p>
+        >{t("Un atlas ilustrado")}</motion.p>
 
         <h1 key={locale} className="mo-hero-title" aria-label={t("Astroingeniería")}>
           {letters.map((letter, index) => [
@@ -1649,7 +1649,7 @@ const Hero = memo(({
           initial={{ opacity: 0, y: 22 }}
           animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 22, transition: { duration: 0 } }}
           transition={{ delay: reduced ? 0 : living ? 2.1 : 1.6, duration: 1, ease: EASE_OUT }}
-        >{t("De los hábitats orbitales a las estrellas, exploramos qué podríamos construir, qué haría falta para lograrlo y dónde aparecen los límites físicos.")}</motion.p>
+        >{t("Del hábitat orbital a la civilización cósmica: qué podríamos construir, qué haría falta y dónde la física dice basta.")}</motion.p>
 
 
         <motion.span
