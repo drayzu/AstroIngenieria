@@ -83,7 +83,9 @@ export const useVelocityWarp = (rootRef: RefObject<HTMLElement | null>, disabled
 
     const loop = () => {
       const top = root.scrollTop;
-      velocity = velocity * 0.75 + (top - last) * 0.25;
+      // Los saltos de varias pantallas son teletransportes, no velocidad
+      const step = Math.abs(top - last) > window.innerHeight * 3 ? 0 : top - last;
+      velocity = velocity * 0.75 + step * 0.25;
       last = top;
 
       if (Math.abs(velocity) < 0.05) {

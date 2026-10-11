@@ -1,7 +1,7 @@
 /* ============ Cierre del recorrido ============
-   Tramo alto con escenario fijo: la cita final, y luego un punto de luz
-   sobre el que se cierra un anillo de luz, estalla y devuelve la visita
-   al comienzo desde ese mismo punto. */
+   Tramo alto con escenario fijo: la cita final y la contraparte de la
+   intro: la estrella se contrae hasta el punto soltando sus capas, y la
+   visita sigue sin corte en la intro desde ese mismo punto. */
 
 .mo-finale {
   position: relative;
@@ -51,8 +51,18 @@
   color: rgba(245, 241, 232, 0.35);
 }
 
-/* Mismo lugar que el punto de #mo-boot (index.html) y de la intro: al
-   fundirse a negro, este punto se convierte en el del comienzo */
+/* Mientras la estrella se contrae no hay barra de capítulos, riel ni
+   píldora: la intro no los tiene, y el salto al comienzo no debe notarse */
+.mo-root[data-finale-end] .mo-halls,
+.mo-root[data-finale-end] .mo-rail,
+.mo-root[data-finale-end] .mo-pill {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+
+/* Mismo lugar que el punto de la intro: al saltar al comienzo, este punto
+   se convierte en el de la ignición sin que se note el corte */
 .mo-finale-anchor {
   --star-r: min(26vmin, 240px);
   position: absolute;
@@ -99,7 +109,10 @@
   will-change: transform, opacity;
 }
 
-.mo-finale-ring {
+/* Estrella fantasma: el recuerdo de la estrella roja del comienzo. Un
+   cuerpo translúcido y desenfocado a través del cual se sigue viendo el
+   cielo, con el borde apenas marcado. Al contraerse pierde el color. */
+.mo-finale-star {
   position: absolute;
   left: 0;
   top: 0;
@@ -107,38 +120,82 @@
   height: calc(var(--star-r) * 2);
   translate: -50% -50%;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 196, 160, 0.85);
+  background:
+    radial-gradient(
+      circle,
+      transparent 88%,
+      rgba(255, 150, 100, 0.22) 96%,
+      rgba(255, 120, 80, 0.32) 99%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle,
+      rgba(255, 236, 214, 0.7) 0%,
+      rgba(255, 170, 120, 0.42) 18%,
+      rgba(250, 110, 60, 0.28) 45%,
+      rgba(225, 66, 34, 0.19) 75%,
+      rgba(180, 40, 20, 0.12) 100%
+    );
   box-shadow:
-    0 0 34px 6px rgba(255, 110, 60, 0.42),
-    inset 0 0 34px 6px rgba(255, 110, 60, 0.28);
+    0 0 50px 10px rgba(255, 100, 50, 0.16),
+    0 0 140px 50px rgba(255, 70, 30, 0.07);
+  mix-blend-mode: screen;
+  will-change: transform, opacity, filter;
+}
+
+/* Capas que se desprenden: trazos finos que se alejan, alternando el rojo
+   del gas exterior con el verde azulado del interior, como una nebulosa
+   planetaria */
+.mo-finale-shell {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--star-r) * 2);
+  height: calc(var(--star-r) * 2);
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 150, 120, 0.75);
+  box-shadow:
+    0 0 26px 3px rgba(255, 90, 60, 0.28),
+    inset 0 0 26px 3px rgba(255, 90, 60, 0.16);
+  opacity: 0;
   will-change: transform, opacity;
 }
 
-/* Implosión: el mismo trazo fino, nacido más allá de los bordes, que se
-   cierra sobre el punto y se adelgaza al llegar */
-.mo-finale-ring.is-implode {
-  width: calc(var(--star-r) * 6.4);
-  height: calc(var(--star-r) * 6.4);
-  border-width: 1px;
-  border-color: rgba(255, 210, 180, 0.8);
+.mo-finale-shell.is-cool {
+  border-color: rgba(150, 225, 230, 0.6);
   box-shadow:
-    0 0 22px 3px rgba(255, 110, 60, 0.32),
-    inset 0 0 22px 3px rgba(255, 110, 60, 0.2);
+    0 0 26px 3px rgba(90, 200, 210, 0.22),
+    inset 0 0 26px 3px rgba(90, 200, 210, 0.12);
 }
 
-.mo-finale-flash {
+/* El disco de acreción de la intro, desenrollándose hacia afuera */
+.mo-finale-swirl {
   position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    circle at 50% 50vh,
-    rgba(255, 238, 218, 0.95) 0%,
-    rgba(255, 140, 80, 0.4) 18%,
-    rgba(255, 80, 40, 0.1) 42%,
-    transparent 70%
+  left: 0;
+  top: 0;
+  width: calc(var(--star-r) * 2.3);
+  height: calc(var(--star-r) * 2.3);
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(255, 200, 160, 0.9) 28deg,
+    rgba(255, 120, 70, 0.3) 70deg,
+    transparent 100deg,
+    rgba(170, 225, 230, 0.7) 150deg,
+    rgba(90, 180, 200, 0.25) 190deg,
+    transparent 220deg,
+    rgba(255, 180, 130, 0.85) 270deg,
+    rgba(255, 110, 60, 0.3) 310deg,
+    transparent 340deg
   );
-  mix-blend-mode: screen;
-  pointer-events: none;
-  will-change: opacity;
+  -webkit-mask-image: radial-gradient(circle, transparent 40%, #000 45%, #000 47%, transparent 55%);
+  mask-image: radial-gradient(circle, transparent 40%, #000 45%, #000 47%, transparent 55%);
+  filter: blur(1.5px) drop-shadow(0 0 6px rgba(255, 120, 60, 0.5));
+  opacity: 0;
+  will-change: transform, opacity;
 }
 
 /* Sin movimiento: el cierre es un pie de página quieto con botón */

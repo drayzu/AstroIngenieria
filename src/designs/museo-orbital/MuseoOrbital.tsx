@@ -21,6 +21,7 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
+import { flushSync } from 'react-dom';
 import {
   AnimatePresence,
   motion,
@@ -63,7 +64,7 @@ import { TopicHeading } from './TopicHeading';
 import { isCorridor, isVertical, roomFor } from './salaRooms';
 import { useVelocityWarp } from './useVelocityWarp';
 import { HeroIgnition, releaseBootScreen, shouldPlayIntro, type IntroPhase } from './HeroIgnition';
-import { MuseumFinale } from './MuseumFinale';
+import { FINALE_REST, MuseumFinale } from './MuseumFinale';
 import { isLivingHero, livingSignal } from './living/livingHero';
 import { DysonPlate } from './living/DysonPlate';
 import { LivingGrab } from './living/LivingGrab';
@@ -446,18 +447,28 @@ const Hero = memo(({
   }, [playIntro]);
 
   // «Volver al comienzo» desde el cierre: la portada vuelve a la estrella roja
-  // y la ignición se repite, cerrando el círculo del recorrido
+  // y la ignición se repite, cerrando el círculo del recorrido. Llega justo
+  // después del salto al inicio y se pinta en el mismo cuadro (flushSync):
+  // la portada nunca alcanza a verse encendida antes de la intro.
   useEffect(() => {
     const onReplay = () => {
       if (reduced) return;
+      const hero = heroRef.current;
+      // Lo que se oculta con animaciones (texto, controles) tarda un cuadro en
+      // aplicarse: hasta entonces solo queda visible la capa de la intro.
+      // Atributo y no clase: React reescribe className al pintar la portada.
+      if (hero) hero.dataset.seam = '';
       imageRequestRef.current += 1;
-      setImageFocus(false);
-      setHeroPosition(0);
-      setIntroPhase((phase) => (phase === 'off' ? 'dark' : phase));
+      flushSync(() => {
+        setImageFocus(false);
+        setHeroPosition(0);
+        setIntroPhase((phase) => (phase === 'off' ? 'dark' : phase));
+      });
+      requestAnimationFrame(() => requestAnimationFrame(() => hero?.removeAttribute('data-seam')));
     };
     window.addEventListener('mo-replay-intro', onReplay);
     return () => window.removeEventListener('mo-replay-intro', onReplay);
-  }, [reduced]);
+  }, [heroRef, reduced]);
 
   const showHeroAt = useCallback((position: number) => {
     if (position === heroPosition) return;
@@ -2987,6 +2998,21 @@ export default function MuseoOrbital() {
       }
       if (isEditable(event.target) || blocked()) return;
 
+      // Fin no llega al fondo literal (eso dispararía la vuelta al inicio):
+      // se detiene en el reposo del cierre y el bucle queda a un gesto más
+      const noModifiers = !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
+      const finale = root.querySelector<HTMLElement>('.mo-finale:not(.is-static)');
+      if (event.key === 'End' && noModifiers && finale) {
+        event.preventDefault();
+        const finaleTop = finale.getBoundingClientRect().top - root.getBoundingClientRect().top + root.scrollTop;
+        const top = finaleTop + FINALE_REST * Math.max(0, finale.offsetHeight - root.clientHeight);
+        velocity = 0;
+        museumKeyboardVelocityRef.current = 0;
+        publishIdle();
+        if (!smoothScrollTo(top)) root.scrollTo({ top, behavior: 'smooth' });
+        return;
+      }
+
       if (event.code.startsWith('Arrow')) {
         velocity = 0;
         museumKeyboardVelocityRef.current = 0;
@@ -3566,34 +3592,15 @@ export default function MuseoOrbital() {
   // La velocidad del scroll estira las obras y deja atrás sus marcos
   useVelocityWarp(rootRef, Boolean(reduced));
 
-  // Desde el cierre: la pantalla se funde a negro dejando solo el punto de
-  // luz (la misma pantalla de arranque de index.html, en el mismo lugar que
-  // el punto del cierre). Detrás se vuelve a la portada y la intro, al
-  // montarse, retira esa pantalla y enciende de nuevo la estrella.
+  // Desde el cierre, costura invisible: el cierre termina con el cielo y un
+  // punto de luz en el centro, que es justo el primer cuadro de la intro.
+  // Se salta a la portada y la intro se monta en ese mismo cuadro, así que
+  // el recorrido sigue sin corte y la estrella vuelve a encenderse.
   const returnToStart = useCallback(() => {
     const root = rootRef.current;
     if (!root) return;
-    if (reduced) {
-      jumpScroll(root, 0);
-      return;
-    }
-    if (document.getElementById('mo-boot')) return;
-    const boot = document.createElement('div');
-    boot.id = 'mo-boot';
-    boot.setAttribute('aria-hidden', 'true');
-    boot.append(document.createElement('i'));
-    boot.style.opacity = '0';
-    boot.style.transition = 'opacity 0.7s ease';
-    document.body.append(boot);
-    requestAnimationFrame(() => {
-      boot.style.opacity = '1';
-    });
-    window.setTimeout(() => {
-      jumpScroll(root, 0);
-      window.dispatchEvent(new CustomEvent('mo-replay-intro'));
-      // Si la intro no llegara a montarse, la pantalla no se queda negra
-      window.setTimeout(() => releaseBootScreen(450), 1600);
-    }, 750);
+    jumpScroll(root, 0);
+    if (!reduced) window.dispatchEvent(new CustomEvent('mo-replay-intro'));
   }, [reduced]);
 
   const openJourneyConcept = useCallback((concept: AstroConcept) => {

@@ -1241,6 +1241,13 @@ export const StarfieldCanvas = ({
     let lastScrollAt = Number.NEGATIVE_INFINITY;
     const onScroll = () => {
       const top = scrollRef.current?.scrollTop ?? 0;
+      // Un salto de varias pantallas (del cierre al inicio, cambio de idioma)
+      // es un teletransporte, no velocidad: no estira el cielo
+      if (Math.abs(top - lastScroll) > window.innerHeight * 3) {
+        lastScroll = top;
+        rectsDirty = true;
+        return;
+      }
       scrollVel = scrollVel * 0.82 + (top - lastScroll) * 0.18;
       lastScroll = top;
       lastScrollAt = performance.now();

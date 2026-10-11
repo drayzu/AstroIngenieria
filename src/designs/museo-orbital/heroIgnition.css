@@ -14,6 +14,25 @@
   opacity: 0;
 }
 
+/* La escena WebGL no dibuja nada antes de la ignición, pero mientras estuvo
+   pausada conserva su último cuadro: al volver desde el cierre se vería la
+   estrella vieja hasta que el lienzo despierte */
+.mo-hero.is-intro-pre .mo-living-canvas {
+  visibility: hidden;
+}
+
+/* Costura con el cierre: en los primeros cuadros tras el salto solo existe
+   la capa de la intro, y lo que la intro apaga se apaga de golpe */
+.mo-hero[data-seam] > :not(.mo-ignite) {
+  visibility: hidden;
+}
+
+.mo-hero[data-seam] .mo-hero-scrim,
+.mo-hero[data-seam] ~ .mo-marquee,
+.mo-hero[data-seam] ~ .mo-rail {
+  transition: none;
+}
+
 /* Mientras arde la intro no hay barra, marquesina ni riel */
 .mo-hero.is-intro-dark .mo-hero-toolbar,
 .mo-hero.is-intro-dark .mo-hero-carousel,
