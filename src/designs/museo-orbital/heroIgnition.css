@@ -333,11 +333,16 @@
   inset: 0;
 }
 
-/* La mitad lejana se abre en un círculo del tamaño de la estrella (--hole lo
-   anima HeroIgnition): ahí la estrella queda por delante del disco */
-.mo-ignite-disk-half.is-back {
-  -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent var(--hole, 0px), #000 calc(var(--hole, 0px) + 4px));
-  mask-image: radial-gradient(circle at 50% 50%, transparent var(--hole, 0px), #000 calc(var(--hole, 0px) + 4px));
+/* La mitad lejana va detrás del lienzo 3D: durante el nacimiento el
+   escenario es su propio contexto de apilamiento y ella queda al fondo.
+   (Fuera del nacimiento la cartela y el agarre viven en el escenario y no
+   deben quedar encerrados en él) */
+.mo-hero[data-birth] .mo-living-stage {
+  isolation: isolate;
+}
+
+.mo-ignite-under {
+  z-index: -1;
 }
 
 .mo-ignite-disk-plane {

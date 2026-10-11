@@ -468,6 +468,9 @@ const buildSwarm = (count: number) => {
 
 const easeOut = (t: number) => 1 - (1 - t) ** 3;
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
+// Desde el cierre la estrella deja el centro 2,15 s más tarde que en la intro:
+// la esfera de Dyson se retrasa lo mismo
+const GENTLE_SHELL_DELAY = 2.15;
 // Color del destello con que nace la estrella
 const FLASH_WHITE = new THREE.Vector3(1.5, 1.41, 1.29);
 // Al nacer de la nebulosa del cierre la estrella tarda esto más en encenderse
@@ -735,9 +738,13 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
     coronaUniforms.uIgnite.value = age < 0 ? 0 : easeOut(clamp01((age - 0.25) / 1.3));
     coronaUniforms.uFlareAngle.value = livingSignal.flareAngle;
     coronaUniforms.uFlareAge.value = (now - livingSignal.flareAt) / 1000;
+    // La esfera de Dyson llega después de que la estrella nace. Desde el
+    // cierre la estrella tarda más y espera en el centro: la esfera se retrasa
+    // lo mismo, para no emerger junto con ella
+    const shellSince = since < 0 || !gentle ? since : since - GENTLE_SHELL_DELAY;
     swarmUniforms.uTime.value = time;
-    swarmUniforms.uBuild.value = since - 1.8;
-    swarmUniforms.uIgnite.value = since < 0 ? 0 : clamp01((since - 1.6) / 1.2);
+    swarmUniforms.uBuild.value = shellSince - 1.8;
+    swarmUniforms.uIgnite.value = shellSince < 0 ? 0 : clamp01((shellSince - 1.6) / 1.2);
     swarmUniforms.uPixelRatio.value = viewport.dpr;
     swarmUniforms.uViewHeight.value = size.height;
     swarmUniforms.uAspect.value = size.width / size.height;
@@ -757,17 +764,17 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
     }
     if (livingSignal.flareAt !== work.flareSeen) {
       work.flareSeen = livingSignal.flareAt;
-      if (since > SHELL_KICKOFF) work.boost += FLARE_BOOST;
+      if (shellSince > SHELL_KICKOFF) work.boost += FLARE_BOOST;
     }
     work.boost *= Math.exp(-step / BOOST_TAU);
     const rush = work.boost + (spin.dragging ? DRAG_BOOST : 0);
-    const building = since > SHELL_KICKOFF && !work.completeAt;
+    const building = shellSince > SHELL_KICKOFF && !work.completeAt;
     if (building) work.work = Math.min(1, work.work + (step * (1 + rush)) / BUILD_TOTAL);
-    const built = since < 0 ? 0 : since < SHELL_KICKOFF ? shellKickoff(since) : shellFromWork(work.work);
-    const rate = since < 0
+    const built = shellSince < 0 ? 0 : shellSince < SHELL_KICKOFF ? shellKickoff(shellSince) : shellFromWork(work.work);
+    const rate = shellSince < 0
       ? 0
-      : since < SHELL_KICKOFF
-        ? (shellKickoff(since + 0.05) - built) / 0.05
+      : shellSince < SHELL_KICKOFF
+        ? (shellKickoff(shellSince + 0.05) - built) / 0.05
         : building ? (shellWorkSlope(work.work) * (1 + rush)) / BUILD_TOTAL : 0;
     // Ventana de montaje suavizada: si saltara con la aceleración, los paneles
     // a medio colocar retrocederían
@@ -784,18 +791,18 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
     // Pasado el cierre los últimos paneles terminan de asentarse
     shellUniforms.uBuilt.value = work.completeAt ? 1 + Math.min(0.2, sealedAge * 0.06) : built;
     shellUniforms.uWindow.value = work.window;
-    shellUniforms.uIgnite.value = since < 0 ? 0 : clamp01((since - 1.4) / 0.6);
+    shellUniforms.uIgnite.value = shellSince < 0 ? 0 : clamp01((shellSince - 1.4) / 0.6);
     shellUniforms.uTime.value = time;
     shellUniforms.uSealed.value = sealed;
     coronaUniforms.uSealed.value = sealed;
     shellUniforms.uWave.value = sealedAge < 0 || sealedAge > 3 ? -1 : sealedAge;
-    ghostMaterial.opacity = since < 0 ? 0 : 0.14 * easeOut(clamp01((since - 1.3) / 1.4)) * (1 - sealed);
+    ghostMaterial.opacity = shellSince < 0 ? 0 : 0.14 * easeOut(clamp01((shellSince - 1.3) / 1.4)) * (1 - sealed);
     starUniforms.uDim.value = built * 0.3;
     // Con la esfera cerrada la corona queda tapada: solo asoma un resplandor
     coronaUniforms.uIgnite.value *= (1 - built * 0.45) * (1 - sealed * 0.75);
     const percent = Math.floor(built * 100);
     const rushing = building && rush > 0.4;
-    if (since > SHELL_KICKOFF && (percent !== progress.current.percent || rushing !== progress.current.rushing)) {
+    if (shellSince > SHELL_KICKOFF && (percent !== progress.current.percent || rushing !== progress.current.rushing)) {
       progress.current = { percent, rushing };
       livingSignal.onProgress?.(percent, rushing);
     }

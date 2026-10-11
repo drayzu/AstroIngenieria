@@ -213,14 +213,32 @@ export const HeroIgnition = ({
     layer.style.setProperty('--sx', `${sx.toFixed(1)}px`);
     layer.style.setProperty('--sy', `${sy.toFixed(1)}px`);
     layer.style.setProperty('--star-d', `${(starR * 2).toFixed(1)}px`);
+    const fromFinale = introSeam.fromFinale && living;
+
+    /* Desde el cierre la mitad lejana del disco va detrás de la escena 3D (su
+       lienzo es transparente), así la estrella la tapa por sí sola. Se monta
+       dentro del escenario durante el nacimiento y se retira al terminar */
+    let under: HTMLDivElement | null = null;
+    if (fromFinale) {
+      under = document.createElement('div');
+      under.className = 'mo-ignite mo-ignite-under';
+      under.setAttribute('aria-hidden', 'true');
+      ['--sx', '--sy', '--star-d'].forEach((name) => under?.style.setProperty(name, layer.style.getPropertyValue(name)));
+      under.innerHTML = '<span class="mo-ignite-anchor"><span class="mo-ignite-disk"><span class="mo-ignite-disk-half is-back">'
+        + '<span class="mo-ignite-disk-plane"><span class="mo-ignite-disk-clip"><span class="mo-ignite-disk-spin"></span></span></span>'
+        + '</span></span></span>';
+      bg.prepend(under);
+    }
+    const diskBack = under?.querySelector<HTMLElement>('.mo-ignite-disk');
+    const disks = diskBack ? [disk, diskBack] : [disk];
 
     // El punto nace donde estaba el de arranque y viaja al centro de la estrella
     const bootX = window.innerWidth / 2;
     const bootY = window.innerHeight * 0.5;
     dot.style.transform = `translateX(${bootX}px) translateY(${bootY}px)`;
     releaseBootScreen();
-    // Se borra al terminar y no aquí: en desarrollo el efecto corre dos veces
-    const fromFinale = introSeam.fromFinale && living;
+    // fromFinale se borra al terminar y no al leerlo: en desarrollo el efecto
+    // corre dos veces
 
     const controls: AnimationPlaybackControls[] = [];
     const timers: number[] = [];
@@ -282,7 +300,7 @@ export const HeroIgnition = ({
       // El gas que cayó queda girando en un disco alrededor del punto, dentro
       // de una nube tenue, mientras el punto se calienta
       run(animate(cloud, { opacity: [0, 0.9], scale: [1.3, 1] }, { duration: GENTLE_WARM, ease: EASE_OUT }));
-      run(animate(disk, { opacity: [0, 1], scale: [1.5, 0.85] }, { duration: GENTLE_WARM + 0.1, ease: EASE_OUT }));
+      run(animate(disks, { opacity: [0, 1], scale: [1.5, 0.85] }, { duration: GENTLE_WARM + 0.1, ease: EASE_OUT }));
       const warm = animate(dot, { scale: [0.75, 1.8] }, { duration: GENTLE_WARM, ease: 'easeIn' });
       run(warm);
       gathered = warm.then(() => undefined);
@@ -319,14 +337,8 @@ export const HeroIgnition = ({
         // dispara sus chorros por los polos, con nudos de gas que se alejan
         run(animate(flash, { opacity: [0, 0.8, 0] }, { duration: 2.4, times: [0, 0.22, 1], ease: 'easeInOut' }));
         later(() => { livingSignal.ignitedAt = performance.now(); }, GENTLE_GLOW);
-        // La mitad lejana del disco se abre alrededor de la estrella mientras crece
-        run(animate(0, starR / 0.85, {
-          duration: 2.3,
-          ease: 'easeInOut',
-          onUpdate: (value) => disk.style.setProperty('--hole', `${value.toFixed(1)}px`),
-        }));
         // La estrella ilumina el gas que la rodea al encenderse
-        run(animate([disk, cloud], { filter: ['brightness(0.75)', 'brightness(1.6) saturate(1.15)'] }, { duration: GENTLE_WIND, ease: 'easeIn' }));
+        run(animate([...disks, cloud], { filter: ['brightness(0.75)', 'brightness(1.6) saturate(1.15)'] }, { duration: GENTLE_WIND, ease: 'easeIn' }));
         run(animate([implode, implodeEcho, swirl, flare], { opacity: 0 }, { duration: 0.12 }));
         run(animate(dot, { scale: 3.2, opacity: 0 }, { duration: 1.4, ease: EASE_OUT }));
         const reach = window.innerHeight * 0.4;
@@ -341,7 +353,7 @@ export const HeroIgnition = ({
         // Al encenderse la fusión el viento estelar despeja la nube y el disco
         run(animate(wind, { scale: [0.5, 3], opacity: [0, 0.55, 0] }, { duration: 1.9, delay: GENTLE_WIND, ease: EASE_OUT }));
         run(animate(cloud, { opacity: 0, scale: 1.7 }, { duration: 1.5, delay: GENTLE_WIND, ease: EASE_OUT }));
-        run(animate(disk, { opacity: 0, scale: 1.5 }, { duration: 1.2, delay: GENTLE_WIND + 0.1, ease: EASE_OUT }));
+        run(animate(disks, { opacity: 0, scale: 1.5 }, { duration: 1.2, delay: GENTLE_WIND + 0.1, ease: EASE_OUT }));
         later(() => {
           hero.removeAttribute('data-birth');
           hero.setAttribute('data-born', '');
@@ -450,6 +462,7 @@ export const HeroIgnition = ({
 
     return () => {
       cancelled = true;
+      under?.remove();
       hero.removeAttribute('data-birth');
       hero.removeAttribute('data-born');
       lockSmoothScroll('intro', false);
@@ -488,18 +501,16 @@ export const HeroIgnition = ({
         <span ref={implodeEchoRef} className="mo-ignite-implode is-echo" />
         {/* Nacimiento desde el cierre: nube, disco, chorros y viento */}
         <span ref={cloudRef} className="mo-ignite-cloud" />
-        {/* El disco en dos mitades: la lejana deja ver la estrella y la
-            cercana le pasa por delante, así la estrella queda dentro de él */}
+        {/* Mitad cercana del disco: pasa por delante de la estrella (la
+            lejana se monta detrás de la escena 3D) */}
         <span ref={diskRef} className="mo-ignite-disk">
-          {(['is-back', 'is-front'] as const).map((half) => (
-            <span key={half} className={`mo-ignite-disk-half ${half}`}>
-              <span className="mo-ignite-disk-plane">
-                <span className="mo-ignite-disk-clip">
-                  <span className="mo-ignite-disk-spin" />
-                </span>
+          <span className="mo-ignite-disk-half is-front">
+            <span className="mo-ignite-disk-plane">
+              <span className="mo-ignite-disk-clip">
+                <span className="mo-ignite-disk-spin" />
               </span>
             </span>
-          ))}
+          </span>
         </span>
         <span ref={jetsRef} className="mo-ignite-jets">
           <span className="mo-ignite-jet is-up" />
