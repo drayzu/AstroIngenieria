@@ -15,8 +15,9 @@ import './verticalRooms.css';
      scroll la hace girar y se inclinan siguiendo su borde
    - blueprint (Industria): cada obra llega como plano técnico y se imprime
      línea a línea al pasar; el transporte sube por un ascensor espacial
-   - starlight (Estelar): una estrella se desplaza empujada por su motor y
-     proyecta las sombras de las obras; al final colapsa en un agujero negro
+   - starlight (Estelar): el borde de una estrella hierve al pie de la sala y
+     cada obra sale de ella al rojo vivo, como materia extraída, y se enfría
+     mientras sube
    - silence (Inteligencia extraterrestre): sala a oscuras que solo revela el
      barrido del radar o la linterna del cursor; el bosque oscuro se esconde
 
@@ -28,8 +29,8 @@ const DARK_FOREST = 'dark-forest';
 
 interface ItemParts {
   root?: HTMLElement | null;
-  shadow?: HTMLElement | null;
-  rim?: HTMLElement | null;
+  heat?: HTMLElement | null;
+  glow?: HTMLElement | null;
   print?: HTMLElement | null;
   sheet?: HTMLElement | null;
   cone?: HTMLElement | null;
@@ -38,12 +39,7 @@ interface ItemParts {
 interface SkyParts {
   sky?: HTMLElement | null;
   spokes?: HTMLElement | null;
-  star?: HTMLElement | null;
-  sun?: HTMLElement | null;
-  jet?: HTMLElement | null;
-  mirror?: HTMLElement | null;
-  lift?: HTMLElement | null;
-  hole?: HTMLElement | null;
+  forge?: HTMLElement | null;
   beam?: HTMLElement | null;
   blips?: (HTMLElement | null)[];
 }
@@ -64,6 +60,14 @@ const seeded = (seed: number) => {
 const BLIPS = Array.from({ length: 7 }, (_, index) => ({
   x: 0.12 + seeded(index + 7) * 0.76,
   y: 0.16 + seeded(index + 19) * 0.7,
+}));
+
+// Plasma que sube desde el borde de la estrella
+const MOTES = Array.from({ length: 14 }, (_, index) => ({
+  x: -46 + seeded(index + 41) * 92,
+  duration: 7 + seeded(index + 53) * 6,
+  delay: -seeded(index + 67) * 12,
+  size: 2 + seeded(index + 79) * 2.5,
 }));
 
 export const VerticalRoom = memo(({
@@ -96,15 +100,8 @@ export const VerticalRoom = memo(({
   };
 
   const paint = (offset: number, viewport: number, now: number) => {
-    const { width, bodyHeight, items: placed, groups: groupBoxes } = geometry.current;
+    const { width, bodyHeight, items: placed } = geometry.current;
     const state = live.current;
-    // El cielo se queda fijo mientras la sala ocupa la pantalla
-    const skyTop = offset < 0 ? -offset : Math.min(0, bodyHeight - viewport - offset);
-
-    // Luz de la sala Estelar: dónde está la estrella y cuánto ilumina
-    let light = { x: 0, y: 0, power: 0 };
-    if (kind === 'starlight') light = paintStar(sky.current, groupBoxes, offset, viewport, width, skyTop);
-
     let sweep = 0;
     if (kind === 'silence') {
       const animation = radar.current;
@@ -117,6 +114,14 @@ export const VerticalRoom = memo(({
         const echo = Math.exp(-sinceSweep(sweep, point.x * width - width / 2, point.y * viewport - viewport / 2) / 0.7);
         blip.style.opacity = (echo * 0.9).toFixed(3);
       });
+    }
+
+    if (kind === 'starlight' && sky.current.forge) {
+      // Al acabar la sala la estrella se hunde bajo el borde de la pantalla:
+      // si no, el fondo de la sala la cortaría en seco
+      const remaining = bodyHeight - offset - viewport;
+      const sink = 1 - smoothstep(0, viewport * 0.7, remaining);
+      sky.current.forge.style.transform = `translate3d(0, ${(sink * viewport * 0.3).toFixed(1)}px, 0)`;
     }
 
     if (kind === 'wheel' && sky.current.spokes) {
@@ -161,19 +166,13 @@ export const VerticalRoom = memo(({
         parts.sheet?.style.setProperty('transform', `translate3d(0, -${percent}%, 0)`);
         parts.print?.classList.toggle('is-printing', printed > 0.001 && printed < 0.999);
       } else if (kind === 'starlight') {
-        const centerX = box.centerX;
-        const frameCenterY = top + box.frameHeight / 2;
-        const dx = centerX - light.x;
-        const dy = frameCenterY - light.y;
-        const distance = Math.hypot(dx, dy) || 1;
-        const length = 16 + 26 * clamp01(distance / (width * 0.9));
-        parts.shadow?.style.setProperty('transform', `translate3d(${((dx / distance) * length).toFixed(1)}px, ${((dy / distance) * length).toFixed(1)}px, 0)`);
-        parts.shadow?.style.setProperty('opacity', (0.25 + light.power * 0.6).toFixed(3));
-        // El lado del marco que mira a la estrella recibe su luz
-        const rimX = (-dx / distance) * box.width * 0.7;
-        const rimY = (-dy / distance) * box.frameHeight * 0.9;
-        parts.rim?.style.setProperty('transform', `translate3d(${rimX.toFixed(1)}px, ${rimY.toFixed(1)}px, 0)`);
-        parts.rim?.style.setProperty('opacity', (light.power * 0.9).toFixed(3));
+        // Al asomar desde la estrella la obra llega incandescente; al subir se
+        // enfría de arriba abajo y queda en sus colores hacia la mitad
+        const heat = smoothstep(0.5, 0.97, (top + box.frameHeight / 2) / viewport);
+        parts.heat?.style.setProperty('opacity', heat.toFixed(3));
+        parts.heat?.style.setProperty('transform', `translate3d(0, ${((1 - heat) * 50).toFixed(2)}%, 0)`);
+        parts.glow?.style.setProperty('opacity', heat.toFixed(3));
+        root.style.transform = `translate3d(0, ${(heat * 28).toFixed(1)}px, 0) scale(${(1 - heat * 0.03).toFixed(4)})`;
       } else if (kind === 'silence') {
         const work = works[index];
         const echo = Math.exp(-sinceSweep(sweep, box.centerX - width / 2, centerY - viewport / 2) / 1.1);
@@ -270,7 +269,7 @@ export const VerticalRoom = memo(({
         </span>
       );
     }
-    if (kind === 'starlight') return <span className="mo-starlight-rim" ref={part(index, 'rim')} aria-hidden="true" />;
+    if (kind === 'starlight') return <span className="mo-forge-heat" ref={part(index, 'heat')} aria-hidden="true" />;
     return undefined;
   };
 
@@ -286,14 +285,23 @@ export const VerticalRoom = memo(({
         )}
         {kind === 'blueprint' && <span className="mo-drafting-grid" />}
         {kind === 'starlight' && (
-          <div className="mo-starlight-star" ref={skyPart('star')}>
-            <span className="mo-starlight-jet" ref={skyPart('jet')} />
-            <span className="mo-starlight-lift" ref={skyPart('lift')}>
-              {[0, 1, 2, 3, 4].map((filament) => <i key={filament} />)}
+          <div className="mo-forge" ref={skyPart('forge')}>
+            <span className="mo-forge-surface">
+              <span className="mo-forge-granules" />
             </span>
-            <span className="mo-starlight-sun" ref={skyPart('sun')} />
-            <span className="mo-starlight-mirror" ref={skyPart('mirror')} />
-            <span className="mo-starlight-hole" ref={skyPart('hole')} />
+            {MOTES.map((mote, moteIndex) => (
+              <span
+                key={moteIndex}
+                className="mo-forge-mote"
+                style={{
+                  left: `${mote.x}vw`,
+                  width: `${mote.size}px`,
+                  height: `${mote.size}px`,
+                  animationDuration: `${mote.duration}s`,
+                  animationDelay: `${mote.delay}s`,
+                }}
+              />
+            ))}
           </div>
         )}
         {kind === 'silence' && (
@@ -334,7 +342,7 @@ export const VerticalRoom = memo(({
                         <span className="mo-spot-beam" />
                       </span>
                     )}
-                    {kind === 'starlight' && <span className="mo-starlight-shadow" ref={part(current, 'shadow')} aria-hidden="true" />}
+                    {kind === 'starlight' && <span className="mo-forge-glow" ref={part(current, 'glow')} aria-hidden="true" />}
                     {renderObra(concept, plate, false, overlayFor(current, concept, plate))}
                   </div>
                 );
@@ -358,53 +366,11 @@ const sinceSweep = (sweep: number, dx: number, dy: number) => {
 const settleItem = (parts: ItemParts) => {
   parts.root?.style.removeProperty('transform');
   parts.root?.style.removeProperty('opacity');
-  parts.shadow?.style.removeProperty('transform');
-  parts.rim?.style.removeProperty('transform');
+  parts.heat?.style.removeProperty('transform');
+  parts.heat?.style.removeProperty('opacity');
+  parts.glow?.style.removeProperty('opacity');
   parts.print?.style.removeProperty('transform');
   parts.sheet?.style.removeProperty('transform');
-};
-
-/* La estrella de la sala Estelar recorre tres actos, uno por grupo: se
-   desplaza empujada por su espejo (Shkadov) dejando un chorro de luz, pierde
-   materia hacia arriba y termina colapsando en un agujero negro. */
-const paintStar = (
-  parts: SkyParts,
-  groups: Geometry['groups'],
-  offset: number,
-  viewport: number,
-  width: number,
-  skyTop: number,
-) => {
-  const progressIn = (index: number) => {
-    const group = groups[index];
-    if (!group) return 0;
-    return clamp01((offset + viewport * 0.5 - group.top) / Math.max(1, group.height));
-  };
-  const moving = progressIn(0);
-  const lifting = progressIn(1);
-  const collapse = smoothstep(0.1, 0.75, progressIn(2));
-
-  // Acto I: de izquierda a derecha, con el espejo delante y el chorro detrás
-  const travel = smoothstep(0, 1, moving);
-  let x = 0.16 + travel * 0.66;
-  let y = 0.26 - travel * 0.06;
-  // Acto III: la estrella colapsada vuelve al centro
-  x += (0.5 - x) * collapse;
-  y += (0.22 - y) * collapse;
-  const thrust = smoothstep(0.02, 0.15, moving) * (1 - smoothstep(0.85, 1, moving));
-
-  const px = x * width;
-  const py = skyTop + y * viewport;
-  parts.star?.style.setProperty('transform', `translate3d(${(x * width).toFixed(1)}px, ${(y * viewport).toFixed(1)}px, 0)`);
-  parts.jet?.style.setProperty('opacity', (thrust * (1 - collapse)).toFixed(3));
-  parts.mirror?.style.setProperty('opacity', (smoothstep(0, 0.12, moving) * (1 - smoothstep(0.2, 0.6, lifting)) * (1 - collapse)).toFixed(3));
-  parts.lift?.style.setProperty('opacity', (smoothstep(0.05, 0.3, lifting) * (1 - collapse)).toFixed(3));
-  const shrink = 1 - smoothstep(0, 1, lifting) * 0.2;
-  parts.sun?.style.setProperty('opacity', (1 - collapse).toFixed(3));
-  parts.sun?.style.setProperty('transform', `scale(${(shrink * (1 - collapse * 0.7)).toFixed(4)})`);
-  parts.hole?.style.setProperty('opacity', collapse.toFixed(3));
-
-  return { x: px, y: py, power: 1 - collapse * 0.35 };
 };
 
 /* Plano técnico de cada obra: retícula, cotas y su cajetín */

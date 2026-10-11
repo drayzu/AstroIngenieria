@@ -15,6 +15,7 @@ import { metricRows, metricValueLabel } from '../../data/metricProfile';
 import { getReadingConnections, type ReadingContext } from '../../data/readingJourney';
 import { ArticleReader } from '../shared/ArticleReader';
 import { ImageLightbox, type ImageLightboxImage } from '../shared/ImageLightbox';
+import { StudyDiagram } from './StudyDiagrams';
 import './museoOrbital.css';
 
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
@@ -401,6 +402,8 @@ export const StudioRoom = ({
               </dl>
             </div>
           </section>
+
+          <StudyDiagram conceptId={concept.id} />
 
           <section className="mo-tab-pane mo-tab-pane-with-back" aria-label={t("Lectura del tema")}>
             <ArticleReader

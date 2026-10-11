@@ -1,0 +1,278 @@
+/* ======================================================================
+   Salas de estudio: diagramas animados entre la portada y la lectura
+   ====================================================================== */
+
+.mo-study-diagram {
+  margin: 0;
+  padding: 36px clamp(24px, 5vw, 80px) 44px;
+  border-bottom: 1px solid var(--mo-line);
+}
+
+.mo-study-diagram > .mo-kicker {
+  margin: 0 0 8px;
+}
+
+.mo-study-diagram svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+}
+
+.mo-study-diagram figcaption {
+  max-width: 720px;
+  margin: 18px auto 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(245, 241, 232, 0.72);
+}
+
+.mo-study-diagram figcaption strong {
+  display: block;
+  margin-bottom: 4px;
+  font-family: var(--mo-serif);
+  font-size: 24px;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--mo-ink);
+}
+
+/* Rótulos dentro del diagrama, como las cotas de una lámina técnica */
+.sa-label {
+  font-family: var(--mo-mono);
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  fill: rgba(245, 241, 232, 0.62);
+}
+
+.sa-leader,
+.sa-scale {
+  stroke: rgba(245, 241, 232, 0.28);
+  stroke-width: 1;
+}
+
+.sa-trail {
+  stroke: rgba(255, 196, 150, 0.55);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 9;
+}
+
+/* Luz que viaja: guiones que avanzan por cada rayo */
+.sa-ray {
+  stroke: #ffc995;
+  stroke-width: 1.6;
+  stroke-dasharray: 6 14;
+  opacity: 0.75;
+}
+
+.sa-ray.is-short {
+  stroke: #ffe6c4;
+  opacity: 0.55;
+  stroke-dasharray: 4 6;
+}
+
+.sa-flow {
+  animation: sa-flow 1.1s linear infinite;
+}
+
+@keyframes sa-flow {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+.sa-mirror {
+  fill: none;
+  stroke-width: 5;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px rgba(220, 235, 255, 0.55));
+}
+
+.sa-frame {
+  fill: none;
+  stroke: rgba(200, 214, 232, 0.4);
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+}
+
+.sa-arrow {
+  stroke: rgba(245, 241, 232, 0.7);
+  stroke-width: 1.5;
+}
+
+.sa-arrow-head {
+  fill: rgba(245, 241, 232, 0.7);
+}
+
+.sa-orbit {
+  fill: none;
+  stroke: rgba(245, 241, 232, 0.16);
+  stroke-width: 1;
+}
+
+.sa-planet {
+  fill: #9fc4ff;
+  filter: drop-shadow(0 0 4px rgba(159, 196, 255, 0.7));
+}
+
+.sa-planet.is-far {
+  fill: #d9b98c;
+  filter: drop-shadow(0 0 4px rgba(217, 185, 140, 0.6));
+}
+
+/* Star lifting */
+.sa-field {
+  fill: none;
+  stroke: rgba(150, 190, 255, 0.24);
+  stroke-width: 1;
+}
+
+.sa-plasma {
+  fill: #ffe2bf;
+  filter: drop-shadow(0 0 4px rgba(255, 170, 110, 0.9));
+}
+
+.sa-collector {
+  fill: none;
+  stroke: rgba(245, 241, 232, 0.55);
+  stroke-width: 1.2;
+}
+
+.sa-ring {
+  fill: none;
+  stroke: #ff9a6c;
+  stroke-width: 2;
+  stroke-dasharray: 10 10;
+  filter: drop-shadow(0 0 3px rgba(255, 140, 90, 0.8));
+}
+
+.sa-ring.is-back {
+  opacity: 0.3;
+}
+
+.sa-gauge-track {
+  fill: rgba(245, 241, 232, 0.1);
+}
+
+.sa-gauge.is-mass {
+  fill: #ff8a5c;
+}
+
+.sa-gauge.is-life {
+  fill: #9ee6b0;
+}
+
+/* Agujero negro */
+.sa-disk-streak {
+  fill: none;
+  stroke: #fff6e6;
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-dasharray: 12 28;
+  opacity: 0.55;
+}
+
+.sa-spin {
+  animation: sa-flow 2.6s linear infinite;
+}
+
+.sa-lensed {
+  fill: none;
+  stroke: #ffd3a0;
+  stroke-width: 9;
+  opacity: 0.8;
+  filter: drop-shadow(0 0 6px rgba(255, 150, 90, 0.7));
+}
+
+.sa-lensed.is-thin {
+  stroke-width: 2.5;
+  opacity: 0.55;
+}
+
+.sa-horizon {
+  fill: #000;
+}
+
+.sa-photon {
+  fill: none;
+  stroke: #ffe6c2;
+  stroke-width: 1.6;
+  filter: drop-shadow(0 0 5px rgba(255, 210, 160, 0.9));
+}
+
+.sa-ergo {
+  fill: none;
+  stroke: rgba(160, 200, 255, 0.45);
+  stroke-width: 1;
+  stroke-dasharray: 4 6;
+}
+
+.sa-path {
+  fill: none;
+  stroke: rgba(245, 241, 232, 0.12);
+  stroke-width: 1;
+  stroke-dasharray: 2 6;
+}
+
+.sa-streak {
+  fill: none;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-dasharray: 0.3 1.4;
+}
+
+.sa-streak.is-in {
+  stroke: rgba(180, 210, 255, 0.7);
+}
+
+.sa-streak.is-out {
+  stroke: #ffe3b8;
+  stroke-width: 3.2;
+  filter: drop-shadow(0 0 5px rgba(255, 200, 140, 0.9));
+}
+
+.sa-body {
+  fill: #cfe1ff;
+  filter: drop-shadow(0 0 4px rgba(200, 225, 255, 0.9));
+}
+
+.sa-body.is-falling {
+  fill: #8fb4ff;
+}
+
+.sa-body.is-out {
+  fill: #fff2da;
+  filter: drop-shadow(0 0 8px rgba(255, 210, 150, 1));
+}
+
+.sa-split {
+  fill: none;
+  stroke: #fff2da;
+  stroke-width: 2;
+}
+
+/* Fuera de pantalla todo se detiene */
+.mo-study-diagram:not(.is-live) * {
+  animation-play-state: paused !important;
+}
+
+@media (max-width: 720px) {
+  .mo-study-diagram {
+    padding: 28px 16px 32px;
+  }
+
+  /* A este tamaño los rótulos serían ilegibles: el pie de la lámina explica */
+  .sa-label,
+  .sa-leader {
+    display: none;
+  }
+
+  .mo-study-diagram figcaption {
+    font-size: 14px;
+  }
+
+  .mo-study-diagram figcaption strong {
+    font-size: 20px;
+  }
+}

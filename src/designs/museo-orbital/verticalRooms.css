@@ -329,189 +329,137 @@
 }
 
 /* ======================================================================
-   Ingeniería estelar: la luz viene de la estrella
+   Ingeniería estelar: las obras salen de la estrella al rojo vivo
    ====================================================================== */
 
-.mo-starlight-star {
+/* Borde de una estrella gigante al pie de la sala: solo asoma su arco */
+.mo-forge {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 0;
+  height: 0;
+}
+
+.mo-forge-surface {
+  position: absolute;
+  top: -15vh;
+  left: -160vmax;
+  width: 320vmax;
+  height: 320vmax;
+  overflow: hidden;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    #ffd7a0 0%,
+    #ffb067 93%,
+    #f2733c 97.4%,
+    #c63d20 99.3%,
+    #7d1c0d 100%
+  );
+  box-shadow:
+    0 0 5vh 1vh rgba(255, 150, 80, 0.55),
+    0 0 20vh 6vh rgba(255, 100, 50, 0.22),
+    0 0 55vh 14vh rgba(255, 80, 40, 0.08);
+}
+
+/* Granulación: celdas de plasma que derivan despacio */
+.mo-forge-granules {
   position: absolute;
   top: 0;
   left: 0;
-  width: 0;
-  height: 0;
+  width: 200%;
+  height: 26vh;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='360'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.045' numOctaves='3' seed='7' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 0.55  0 0 0 0 0.25  0 0 0 -2.4 1.7'/></filter><rect width='100%' height='100%' filter='url(%23g)'/></svg>") repeat;
+  background-size: 360px 360px;
+  mix-blend-mode: multiply;
+  opacity: 0.5;
+  animation: mo-forge-boil 140s linear infinite;
   will-change: transform;
 }
 
-.mo-starlight-sun {
-  position: absolute;
-  top: -12vmin;
-  left: -12vmin;
-  width: 24vmin;
-  height: 24vmin;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    #fffaf4 0%,
-    #ffe6d2 8%,
-    color-mix(in srgb, var(--accent, #c9a86a) 85%, #fff) 16%,
-    color-mix(in srgb, var(--accent, #c9a86a) 34%, transparent) 32%,
-    color-mix(in srgb, var(--accent, #c9a86a) 8%, transparent) 50%,
-    transparent 70%
-  );
-  will-change: transform, opacity;
-}
-
-/* Chorro de luz detrás de la estrella mientras su espejo la empuja */
-.mo-starlight-jet {
-  position: absolute;
-  top: -2.4vmin;
-  right: 0;
-  width: 48vw;
-  height: 4.8vmin;
-  border-radius: 50%;
-  background: linear-gradient(
-    to left,
-    color-mix(in srgb, var(--accent, #c9a86a) 70%, #fff) 0%,
-    color-mix(in srgb, var(--accent, #c9a86a) 28%, transparent) 30%,
-    transparent
-  );
-  filter: blur(6px);
-  opacity: 0;
-  will-change: opacity;
-}
-
-/* Espejo de Shkadov: un arco delante, en el sentido del viaje */
-.mo-starlight-mirror {
-  position: absolute;
-  top: -12vmin;
-  left: -5vmin;
-  width: 24vmin;
-  height: 24vmin;
-  border-right: 1.5px solid rgba(255, 228, 208, 0.8);
-  border-radius: 50%;
-  opacity: 0;
-  will-change: opacity;
-}
-
-/* Extracción de materia: filamentos que suben desde la estrella */
-.mo-starlight-lift {
-  position: absolute;
-  top: -34vmin;
-  left: -7vmin;
-  width: 14vmin;
-  height: 30vmin;
-  opacity: 0;
-  will-change: opacity;
-}
-
-.mo-starlight-lift i {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: 1.5px;
-  height: 100%;
-  background: linear-gradient(to top, color-mix(in srgb, var(--accent, #c9a86a) 85%, #fff), transparent);
-  transform-origin: bottom center;
-  animation: mo-starlight-lift 3.4s ease-in-out infinite;
-}
-
-.mo-starlight-lift i:nth-child(1) { rotate: -16deg; animation-delay: -0.4s; }
-.mo-starlight-lift i:nth-child(2) { rotate: -6deg; animation-delay: -1.6s; height: 80%; }
-.mo-starlight-lift i:nth-child(3) { rotate: 3deg; animation-delay: -2.4s; }
-.mo-starlight-lift i:nth-child(4) { rotate: 11deg; animation-delay: -0.9s; height: 70%; }
-.mo-starlight-lift i:nth-child(5) { rotate: 19deg; animation-delay: -2.9s; height: 86%; }
-
-@keyframes mo-starlight-lift {
-  0%,
-  100% {
-    transform: scaleY(0.55);
-    opacity: 0.4;
+@keyframes mo-forge-boil {
+  to {
+    transform: translate3d(-50%, 0, 0);
   }
-  50% {
-    transform: scaleY(1);
+}
+
+/* Plasma extraído: chispas que suben desde el borde */
+.mo-forge-mote {
+  position: absolute;
+  bottom: 14vh;
+  border-radius: 50%;
+  background: #ffe6c2;
+  box-shadow: 0 0 6px 2px rgba(255, 150, 80, 0.75);
+  opacity: 0;
+  animation: mo-forge-mote 9s ease-out infinite;
+}
+
+@keyframes mo-forge-mote {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  12% {
     opacity: 1;
   }
+  100% {
+    transform: translate3d(0, -62vh, 0);
+    opacity: 0;
+  }
 }
 
-/* Agujero negro: horizonte, anillo de fotones y disco de acreción */
-.mo-starlight-hole {
+/* Calor sobre la imagen: incandescente abajo; al enfriarse VerticalRoom lo
+   desliza hacia abajo y la imagen recupera sus colores desde arriba */
+.mo-forge-heat {
+  /* El doble de alto que la imagen: la mitad de arriba es un borde difuso,
+     así el frente que se enfría avanza sin dibujar una línea */
   position: absolute;
-  top: -13vmin;
-  left: -13vmin;
-  width: 26vmin;
-  height: 26vmin;
+  top: -100%;
+  left: 0;
+  right: 0;
+  height: 200%;
+  z-index: 3;
+  background: linear-gradient(
+    to top,
+    rgba(255, 244, 222, 0.92) 0%,
+    rgba(255, 174, 96, 0.78) 13%,
+    rgba(232, 84, 42, 0.52) 30%,
+    rgba(160, 36, 16, 0.3) 50%,
+    rgba(160, 36, 16, 0) 78%
+  );
+  mix-blend-mode: screen;
   opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* Resplandor de la obra recién salida de la estrella */
+.mo-forge-glow {
+  position: absolute;
+  top: 4%;
+  left: 4%;
+  right: 4%;
+  z-index: -1;
+  aspect-ratio: 21 / 9;
+  border-radius: 6px;
+  background: rgba(255, 112, 52, 0.75);
+  filter: blur(30px);
+  opacity: 0;
+  pointer-events: none;
   will-change: opacity;
 }
 
-.mo-starlight-hole::before {
-  content: '';
-  position: absolute;
-  inset: 8% -45%;
-  border-radius: 50%;
-  background: radial-gradient(
-    ellipse at center,
-    transparent 33%,
-    rgba(255, 190, 120, 0.9) 37%,
-    rgba(255, 120, 66, 0.5) 45%,
-    rgba(255, 84, 44, 0.16) 56%,
-    transparent 66%
-  );
-  transform: rotate(-12deg) scaleY(0.3);
-}
-
-.mo-starlight-hole::after {
-  content: '';
-  position: absolute;
-  inset: 31%;
-  border-radius: 50%;
-  background: #000;
-  box-shadow:
-    0 0 0 1.5px rgba(255, 210, 160, 0.85),
-    0 0 26px 8px rgba(255, 140, 80, 0.32);
-}
-
-/* Sombra de cada marco, opuesta a la estrella */
-.mo-starlight-shadow {
-  position: absolute;
-  top: 2%;
-  left: 2%;
-  right: 2%;
-  z-index: -1;
-  aspect-ratio: 21 / 9;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.88);
-  filter: blur(18px);
-  opacity: 0.5;
-  pointer-events: none;
-  will-change: transform, opacity;
-}
-
-/* Luz de la estrella sobre la imagen: un halo cálido que VerticalRoom
-   desplaza hacia el lado del marco que mira a la estrella */
-.mo-starlight-rim {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 2;
-  width: 150%;
-  aspect-ratio: 1;
-  margin: -75% 0 0 -75%;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle closest-side,
-    color-mix(in srgb, var(--accent, #c9a86a) 40%, rgba(255, 220, 186, 0.46)) 0%,
-    color-mix(in srgb, var(--accent, #c9a86a) 18%, rgba(255, 220, 186, 0.16)) 38%,
-    transparent 100%
-  );
-  opacity: 0;
-  pointer-events: none;
-  will-change: transform, opacity;
-}
-
-/* La estrella pasa detrás del muro: las fichas no deben perderse en su brillo */
 .mo-room.is-starlight .mo-obra-meta,
 .mo-room.is-starlight .mo-topic-group > h3 {
   text-shadow: 0 1px 14px rgba(0, 0, 0, 0.95), 0 0 4px rgba(0, 0, 0, 0.8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mo-forge-granules,
+  .mo-forge-mote {
+    animation: none;
+  }
 }
 
 /* ======================================================================
