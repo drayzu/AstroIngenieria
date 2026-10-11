@@ -101,11 +101,6 @@
             transform-origin: center;
             animation: haloPulse 4.5s ease-in-out infinite;
         }
-        .entrar-press {
-            transform-box: fill-box;
-            transform-origin: center;
-            animation: pressPulse 4.5s ease-in-out infinite;
-        }
         .subtitle {
             font-family: 'Montserrat', 'Segoe UI', sans-serif;
             font-size: 13px;
@@ -305,10 +300,6 @@
             50%      { opacity: 1;    transform: scale(1.06); }
         }
 
-        @keyframes pressPulse {
-            0%, 100% { transform: scale(1); }
-            50%      { transform: scale(1.02); }
-        }
 
         /* ---- v2: looping staggered reveal of the narrative (30s cycle) ---- */
         .r1 { animation: rv1 30s cubic-bezier(.2,.7,.2,1) infinite; }
@@ -671,8 +662,8 @@
         <!-- Breathing halo behind the word -->
         <ellipse class="halo" cx="600" cy="848" rx="210" ry="52" fill="url(#entrar-halo)"/>
 
-        <!-- The word itself (gently breathing, like a live button) -->
-        <text x="607" y="870" class="entrar-title entrar-press">ENTRAR</text>
+        <!-- The word itself -->
+        <text x="607" y="870" class="entrar-title">ENTRAR</text>
 
         <!-- Underline with fading edges + pulsing core -->
         <rect x="470" y="901.5" width="120" height="1" fill="url(#fade-left)"/>
