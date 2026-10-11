@@ -1886,20 +1886,9 @@ const useNearViewportImage = (imageRef: RefObject<HTMLImageElement | null>) => {
   return shouldLoad;
 };
 
-/* Entrada de las obras: primero se cuelga el marco y luego la imagen se
-   abre dentro de él. Tres aperturas alternan por número de placa para dar
-   ritmo al muro: cortina desde abajo, obturador desde el centro y barrido
-   diagonal. Los polígonos comparten número de puntos para interpolarse. */
-const OBRA_REVEALS = [
-  { from: 'inset(100% 0% 0% 0%)', to: 'inset(0% 0% 0% 0%)', zoom: 1.2 },
-  { from: 'inset(0% 50% 0% 50%)', to: 'inset(0% 0% 0% 0%)', zoom: 1.14 },
-  {
-    from: 'polygon(0% 0%, 0% 0%, -35% 100%, -35% 100%)',
-    to: 'polygon(0% 0%, 135% 0%, 100% 100%, -35% 100%)',
-    zoom: 1.18,
-  },
-] as const;
-
+/* Entrada de las obras: el marco se cuelga y la imagen se revela cuando
+   de verdad terminó de cargar, con un fundido y un leve acercamiento. Cada
+   sala pone encima su propio movimiento (foco, rueda, plano…). */
 const obraVariants = {
   hidden: { opacity: 0, y: 40 },
   shown: { opacity: 1, y: 0, transition: { duration: 0.8, ease: EASE_OUT } },
@@ -1942,7 +1931,12 @@ const Obra = memo(({
   const nearViewport = useNearViewportImage(imgRef);
   const shouldLoadImage = nearViewport || preload;
   const reduced = useReducedMotion();
-  const reveal = OBRA_REVEALS[plate % OBRA_REVEALS.length];
+  const [developed, setDeveloped] = useState(false);
+  // Una imagen ya en caché puede terminar de cargar antes del primer efecto
+  useEffect(() => {
+    const img = imgRef.current;
+    if (shouldLoadImage && img?.complete && img.naturalWidth > 1) setDeveloped(true);
+  }, [shouldLoadImage]);
 
   useEffect(() => {
     if (!hovered || !shouldLoadImage || !images || images.length < 2 || reduced ||
@@ -2014,24 +2008,14 @@ const Obra = memo(({
         onClick={() => onSelect(concept)}
       >
         <figure className="mo-frame">
-          <motion.div
-            className="mo-frame-mask"
-            variants={{
-              hidden: { clipPath: reveal.from },
-              shown: {
-                clipPath: reveal.to,
-                transition: { delay: 0.15, duration: 1.25, ease: EASE_OUT },
-                transitionEnd: { clipPath: 'none' },
-              },
-            }}
-          >
+          <div className="mo-frame-mask">
             {/* Capa más alta que la ventana: el zoom de entrada y la deriva
                 con el scroll nunca dejan ver sus bordes */}
             <motion.div
-              className="mo-frame-zoom"
+              className={`mo-frame-zoom${developed || !approvedImage ? ' is-developed' : ''}`}
               variants={{
-                hidden: { scale: reveal.zoom },
-                shown: { scale: 1, transition: { delay: 0.15, duration: 1.6, ease: EASE_OUT } },
+                hidden: { scale: 1.06 },
+                shown: { scale: 1, transition: { delay: 0.1, duration: 1.6, ease: EASE_OUT } },
               }}
             >
             {approvedImage ? <motion.img
@@ -2041,6 +2025,9 @@ const Obra = memo(({
               alt={concept.illustration.alt}
               loading="lazy"
               decoding="async"
+              onLoad={(event) => {
+                if (event.currentTarget.naturalWidth > 1) setDeveloped(true);
+              }}
             /> : <span className="mo-image-pending" role="img" aria-label={t("Imagen de {0} pendiente de selección", concept.title)}>{t("Imagen pendiente de selección")}</span>}
             <AnimatePresence initial={false}>
               {shouldLoadImage && images && hoverImageIndex > 0 && (
@@ -2061,7 +2048,7 @@ const Obra = memo(({
             </motion.div>
             {overlay}
             {approvedImage && featured && shouldLoadImage && <DistortOverlay imageRef={imgRef} active={hovered && hoverImageIndex === 0} />}
-          </motion.div>
+          </div>
           <span className="mo-frame-glow" aria-hidden="true" />
         </figure>
         <div className="mo-obra-meta">
