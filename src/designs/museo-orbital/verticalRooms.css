@@ -37,45 +37,43 @@
   will-change: opacity;
 }
 
-/* Cono de luz desde el techo hasta la obra */
+/* Luz de galería: un baño cálido que cae sobre el muro desde arriba y un
+   halo detrás del marco. Sin bordes ni geometría: se lee como luz, no como forma */
 .mo-spot {
   position: absolute;
-  bottom: 40%;
-  left: -18%;
-  right: -18%;
+  top: -26vh;
+  bottom: -8%;
+  left: -14%;
+  right: -14%;
   z-index: -1;
-  height: 95vh;
   opacity: 0;
   pointer-events: none;
   will-change: opacity;
 }
 
-/* Haz suave: bordes difuminados y se desvanece arriba y al llegar al suelo */
+/* Baño desde el techo: más intenso arriba del marco, se apaga hacia los lados */
 .mo-spot-beam {
   position: absolute;
   inset: 0;
-  clip-path: polygon(45% 0, 55% 0, 96% 100%, 4% 100%);
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    color-mix(in srgb, var(--accent, #c9a86a) 5%, rgba(255, 240, 210, 0.03)) 40%,
-    color-mix(in srgb, var(--accent, #c9a86a) 11%, rgba(255, 240, 210, 0.06)) 85%,
-    transparent
+  background: radial-gradient(
+    ellipse 44% 46% at 50% 42%,
+    color-mix(in srgb, var(--accent, #c9a86a) 12%, rgba(255, 240, 210, 0.07)),
+    color-mix(in srgb, var(--accent, #c9a86a) 5%, rgba(255, 240, 210, 0.025)) 55%,
+    transparent 100%
   );
-  filter: blur(14px);
 }
 
-/* Charco de luz sobre el muro, detrás del marco */
+/* Halo sobre el muro, detrás del marco */
 .mo-spot::after {
   content: '';
   position: absolute;
-  bottom: -18%;
-  left: 8%;
-  right: 8%;
-  height: 50%;
+  top: 30%;
+  bottom: 0;
+  left: 4%;
+  right: 4%;
   background: radial-gradient(
     ellipse closest-side,
-    color-mix(in srgb, var(--accent, #c9a86a) 14%, rgba(255, 240, 210, 0.08)),
+    color-mix(in srgb, var(--accent, #c9a86a) 16%, rgba(255, 240, 210, 0.09)),
     transparent
   );
 }

@@ -53,9 +53,9 @@ const irisRadius = (p: number, windowSize = 30) => {
   return `calc(${min.toFixed(3)}vmin + ${max.toFixed(3)}vmax)`;
 };
 
-/* Colapso: la estrella se encoge hasta ser un punto, el punto destella y
-   recién entonces se abre la ventana, primero en vmin y luego cubriendo */
-const COLLAPSE = { shrink: [0, 0.17], flare: [0.14, 0.24], open: [0.2, 0.31] } satisfies Record<string, [number, number]>;
+/* Colapso: la luz se condensa en un punto, el punto destella y recién
+   entonces se abre la ventana, primero en vmin y luego cubriendo */
+const COLLAPSE = { gather: [0.02, 0.15], flare: [0.13, 0.24], open: [0.2, 0.31] } satisfies Record<string, [number, number]>;
 const collapseRadius = (p: number) => {
   if (p < COLLAPSE.open[0]) return '0px';
   const min = 30 * easeOut(seg(p, COLLAPSE.open));
@@ -127,15 +127,14 @@ const IrisRing = ({ progress }: { progress: MotionValue<number> }) => {
   return <motion.span className="mo-journey-ring" style={{ width: size, height: size, opacity }} />;
 };
 
-/* ---------------- Colapso: la estrella vuelve a ser el punto de luz ---------------- */
+/* ---------------- Colapso: la luz se condensa en el punto de partida ---------------- */
 
 const StarCollapse = ({ progress }: { progress: MotionValue<number> }) => {
-  // La estrella y el contorno de su esfera se encogen hacia el centro
-  const starScale = useTransform(progress, (p) => 1 - 0.97 * seg(p, COLLAPSE.shrink) ** 1.6);
-  const starOpacity = useTransform(progress, [0, 0.02, COLLAPSE.shrink[1], COLLAPSE.flare[1]], [0, 1, 1, 0]);
-  const heat = useTransform(progress, (p) => seg(p, [0.08, COLLAPSE.shrink[1]]));
-  const shellScale = useTransform(progress, (p) => 1 - 0.98 * seg(p, [0, COLLAPSE.shrink[1] - 0.02]) ** 1.3);
-  const shellRotate = useTransform(progress, [0, COLLAPSE.shrink[1]], [0, 140]);
+  // Un resplandor tenue se recoge hacia el centro mientras nace el punto
+  const gatherScale = useTransform(progress, (p) => 1 - 0.94 * easeInOut(seg(p, COLLAPSE.gather)));
+  const gatherOpacity = useTransform(progress, [COLLAPSE.gather[0], COLLAPSE.gather[0] + 0.05, COLLAPSE.gather[1], COLLAPSE.flare[0] + 0.04], [0, 0.55, 0.9, 0]);
+  const pointScale = useTransform(progress, [COLLAPSE.gather[0], COLLAPSE.gather[1]], [0, 1]);
+  const pointOpacity = useTransform(progress, [COLLAPSE.gather[0], COLLAPSE.gather[0] + 0.06, COLLAPSE.open[0] + 0.02, COLLAPSE.open[1]], [0, 1, 1, 0]);
   // El punto destella con su destello anamórfico justo antes de abrirse
   const flareOpacity = useTransform(progress, [COLLAPSE.flare[0], COLLAPSE.flare[0] + 0.03, COLLAPSE.open[0] + 0.02, COLLAPSE.open[1]], [0, 1, 1, 0]);
   const flareScale = useTransform(progress, [COLLAPSE.flare[0], COLLAPSE.open[0], COLLAPSE.open[1]], [0.2, 1, 1.8]);
@@ -143,12 +142,9 @@ const StarCollapse = ({ progress }: { progress: MotionValue<number> }) => {
   const ringOpacity = useTransform(progress, [COLLAPSE.open[0], COLLAPSE.open[0] + 0.03, JOURNEY_COVER[0], JOURNEY_COVER[0] + 0.12], [0, 1, 1, 0]);
   return (
     <span className="mo-journey-collapse" aria-hidden="true">
-      <motion.span className="mo-journey-collapse-shell" style={{ scale: shellScale, rotate: shellRotate, opacity: starOpacity }} />
-      <motion.span className="mo-journey-collapse-star" style={{ scale: starScale, opacity: starOpacity }}>
-        <motion.span className="mo-journey-collapse-heat" style={{ opacity: heat }} />
-      </motion.span>
+      <motion.span className="mo-journey-collapse-gather" style={{ scale: gatherScale, opacity: gatherOpacity }} />
       <motion.span className="mo-journey-collapse-flare" style={{ opacity: flareOpacity, scaleX: flareScale }} />
-      <motion.span className="mo-journey-collapse-point" style={{ opacity: flareOpacity }} />
+      <motion.span className="mo-journey-collapse-point" style={{ opacity: pointOpacity, scale: pointScale }} />
       <motion.span className="mo-journey-ring" style={{ width: ringSize, height: ringSize, opacity: ringOpacity }} />
     </span>
   );
