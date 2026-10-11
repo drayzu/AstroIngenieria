@@ -14,10 +14,15 @@ import './verticalRooms.css';
    - wheel (Hábitats): las obras van montadas en la rueda de un hábitat; el
      scroll la hace girar y se inclinan siguiendo su borde
    - blueprint (Industria): cada obra llega como plano técnico y se imprime
-     línea a línea al pasar; el transporte sube por un ascensor espacial
+     línea a línea al pasar, y toda la sala es la subida por un ascensor
+     espacial: la cápsula sigue el scroll de la superficie a la órbita
+     geoestacionaria, el cielo se apaga y la Tierra se curva y se aleja
    - starlight (Estelar): el borde de una estrella hierve al pie de la sala y
-     cada obra sale de ella al rojo vivo, como materia extraída, y se enfría
-     mientras sube
+     cada obra sale de ella al rojo vivo, como materia extraída, disparada en
+     arco y frenando mientras sube y se enfría. La estrella gira con el scroll
+     y vive lo que cuenta cada grupo: se desplaza (motores estelares), se
+     encoge y enrojece al extraerle materia y al final colapsa en un agujero
+     negro que crece hasta tragarse la pantalla: la sala termina dentro de él
    - silence (Inteligencia extraterrestre): sala a oscuras que solo revela el
      barrido del radar o la linterna del cursor; el bosque oscuro se esconde
 
@@ -25,6 +30,28 @@ import './verticalRooms.css';
    escriben transformaciones y opacidades de las obras a la vista. */
 
 const RADAR_PERIOD = 7200;
+
+/* Ascensor espacial: altitud en escala logarítmica, de 0 km a la órbita
+   geoestacionaria, para que la atmósfera no se pase en un instante */
+const GEO_KM = 35_786;
+const climbAt = (km: number) => Math.log1p(km) / Math.log1p(GEO_KM);
+const CLIMB_MARKS = [
+  { km: 12, label: 'Aviones comerciales' },
+  { km: 100, label: 'Línea de Kármán' },
+  { km: 408, label: 'Estación espacial' },
+  { km: 2_000, label: 'Fin de la órbita baja' },
+  { km: 20_200, label: 'Satélites de navegación' },
+  { km: GEO_KM, label: 'Órbita geoestacionaria' },
+].map((mark) => ({ ...mark, at: climbAt(mark.km) }));
+const CLIMB_ZONES = [
+  { below: 12, label: 'Troposfera' },
+  { below: 50, label: 'Estratosfera' },
+  { below: 100, label: 'Mesosfera' },
+  { below: 2_000, label: 'Órbita baja' },
+  { below: GEO_KM - 1, label: 'Órbita media' },
+  { below: Infinity, label: 'Órbita geoestacionaria' },
+];
+const kmLabel = (km: number) => km.toLocaleString('es-CL', { maximumFractionDigits: km < 10 ? 1 : 0 });
 const DARK_FOREST = 'dark-forest';
 
 interface ItemParts {
@@ -34,14 +61,26 @@ interface ItemParts {
   print?: HTMLElement | null;
   sheet?: HTMLElement | null;
   cone?: HTMLElement | null;
+  ping?: HTMLElement | null;
+  label?: HTMLElement | null;
 }
 
 interface SkyParts {
   sky?: HTMLElement | null;
   spokes?: HTMLElement | null;
   forge?: HTMLElement | null;
+  surface?: HTMLElement | null;
+  granules?: HTMLElement | null;
+  cooled?: HTMLElement | null;
+  hole?: HTMLElement | null;
+  motes?: HTMLElement | null;
   beam?: HTMLElement | null;
   blips?: (HTMLElement | null)[];
+  air?: HTMLElement | null;
+  earth?: HTMLElement | null;
+  altitude?: HTMLElement | null;
+  zone?: HTMLElement | null;
+  marks?: (HTMLElement | null)[];
 }
 
 interface Geometry {
@@ -84,9 +123,20 @@ export const VerticalRoom = memo(({
   const { t } = useLocale();
   const bodyRef = useRef<HTMLDivElement>(null);
   const items = useRef<ItemParts[]>([]);
-  const sky = useRef<SkyParts>({ blips: [] });
+  const sky = useRef<SkyParts>({ blips: [], marks: [] });
   const geometry = useRef<Geometry>({ width: 1, bodyHeight: 1, items: [], groups: [] });
-  const live = useRef({ touched: new Set<number>(), lit: new Set<number>(), pointer: { x: -9999, y: -9999 } });
+  const live = useRef({
+    touched: new Set<number>(),
+    lit: new Set<number>(),
+    pointer: { x: -9999, y: -9999 },
+    altitude: '',
+    zone: '',
+    // Radar: ángulo desde el último barrido, señal fijada y su intensidad
+    since: [] as number[],
+    locked: new Set<number>(),
+    lock: [] as number[],
+    lastNow: 0,
+  });
   const radar = useRef<Animation | null>(null);
 
   const works = useMemo(() => groups.flatMap((group, groupIndex) =>
@@ -95,7 +145,7 @@ export const VerticalRoom = memo(({
   const part = (index: number, key: keyof ItemParts) => (element: HTMLElement | null) => {
     items.current[index] = { ...items.current[index], [key]: element };
   };
-  const skyPart = (key: Exclude<keyof SkyParts, 'blips'>) => (element: HTMLElement | null) => {
+  const skyPart = (key: Exclude<keyof SkyParts, 'blips' | 'marks'>) => (element: HTMLElement | null) => {
     sky.current[key] = element;
   };
 
@@ -103,6 +153,8 @@ export const VerticalRoom = memo(({
     const { width, bodyHeight, items: placed } = geometry.current;
     const state = live.current;
     let sweep = 0;
+    const dt = state.lastNow ? clamp(now - state.lastNow, 0, 100) : 16;
+    state.lastNow = now;
     if (kind === 'silence') {
       const animation = radar.current;
       if (animation && animation.playState !== 'running') animation.play();
@@ -116,12 +168,26 @@ export const VerticalRoom = memo(({
       });
     }
 
-    if (kind === 'starlight' && sky.current.forge) {
-      // Al acabar la sala la estrella se hunde bajo el borde de la pantalla:
-      // si no, el fondo de la sala la cortaría en seco
-      const remaining = bodyHeight - offset - viewport;
-      const sink = 1 - smoothstep(0, viewport * 0.7, remaining);
-      sky.current.forge.style.transform = `translate3d(0, ${(sink * viewport * 0.3).toFixed(1)}px, 0)`;
+    if (kind === 'starlight') {
+      // La estrella sigue al grupo que asoma por abajo: lo que sale de ella
+      const level = groupLevel(geometry.current.groups, offset + viewport * 0.92);
+      paintStar(sky.current, level, offset, width, viewport, bodyHeight - offset - viewport);
+    }
+
+    if (kind === 'blueprint') {
+      const climb = clamp01(offset / Math.max(1, bodyHeight - viewport));
+      paintClimb(sky.current, climb, viewport);
+      const km = Math.expm1(climb * Math.log1p(GEO_KM));
+      const altitude = kmLabel(climb > 0.999 ? GEO_KM : km);
+      if (altitude !== state.altitude && sky.current.altitude) {
+        state.altitude = altitude;
+        sky.current.altitude.textContent = altitude;
+      }
+      const zone = t(CLIMB_ZONES.find((band) => km < band.below)?.label ?? '');
+      if (zone !== state.zone && sky.current.zone) {
+        state.zone = zone;
+        sky.current.zone.textContent = zone;
+      }
     }
 
     if (kind === 'wheel' && sky.current.spokes) {
@@ -138,7 +204,15 @@ export const VerticalRoom = memo(({
       const top = box.top - offset;
       const centerY = top + box.height / 2;
       if (centerY < -viewport * 0.6 || centerY > viewport * 1.6) {
-        if (state.touched.delete(index)) settleItem(parts);
+        if (state.touched.delete(index)) {
+          settleItem(parts);
+          if (kind === 'silence') {
+            state.locked.delete(index);
+            state.lock[index] = 0;
+            delete state.since[index];
+            root.classList.remove('is-locked');
+          }
+        }
         continue;
       }
       state.touched.add(index);
@@ -172,22 +246,59 @@ export const VerticalRoom = memo(({
         parts.heat?.style.setProperty('opacity', heat.toFixed(3));
         parts.heat?.style.setProperty('transform', `translate3d(0, ${((1 - heat) * 50).toFixed(2)}%, 0)`);
         parts.glow?.style.setProperty('opacity', heat.toFixed(3));
-        root.style.transform = `translate3d(0, ${(heat * 28).toFixed(1)}px, 0) scale(${(1 - heat * 0.03).toFixed(4)})`;
+        // Eyectada en arco, como un bucle de plasma: sale de un costado, más
+        // rápido que el scroll, y frena y se endereza al llegar a la mitad
+        const launch = smoothstep(0.42, 1.05, (top + box.frameHeight / 2) / viewport);
+        const side = index % 2 ? 1 : -1;
+        const swing = launch * launch;
+        const drift = side * swing * Math.min(width * 0.07, 90);
+        root.style.transform = `translate3d(${drift.toFixed(1)}px, ${(swing * viewport * 0.16).toFixed(1)}px, 0) rotate(${(side * swing * 5).toFixed(2)}deg) scale(${(1 - launch * 0.06).toFixed(4)})`;
       } else if (kind === 'silence') {
         const work = works[index];
-        const echo = Math.exp(-sinceSweep(sweep, box.centerX - width / 2, centerY - viewport / 2) / 1.1);
+        const since = sinceSweep(sweep, box.centerX - width / 2, centerY - viewport / 2);
+        // El ángulo crece hasta que el barrido vuelve a pasar y cae a cero
+        const crossed = since < (state.since[index] ?? -1) - 1;
+        state.since[index] = since;
         const pointer = state.pointer;
         const gapX = Math.max(0, Math.abs(pointer.x - box.centerX) - box.width / 2);
         const gapY = Math.max(0, Math.abs(pointer.y - centerY) - box.height / 2);
         const torch = 1 - smoothstep(40, 340, Math.hypot(gapX, gapY));
-        const found = Math.max(echo, torch);
+        const inReach = Math.abs(fromMiddle) < 0.3;
         if (work?.concept.id === DARK_FOREST) {
           // El bosque oscuro: lo que encuentra la luz se esconde
+          const found = Math.max(Math.exp(-since / 1.1), torch);
           root.style.opacity = (0.08 + 0.6 * (1 - found)).toFixed(3);
           root.style.transform = `scale(${(1 - found * 0.05).toFixed(4)})`;
-        } else {
-          root.style.opacity = (0.06 + found * 0.94).toFixed(3);
+          if (crossed && inReach) {
+            parts.label?.animate(
+              [{ opacity: 0 }, { opacity: 1, offset: 0.08 }, { opacity: 0.2, offset: 0.16 }, { opacity: 1, offset: 0.24 }, { opacity: 0 }],
+              { duration: 1800, easing: 'ease-out' },
+            );
+          }
+          continue;
         }
+        // Detectada frente al visitante: la señal se fija hasta que se aleja
+        if (crossed && inReach && !state.locked.has(index)) {
+          state.locked.add(index);
+          root.classList.add('is-locked');
+          pingEcho(parts.ping, true);
+        } else if (crossed && Math.abs(fromMiddle) < 0.7) {
+          pingEcho(parts.ping, false);
+        }
+        if (state.locked.has(index) && Math.abs(fromMiddle) > 0.55) {
+          state.locked.delete(index);
+          root.classList.remove('is-locked');
+        }
+        const target = state.locked.has(index) ? 1 : 0;
+        const current = state.lock[index] ?? 0;
+        const lock = current + (target - current) * (1 - Math.exp(-dt * (target ? 0.004 : 0.0015)));
+        state.lock[index] = lock;
+        // El barrido pinta la obra como el fósforo de una pantalla de radar:
+        // la máscara sigue el haz y deja una estela que se apaga
+        root.style.setProperty('--sweep', `${((sweep * 180) / Math.PI).toFixed(2)}deg`);
+        root.style.setProperty('--rx', `${(width / 2 - (box.centerX - box.width / 2)).toFixed(1)}px`);
+        root.style.setProperty('--ry', `${(viewport / 2 - top).toFixed(1)}px`);
+        root.style.setProperty('--floor', Math.max(0.05, lock, torch).toFixed(3));
       }
     }
   };
@@ -283,25 +394,56 @@ export const VerticalRoom = memo(({
             <span className="mo-wheel-spokes" ref={skyPart('spokes')} />
           </div>
         )}
-        {kind === 'blueprint' && <span className="mo-drafting-grid" />}
+        {kind === 'blueprint' && (
+          <div className="mo-climb">
+            <span className="mo-climb-air" ref={skyPart('air')} />
+            <span className="mo-climb-earth" ref={skyPart('earth')} />
+            <span className="mo-drafting-grid" />
+            {CLIMB_MARKS.map((mark, markIndex) => (
+              <span className="mo-climb-mark" key={mark.km} ref={(element) => { sky.current.marks![markIndex] = element; }}>
+                <span>
+                  <b>{kmLabel(mark.km)} km</b>
+                  {t(mark.label)}
+                </span>
+              </span>
+            ))}
+            <span className="mo-climb-cable" />
+            <span className="mo-climb-capsule">
+              <span className="mo-climb-reading">
+                <b ref={skyPart('altitude')}>0</b>
+                <small>km</small>
+                <em ref={skyPart('zone')}>{t('Troposfera')}</em>
+              </span>
+            </span>
+          </div>
+        )}
         {kind === 'starlight' && (
           <div className="mo-forge" ref={skyPart('forge')}>
-            <span className="mo-forge-surface">
-              <span className="mo-forge-granules" />
+            <span className="mo-forge-surface" ref={skyPart('surface')}>
+              <span className="mo-forge-cooled" ref={skyPart('cooled')} />
+              <span className="mo-forge-granules" ref={skyPart('granules')} />
             </span>
-            {MOTES.map((mote, moteIndex) => (
-              <span
-                key={moteIndex}
-                className="mo-forge-mote"
-                style={{
-                  left: `${mote.x}vw`,
-                  width: `${mote.size}px`,
-                  height: `${mote.size}px`,
-                  animationDuration: `${mote.duration}s`,
-                  animationDelay: `${mote.delay}s`,
-                }}
-              />
-            ))}
+            {/* Lo que queda al final: un agujero negro con su disco */}
+            <span className="mo-forge-hole" ref={skyPart('hole')}>
+              <span className="mo-forge-hole-disk is-back" />
+              <span className="mo-forge-hole-shadow" />
+              <span className="mo-forge-hole-disk" />
+            </span>
+            <span className="mo-forge-motes" ref={skyPart('motes')}>
+              {MOTES.map((mote, moteIndex) => (
+                <span
+                  key={moteIndex}
+                  className="mo-forge-mote"
+                  style={{
+                    left: `${mote.x}vw`,
+                    width: `${mote.size}px`,
+                    height: `${mote.size}px`,
+                    animationDuration: `${mote.duration}s`,
+                    animationDelay: `${mote.delay}s`,
+                  }}
+                />
+              ))}
+            </span>
           </div>
         )}
         {kind === 'silence' && (
@@ -320,37 +462,36 @@ export const VerticalRoom = memo(({
         )}
       </div>
 
-      {groups.map((group) => {
-        const elevator = kind === 'blueprint' && group.works.some(({ concept }) => concept.id === 'space-elevator');
-        return (
-          <section className="mo-topic-group" key={group.title} aria-label={group.title}>
-            <TopicHeading title={group.title} />
-            <div className="mo-wall">
-              {elevator && (
-                <span className="mo-cable" aria-hidden="true">
-                  <span className="mo-cable-mark is-top">GEO · 35 786 km</span>
-                  <span className="mo-cable-climber" />
-                  <span className="mo-cable-mark is-bottom">0 km</span>
-                </span>
-              )}
-              {group.works.map(({ concept, plate }) => {
-                const current = index++;
-                return (
-                  <div className="mo-room-item" key={concept.id} data-concept={concept.id} ref={part(current, 'root')}>
-                    {kind === 'spotlight' && (
-                      <span className="mo-spot" ref={part(current, 'cone')} aria-hidden="true">
-                        <span className="mo-spot-beam" />
+      {groups.map((group) => (
+        <section className="mo-topic-group" key={group.title} aria-label={group.title}>
+          <TopicHeading title={group.title} />
+          <div className="mo-wall">
+            {group.works.map(({ concept, plate }) => {
+              const current = index++;
+              return (
+                <div className="mo-room-item" key={concept.id} data-concept={concept.id} ref={part(current, 'root')}>
+                  {kind === 'spotlight' && (
+                    <span className="mo-spot" ref={part(current, 'cone')} aria-hidden="true">
+                      <span className="mo-spot-beam" />
+                    </span>
+                  )}
+                  {kind === 'starlight' && <span className="mo-forge-glow" ref={part(current, 'glow')} aria-hidden="true" />}
+                  {kind === 'silence' && (
+                    <span className="mo-radar-mark" aria-hidden="true">
+                      <span className="mo-radar-ping" ref={part(current, 'ping')} />
+                      <span className="mo-radar-brackets" />
+                      <span className="mo-radar-label" ref={part(current, 'label')}>
+                        {concept.id === DARK_FOREST ? t("Señal perdida") : t("Señal confirmada")}
                       </span>
-                    )}
-                    {kind === 'starlight' && <span className="mo-forge-glow" ref={part(current, 'glow')} aria-hidden="true" />}
-                    {renderObra(concept, plate, false, overlayFor(current, concept, plate))}
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        );
-      })}
+                    </span>
+                  )}
+                  {renderObra(concept, plate, false, overlayFor(current, concept, plate))}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ))}
     </div>
   );
 });
@@ -363,9 +504,21 @@ const sinceSweep = (sweep: number, dx: number, dy: number) => {
   return (((sweep - angle) % turn) + turn) % turn;
 };
 
+/* Eco que vuelve de la obra al pasar el barrido; más fuerte al fijar la señal */
+const pingEcho = (ping: HTMLElement | null | undefined, strong: boolean) => {
+  ping?.animate(
+    [
+      { transform: 'translate(-50%, -50%) scale(0.15)', opacity: strong ? 0.95 : 0.4 },
+      { transform: `translate(-50%, -50%) scale(${strong ? 1 : 0.7})`, opacity: 0 },
+    ],
+    { duration: strong ? 1700 : 1100, easing: 'cubic-bezier(0.2, 0.7, 0.3, 1)' },
+  );
+};
+
 const settleItem = (parts: ItemParts) => {
   parts.root?.style.removeProperty('transform');
   parts.root?.style.removeProperty('opacity');
+  parts.root?.style.removeProperty('--floor');
   parts.heat?.style.removeProperty('transform');
   parts.heat?.style.removeProperty('opacity');
   parts.glow?.style.removeProperty('opacity');
@@ -393,3 +546,63 @@ const BlueprintDrawing = ({ title, plate, label }: { title: string; plate: numbe
     </span>
   </>
 );
+
+/* Grupo que se recorre más lo avanzado en él: 0 al entrar al primero */
+const groupLevel = (groups: Geometry['groups'], at: number) => {
+  let level = 0;
+  groups.forEach((group, index) => {
+    if (at >= group.top) level = index + clamp01((at - group.top) / (group.height || 1));
+  });
+  return level;
+};
+
+/* La estrella cuenta su capítulo: gira con el scroll, se desplaza con los
+   motores estelares, se encoge y enrojece al extraerle materia y colapsa */
+const paintStar = (sky: SkyParts, level: number, offset: number, width: number, viewport: number, remaining: number) => {
+  const engines = smoothstep(0.15, 1, level) * (1 - smoothstep(1.2, 2, level));
+  const lifted = smoothstep(1, 1.8, level);
+  const collapse = smoothstep(1.85, 2.45, level);
+  const shift = -engines * Math.min(width * 0.14, 220);
+  const shrink = lifted * viewport * 0.065 + collapse * viewport * 0.3;
+  // La estrella gira con el scroll: la granulación corre por el borde (la
+  // textura se repite cada 360 px, así el desplazamiento no tiene costura)
+  sky.granules?.style.setProperty('translate', `${(-((offset * 0.35) % 360)).toFixed(1)}px 0`);
+  if (sky.surface) {
+    sky.surface.style.transform = `translate3d(${shift.toFixed(1)}px, ${shrink.toFixed(1)}px, 0)`;
+    sky.surface.style.opacity = (1 - collapse).toFixed(3);
+  }
+  sky.cooled?.style.setProperty('opacity', lifted.toFixed(3));
+  sky.motes?.style.setProperty('opacity', (1 - collapse).toFixed(3));
+  if (sky.hole) {
+    // Al acabar la sala caemos en él: sube al centro y crece hasta que el
+    // anillo de fotones sale por los bordes y todo queda en negro; después
+    // la oscuridad se disuelve en el cielo y la sala termina sin corte
+    const swallow = 1 - smoothstep(viewport * 0.32, viewport * 1, remaining);
+    const through = 1 - smoothstep(viewport * 0.02, viewport * 0.28, remaining);
+    const rise = (1 - collapse) * viewport * 0.25 - swallow * swallow * viewport * 0.5;
+    const scale = (0.6 + collapse * 0.4) * (1 + swallow ** 2.2 * 3.4);
+    sky.hole.style.opacity = (collapse * (1 - through)).toFixed(3);
+    sky.hole.style.setProperty('--swallow', swallow.toFixed(3));
+    sky.hole.style.transform = `translate3d(-50%, ${rise.toFixed(1)}px, 0) scale(${scale.toFixed(4)})`;
+  }
+};
+
+/* Subida por el ascensor: el aire se apaga pasada la línea de Kármán, la
+   Tierra se hunde y se curva, y las marcas de altitud pasan por la cápsula */
+const paintClimb = (sky: SkyParts, climb: number, viewport: number) => {
+  sky.air?.style.setProperty('opacity', (1 - smoothstep(0.18, 0.5, climb)).toFixed(3));
+  if (sky.earth) {
+    const fall = smoothstep(0, 1, climb);
+    sky.earth.style.transform = `translate3d(0, ${(fall * viewport * 0.22).toFixed(1)}px, 0) scale(${(1 - fall * 0.72).toFixed(4)})`;
+    sky.earth.style.opacity = (1 - smoothstep(0.75, 1, climb) * 0.6).toFixed(3);
+  }
+  sky.marks?.forEach((mark, index) => {
+    if (!mark) return;
+    // Pasan más despacio que las obras: están lejos
+    const y = (climb - CLIMB_MARKS[index].at) * viewport * 3.2;
+    mark.style.transform = `translate3d(0, ${y.toFixed(1)}px, 0)`;
+    // Al cruzar la cápsula la cota se apaga y la lectura del altímetro la toma
+    const distance = Math.abs(y);
+    mark.style.opacity = (smoothstep(60, 150, distance) * (1 - smoothstep(viewport * 0.3, viewport * 0.55, distance))).toFixed(3);
+  });
+};

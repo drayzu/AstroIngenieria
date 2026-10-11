@@ -270,61 +270,159 @@
   color: color-mix(in srgb, var(--accent, #c9a86a) 50%, #8fd8ff);
 }
 
-/* Ascensor espacial: un cable junto al grupo de transporte; la cápsula se
-   queda en el centro de la pantalla y así sube mientras bajas */
-.mo-room.is-blueprint .mo-wall {
-  position: relative;
+/* Ascensor espacial: la sala entera es la subida. El cable corre por el
+   margen izquierdo, la cápsula se queda a media pantalla con su altímetro y
+   lo que cambia es el cielo: la Tierra, el aire y las marcas de altitud */
+.mo-climb {
+  --cable-x: max(14px, calc(50% - 590px));
+  /* Lo que queda entre el cable y el muro de obras */
+  --gutter: calc(50% - 480px - var(--cable-x) - 34px);
+  position: absolute;
+  inset: 0;
 }
 
-.mo-cable {
+.mo-climb-air {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(120, 190, 255, 0.34) 0%,
+    rgba(70, 140, 230, 0.16) 30%,
+    rgba(40, 90, 180, 0.05) 62%,
+    transparent 85%
+  );
+  will-change: opacity;
+}
+
+.mo-climb-earth {
+  position: absolute;
+  top: 84vh;
+  left: 50%;
+  width: 260vmax;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform-origin: 50% 0;
+  translate: -50% 0;
+  background: radial-gradient(closest-side, #0b2236 0%, #0d2a44 90%, #1b4d7a 98.6%, #69b6ff 100%);
+  box-shadow:
+    0 0 3vh 0.6vh rgba(110, 185, 255, 0.45),
+    0 0 14vh 4vh rgba(70, 150, 255, 0.16);
+  will-change: transform, opacity;
+}
+
+.mo-climb-cable {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: -72px;
-  display: none;
+  left: var(--cable-x);
   width: 1px;
   background: linear-gradient(
     to bottom,
     transparent,
-    color-mix(in srgb, var(--accent, #c9a86a) 45%, transparent) 4%,
-    color-mix(in srgb, var(--accent, #c9a86a) 45%, transparent) 96%,
+    color-mix(in srgb, var(--accent, #c9a86a) 50%, transparent) 10%,
+    color-mix(in srgb, var(--accent, #c9a86a) 50%, transparent) 90%,
     transparent
   );
 }
 
-.mo-cable-climber {
-  position: sticky;
-  top: 50vh;
-  display: block;
-  width: 9px;
-  height: 18px;
-  margin-left: -4px;
+.mo-climb-capsule {
+  position: absolute;
+  top: 50%;
+  left: var(--cable-x);
+  width: 10px;
+  height: 20px;
+  translate: -50% -50%;
   border-radius: 3px;
-  background: var(--accent, #c9a86a);
+  background: color-mix(in srgb, var(--accent, #c9a86a) 60%, #fff);
   box-shadow: 0 0 16px 3px color-mix(in srgb, var(--accent, #c9a86a) 55%, transparent);
 }
 
-.mo-cable-mark {
+.mo-climb-reading {
   position: absolute;
-  left: 14px;
-  font-family: var(--mo-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.2em;
-  color: var(--mo-muted);
+  top: 50%;
+  left: 18px;
+  display: grid;
+  gap: 3px;
+  translate: 0 -50%;
+  line-height: 1;
   white-space: nowrap;
 }
 
-.mo-cable-mark.is-top {
-  top: 0;
+.mo-climb-reading em {
+  width: 92px;
+  white-space: normal;
+  letter-spacing: 0.12em;
+  line-height: 1.3;
 }
 
-.mo-cable-mark.is-bottom {
-  bottom: 0;
+.mo-climb-reading b {
+  font-family: var(--mo-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--mo-ink);
+  font-variant-numeric: tabular-nums;
 }
 
-@media (min-width: 1180px) {
-  .mo-cable {
-    display: block;
+.mo-climb-reading small,
+.mo-climb-reading em {
+  font-family: var(--mo-mono);
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.mo-climb-reading small {
+  color: color-mix(in srgb, var(--accent, #c9a86a) 75%, #fff);
+}
+
+.mo-climb-reading em {
+  color: var(--mo-muted);
+}
+
+/* Marcas de altitud: una línea tenue de lado a lado con su cota junto al cable */
+.mo-climb-mark {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  display: block;
+  padding: 0 0 6px calc(var(--cable-x) + 18px);
+  border-bottom: 1px dashed rgba(170, 215, 255, 0.16);
+  font-family: var(--mo-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--mo-muted);
+  translate: 0 -100%;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.mo-climb-mark span {
+  display: block;
+  width: var(--gutter);
+  min-width: 70px;
+  line-height: 1.35;
+}
+
+.mo-climb-mark b {
+  display: block;
+  margin-bottom: 3px;
+  font-weight: 400;
+  color: color-mix(in srgb, var(--accent, #c9a86a) 50%, #bfe2ff);
+}
+
+/* Sin margen para el cable, la cápsula y su lectura se esconden */
+@media (max-width: 1179px) {
+  .mo-climb-cable,
+  .mo-climb-capsule {
+    display: none;
+  }
+
+  .mo-climb-mark {
+    padding-left: 20px;
   }
 }
 
@@ -343,6 +441,7 @@
 
 .mo-forge-surface {
   position: absolute;
+  will-change: transform, opacity;
   top: -15vh;
   left: -160vmax;
   width: 320vmax;
@@ -361,6 +460,103 @@
     0 0 5vh 1vh rgba(255, 150, 80, 0.55),
     0 0 20vh 6vh rgba(255, 100, 50, 0.22),
     0 0 55vh 14vh rgba(255, 80, 40, 0.08);
+}
+
+/* La estrella después de extraerle materia: más pequeña, fría y roja */
+.mo-forge-cooled {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    #ff9a5e 0%,
+    #e2582c 93%,
+    #b8361a 97.4%,
+    #7a1a0c 99.3%,
+    #3d0c06 100%
+  );
+  opacity: 0;
+  will-change: opacity;
+}
+
+/* Agujero negro: ocupa el lugar de la estrella al pie de la sala. Solo
+   asoma su sombra con el anillo de fotones; el disco la cruza de lado a lado
+   y su mitad trasera, curvada por la gravedad, la rodea por encima */
+.mo-forge-hole {
+  position: absolute;
+  bottom: -46vmin;
+  left: 0;
+  width: 92vmin;
+  aspect-ratio: 1;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.mo-forge-hole-shadow {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #000;
+  box-shadow:
+    0 0 0 1.5px rgba(255, 228, 196, 0.95),
+    0 0 4vh 0.6vh rgba(255, 150, 80, 0.5),
+    0 0 16vh 4vh rgba(255, 100, 50, 0.16);
+}
+
+.mo-forge-hole-disk {
+  position: absolute;
+  top: 50%;
+  left: -70%;
+  right: -70%;
+  height: 7%;
+  translate: 0 -50%;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(255, 244, 226, 0.95),
+    rgba(255, 176, 104, 0.75) 45%,
+    rgba(255, 104, 52, 0) 100%
+  );
+  filter: blur(1.5px);
+}
+
+/* La mitad trasera del disco, curvada por la gravedad: un anillo suave que
+   brilla arriba y se desvanece hacia los costados, sin puntas cortadas */
+.mo-forge-hole-disk.is-back {
+  top: -10%;
+  left: -10%;
+  right: -10%;
+  height: auto;
+  aspect-ratio: 1;
+  translate: 0 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    rgba(255, 214, 168, 0.95) 0deg,
+    rgba(255, 170, 110, 0.5) 38deg,
+    rgba(255, 140, 80, 0) 78deg,
+    rgba(255, 140, 80, 0) 282deg,
+    rgba(255, 170, 110, 0.5) 322deg,
+    rgba(255, 214, 168, 0.95) 360deg
+  );
+  -webkit-mask-image: radial-gradient(closest-side, transparent 88%, #000 92.5%, #000 94.5%, transparent 99%);
+  mask-image: radial-gradient(closest-side, transparent 88%, #000 92.5%, #000 94.5%, transparent 99%);
+  filter: blur(0.6px) drop-shadow(0 0 1.2vh rgba(255, 140, 70, 0.6));
+}
+
+/* Tramo vacío al final de la sala: el scroll de la caída en el agujero */
+.mo-room.is-starlight {
+  padding-bottom: 80vh;
+}
+
+/* Al caer en él, el disco se apaga y solo queda el anillo de fotones */
+.mo-forge-hole-disk {
+  opacity: calc(1 - var(--swallow, 0) * 1.8);
+}
+
+.mo-forge-motes {
+  position: absolute;
+  inset: 0;
+  will-change: opacity;
 }
 
 /* Granulación: celdas de plasma que derivan despacio */
@@ -467,16 +663,155 @@
    ====================================================================== */
 
 .mo-room.is-silence .mo-room-item {
+  --sweep: 0deg;
+  --rx: 50%;
+  --ry: -100vh;
+  --floor: 0.05;
+}
+
+/* Fósforo: la obra solo se ve donde el haz acaba de pasar. La estela se
+   apaga hacia atrás y el piso (--floor) sube al fijar la señal o con la
+   linterna del cursor */
+.mo-room.is-silence .mo-room-item:not([data-concept='dark-forest']) > :not(.mo-radar-mark) {
+  -webkit-mask-image: conic-gradient(
+    from calc(var(--sweep) - 150deg) at var(--rx) var(--ry),
+    rgb(0 0 0 / var(--floor)) 0deg,
+    rgb(0 0 0 / max(var(--floor), 0.12)) 60deg,
+    rgb(0 0 0 / max(var(--floor), 0.4)) 115deg,
+    rgb(0 0 0 / max(var(--floor), 0.82)) 142deg,
+    #000 150deg,
+    rgb(0 0 0 / var(--floor)) 150.6deg
+  );
+  mask-image: conic-gradient(
+    from calc(var(--sweep) - 150deg) at var(--rx) var(--ry),
+    rgb(0 0 0 / var(--floor)) 0deg,
+    rgb(0 0 0 / max(var(--floor), 0.12)) 60deg,
+    rgb(0 0 0 / max(var(--floor), 0.4)) 115deg,
+    rgb(0 0 0 / max(var(--floor), 0.82)) 142deg,
+    #000 150deg,
+    rgb(0 0 0 / var(--floor)) 150.6deg
+  );
+}
+
+.mo-room.is-silence .mo-room-item[data-concept='dark-forest'] {
   opacity: 0.06;
   will-change: opacity, transform;
 }
 
 /* Al pasar el cursor o enfocar con teclado la obra siempre aparece…
    salvo el bosque oscuro, que se esconde de quien lo busca */
-.mo-room.is-silence .mo-room-item:not([data-concept='dark-forest']):hover,
-.mo-room.is-silence .mo-room-item:focus-within {
+.mo-room.is-silence .mo-room-item:not([data-concept='dark-forest']):hover > :not(.mo-radar-mark),
+.mo-room.is-silence .mo-room-item:focus-within > :not(.mo-radar-mark) {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.mo-room.is-silence .mo-room-item[data-concept='dark-forest']:focus-within {
   opacity: 1 !important;
   transform: none !important;
+}
+
+/* Contacto: mira, eco y etiqueta que acompañan a la obra detectada */
+.mo-radar-mark {
+  position: absolute;
+  inset: -14px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.mo-radar-ping {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 150%;
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in srgb, var(--accent, #c9a86a) 80%, #fff);
+  border-radius: 50%;
+  box-shadow:
+    0 0 22px color-mix(in srgb, var(--accent, #c9a86a) 45%, transparent),
+    inset 0 0 22px color-mix(in srgb, var(--accent, #c9a86a) 35%, transparent);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.15);
+}
+
+/* Corchetes de mira: llegan abiertos y se cierran sobre la obra */
+.mo-radar-brackets {
+  --c: color-mix(in srgb, var(--accent, #c9a86a) 85%, #fff);
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(var(--c), var(--c)) left top / 26px 1.5px no-repeat,
+    linear-gradient(var(--c), var(--c)) left top / 1.5px 26px no-repeat,
+    linear-gradient(var(--c), var(--c)) right top / 26px 1.5px no-repeat,
+    linear-gradient(var(--c), var(--c)) right top / 1.5px 26px no-repeat,
+    linear-gradient(var(--c), var(--c)) left bottom / 26px 1.5px no-repeat,
+    linear-gradient(var(--c), var(--c)) left bottom / 1.5px 26px no-repeat,
+    linear-gradient(var(--c), var(--c)) right bottom / 26px 1.5px no-repeat,
+    linear-gradient(var(--c), var(--c)) right bottom / 1.5px 26px no-repeat;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent, #c9a86a) 60%, transparent));
+  opacity: 0;
+  transform: scale(1.14);
+  transition: opacity 0.5s ease, transform 0.9s ease;
+}
+
+.mo-room-item.is-locked .mo-radar-brackets {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 0.2s ease, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: mo-radar-acquire 0.6s steps(2, jump-none) 2;
+}
+
+.mo-radar-label {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  color: color-mix(in srgb, var(--accent, #c9a86a) 85%, #fff);
+  font: 500 10px/1 ui-monospace, Menlo, monospace;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate3d(-6px, 0, 0);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.mo-radar-label::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
+  vertical-align: 1px;
+}
+
+.mo-room-item.is-locked .mo-radar-label {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.45s;
+}
+
+.mo-room-item.is-locked .mo-radar-label::before {
+  animation: mo-radar-beacon 1.6s ease-in-out infinite;
+}
+
+.mo-room-item[data-concept='dark-forest'] .mo-radar-label {
+  color: #ff6b6b;
+  transform: none;
+}
+
+@keyframes mo-radar-acquire {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes mo-radar-beacon {
+  50% {
+    opacity: 0.3;
+  }
 }
 
 .mo-radar {
