@@ -175,8 +175,8 @@
 /* ---------- Obras colgadas ---------- */
 
 .mo-corridor-work {
-  --ratio: 4 / 5;
-  --scale: 1;
+  --ratio: 21 / 9;
+  --scale: 0.86;
   --h: calc(var(--frame-h) * var(--scale));
   --drop: 0px;
   position: relative;
@@ -187,26 +187,22 @@
   will-change: transform;
 }
 
-.mo-corridor-work.is-wide {
-  --ratio: 16 / 10;
-  --scale: 0.7;
+.mo-corridor-work.is-mid {
+  --scale: 0.72;
 }
 
-.mo-corridor-work.is-wide-low {
-  --ratio: 16 / 10;
+.mo-corridor-work.is-low {
   --scale: 0.66;
   --drop: calc(var(--frame-h) - var(--h));
 }
 
-.mo-corridor-work.is-square {
-  --ratio: 1;
-  --scale: 0.82;
+.mo-corridor-work.is-center {
+  --scale: 0.78;
   --drop: calc((var(--frame-h) - var(--h)) / 2);
 }
 
-.mo-corridor-work.is-square-high {
-  --ratio: 1;
-  --scale: 0.76;
+.mo-corridor-work.is-high {
+  --scale: 0.7;
 }
 
 /* Alambres desde el riel hasta el marco */
@@ -315,21 +311,13 @@
   }
 
   /* En vertical, las obras no pasan del ancho de la pantalla; como el ancho
-     manda, se cuelgan todas centradas y las apaisadas se acercan al cuadrado */
-  .mo-corridor-work {
+     manda, se cuelgan todas centradas */
+  .mo-corridor-work,
+  .mo-corridor-work.is-mid,
+  .mo-corridor-work.is-low,
+  .mo-corridor-work.is-center,
+  .mo-corridor-work.is-high {
     --h: min(calc(var(--frame-h) * var(--scale)), calc((84vw - 22px) / (var(--ratio))));
-    --drop: calc((var(--frame-h) - var(--h)) / 2);
-  }
-
-  .mo-corridor-work.is-wide,
-  .mo-corridor-work.is-wide-low {
-    --ratio: 5 / 4;
-    --scale: 0.8;
-    --drop: calc((var(--frame-h) - var(--h)) / 2);
-  }
-
-  .mo-corridor-work.is-square,
-  .mo-corridor-work.is-square-high {
     --drop: calc((var(--frame-h) - var(--h)) / 2);
   }
 
@@ -411,30 +399,125 @@
   background: linear-gradient(270deg, rgba(255, 64, 72, 0.34), rgba(255, 64, 72, 0.08) 45%, transparent);
 }
 
-/* Empuje: cinco barras que se encienden con la velocidad del tramo */
-.mo-thrust {
+/* Estelas de velocidad: una tira que se repite cada 1600 px */
+.mo-speed-streaks {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -1600px;
+  z-index: 0;
+  width: calc(100% + 3200px);
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1600' height='100%25'><g stroke='%23dbe9ff' stroke-width='1' stroke-linecap='round'><line x1='1170' y1='63.8%25' x2='1463' y2='63.8%25' stroke-opacity='0.51'/><line x1='1428' y1='22.9%25' x2='1525' y2='22.9%25' stroke-opacity='0.50'/><line x1='24' y1='90.1%25' x2='71' y2='90.1%25' stroke-opacity='0.61'/><line x1='228' y1='15.1%25' x2='437' y2='15.1%25' stroke-opacity='0.69'/><line x1='1129' y1='80.4%25' x2='1384' y2='80.4%25' stroke-opacity='0.67'/><line x1='425' y1='19.9%25' x2='490' y2='19.9%25' stroke-opacity='0.48'/><line x1='1100' y1='10.2%25' x2='1161' y2='10.2%25' stroke-opacity='0.39'/><line x1='1448' y1='91.0%25' x2='1499' y2='91.0%25' stroke-opacity='0.28'/><line x1='1398' y1='22.3%25' x2='1438' y2='22.3%25' stroke-opacity='0.59'/><line x1='521' y1='71.0%25' x2='640' y2='71.0%25' stroke-opacity='0.47'/><line x1='1472' y1='13.8%25' x2='1672' y2='13.8%25' stroke-opacity='0.51'/><line x1='-128' y1='13.8%25' x2='72' y2='13.8%25' stroke-opacity='0.51'/><line x1='1428' y1='40.2%25' x2='1496' y2='40.2%25' stroke-opacity='0.58'/><line x1='1594' y1='82.3%25' x2='1707' y2='82.3%25' stroke-opacity='0.30'/><line x1='-6' y1='82.3%25' x2='107' y2='82.3%25' stroke-opacity='0.30'/><line x1='37' y1='24.9%25' x2='81' y2='24.9%25' stroke-opacity='0.69'/><line x1='73' y1='53.0%25' x2='317' y2='53.0%25' stroke-opacity='0.36'/><line x1='1204' y1='57.7%25' x2='1244' y2='57.7%25' stroke-opacity='0.47'/><line x1='1502' y1='49.1%25' x2='1619' y2='49.1%25' stroke-opacity='0.57'/><line x1='-98' y1='49.1%25' x2='19' y2='49.1%25' stroke-opacity='0.57'/><line x1='1104' y1='9.0%25' x2='1203' y2='9.0%25' stroke-opacity='0.70'/><line x1='35' y1='9.2%25' x2='99' y2='9.2%25' stroke-opacity='0.62'/><line x1='1200' y1='30.8%25' x2='1273' y2='30.8%25' stroke-opacity='0.63'/><line x1='787' y1='62.3%25' x2='857' y2='62.3%25' stroke-opacity='0.31'/><line x1='425' y1='7.7%25' x2='499' y2='7.7%25' stroke-opacity='0.22'/><line x1='1201' y1='37.1%25' x2='1241' y2='37.1%25' stroke-opacity='0.28'/><line x1='1535' y1='72.5%25' x2='1693' y2='72.5%25' stroke-opacity='0.60'/><line x1='-65' y1='72.5%25' x2='93' y2='72.5%25' stroke-opacity='0.60'/><line x1='999' y1='7.5%25' x2='1059' y2='7.5%25' stroke-opacity='0.24'/><line x1='300' y1='94.9%25' x2='366' y2='94.9%25' stroke-opacity='0.28'/><line x1='1310' y1='8.7%25' x2='1483' y2='8.7%25' stroke-opacity='0.45'/><line x1='848' y1='32.2%25' x2='934' y2='32.2%25' stroke-opacity='0.49'/><line x1='367' y1='85.5%25' x2='407' y2='85.5%25' stroke-opacity='0.32'/><line x1='1451' y1='15.9%25' x2='1493' y2='15.9%25' stroke-opacity='0.62'/><line x1='209' y1='55.8%25' x2='386' y2='55.8%25' stroke-opacity='0.67'/><line x1='1187' y1='30.8%25' x2='1241' y2='30.8%25' stroke-opacity='0.53'/><line x1='141' y1='55.1%25' x2='285' y2='55.1%25' stroke-opacity='0.24'/><line x1='968' y1='47.6%25' x2='1048' y2='47.6%25' stroke-opacity='0.21'/><line x1='641' y1='71.1%25' x2='685' y2='71.1%25' stroke-opacity='0.45'/><line x1='529' y1='62.8%25' x2='573' y2='62.8%25' stroke-opacity='0.66'/><line x1='512' y1='45.6%25' x2='555' y2='45.6%25' stroke-opacity='0.42'/><line x1='1208' y1='24.2%25' x2='1388' y2='24.2%25' stroke-opacity='0.26'/><line x1='886' y1='59.4%25' x2='962' y2='59.4%25' stroke-opacity='0.25'/><line x1='466' y1='9.3%25' x2='639' y2='9.3%25' stroke-opacity='0.60'/><line x1='135' y1='46.7%25' x2='225' y2='46.7%25' stroke-opacity='0.64'/><line x1='170' y1='5.6%25' x2='229' y2='5.6%25' stroke-opacity='0.36'/><line x1='1404' y1='33.4%25' x2='1508' y2='33.4%25' stroke-opacity='0.44'/><line x1='239' y1='92.6%25' x2='423' y2='92.6%25' stroke-opacity='0.45'/><line x1='857' y1='22.2%25' x2='930' y2='22.2%25' stroke-opacity='0.20'/><line x1='782' y1='10.5%25' x2='824' y2='10.5%25' stroke-opacity='0.42'/></g></svg>") 0 0 / 1600px 100% repeat-x;
+  -webkit-mask-image: linear-gradient(180deg, transparent 8%, #000 26%, #000 80%, transparent 96%);
+  mask-image: linear-gradient(180deg, transparent 8%, #000 26%, #000 80%, transparent 96%);
+  opacity: 0.1;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* Nave y velocímetro: viajan sobre la línea de progreso, la parte
+   recorrida es su estela. La lectura se desliza respecto de la nave
+   (de su izquierda a su derecha) para no salirse en los extremos */
+.mo-ship {
+  --ship-at: 0;
+  position: absolute;
+  top: 0;
+  left: calc(var(--ship-at) * 100%);
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.mo-ship-icon {
+  position: absolute;
+  top: -10.5px;
+  left: -40.5px;
+  width: 42px;
+  height: 21px;
+  overflow: visible;
+  transform-origin: 40.5px 10.5px;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent, #c9a86a) 55%, transparent));
+  transition: transform 0.35s ease;
+}
+
+.mo-ship-hull {
+  fill: color-mix(in srgb, var(--accent, #c9a86a) 35%, #eef2f6);
+}
+
+.mo-ship-wing {
+  fill: color-mix(in srgb, var(--accent, #c9a86a) 60%, #6b7686);
+}
+
+.mo-ship-nozzle {
+  fill: #4a525e;
+}
+
+.mo-ship-window {
+  fill: #0d1622;
+  stroke: color-mix(in srgb, var(--accent, #c9a86a) 70%, #fff);
+  stroke-width: 0.5;
+}
+
+.mo-ship-flame {
+  fill: color-mix(in srgb, var(--accent, #c9a86a) 50%, #fff);
+  transform-origin: 6px 8px;
+  animation: mo-ship-flame 0.18s ease-in-out infinite alternate;
+}
+
+@keyframes mo-ship-flame {
+  from {
+    transform: scaleX(0.75);
+    opacity: 0.7;
+  }
+  to {
+    transform: scaleX(1.25);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mo-ship-flame {
+    animation: none;
+  }
+}
+
+.mo-corridor-stage.is-reverse .mo-ship-icon {
+  transform: scaleX(-1);
+}
+
+.mo-velocity {
+  position: absolute;
+  bottom: 18px;
+  left: 0;
   display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 20px;
-  margin-bottom: 7px;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+  line-height: 1;
+  transform: translateX(calc(var(--ship-at) * -100%));
 }
 
-.mo-thrust i {
-  width: 3px;
-  background: rgba(245, 241, 232, 0.16);
-  transition: background-color 0.45s ease, box-shadow 0.45s ease;
+.mo-velocity b {
+  font-family: var(--mo-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 17px;
+  color: var(--mo-ink);
+  font-variant-numeric: tabular-nums;
 }
 
-.mo-thrust i:nth-child(1) { height: 6px; }
-.mo-thrust i:nth-child(2) { height: 9px; }
-.mo-thrust i:nth-child(3) { height: 12px; }
-.mo-thrust i:nth-child(4) { height: 16px; }
-.mo-thrust i:nth-child(5) { height: 20px; }
+.mo-velocity small {
+  font-family: var(--mo-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--accent, #c9a86a) 75%, #fff);
+}
 
-.mo-thrust i.is-on {
-  background: var(--accent, #c9a86a);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--accent, #c9a86a) 55%, transparent);
+@media (max-width: 560px) {
+  .mo-velocity b {
+    font-size: 14px;
+  }
 }
 
 /* ======================================================================
@@ -459,6 +542,11 @@
 .mo-corridor.is-horizon .mo-corridor-panel::before {
   top: 0;
   bottom: var(--meta);
+}
+
+.mo-corridor.is-horizon .mo-obra-meta,
+.mo-corridor.is-horizon .mo-corridor-panel {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75), 0 0 18px rgba(0, 0, 0, 0.6);
 }
 
 .mo-corridor.is-horizon .mo-corridor-light {
@@ -565,24 +653,198 @@
   box-shadow: inset 0 1px 0 rgba(245, 241, 232, 0.2);
 }
 
-/* Relieve que gira con el planeta: cráteres aplanados por la perspectiva */
-.mo-horizon-surface {
+/* El suelo: una trama de puntos en tres capas con el mismo relieve (desierto,
+   mares y tierra viva) que GalleryCorridor desliza con la pared */
+.mo-horizon-ground {
   position: absolute;
   top: 0;
-  left: calc(var(--rim-r, 1500px) - 50vw - 1200px);
-  width: calc(100vw + 2400px);
-  height: 38vh;
-  background:
-    radial-gradient(ellipse 46px 7px at 120px 24px, rgba(245, 241, 232, 0.07), transparent 70%),
-    radial-gradient(ellipse 84px 12px at 430px 58px, rgba(245, 241, 232, 0.05), transparent 70%),
-    radial-gradient(ellipse 28px 5px at 640px 16px, rgba(245, 241, 232, 0.08), transparent 70%),
-    radial-gradient(ellipse 130px 18px at 880px 104px, rgba(245, 241, 232, 0.04), transparent 70%),
-    radial-gradient(ellipse 60px 9px at 1080px 40px, rgba(245, 241, 232, 0.06), transparent 70%);
-  background-size: 1200px 100%;
+  left: calc(var(--rim-r, 1500px) - 50vw);
+  width: 100vw;
+  height: 240px;
+  overflow: hidden;
+}
+
+.mo-horizon-terrain {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(100% + 1024px);
   background-repeat: repeat-x;
-  -webkit-mask-image: linear-gradient(to bottom, #000, transparent);
-  mask-image: linear-gradient(to bottom, #000, transparent);
+  background-size: 1024px 240px;
+  will-change: transform, opacity;
+}
+
+.mo-horizon-terrain.is-water,
+.mo-horizon-terrain.is-life {
+  opacity: 0;
+}
+
+/* La noche: oscura a la izquierda, transparente a la derecha; al amanecer
+   se desliza y la luz entra por el lado del sol */
+.mo-horizon-night {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 300%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(4, 5, 7, 0.62) 0 40%,
+    rgba(4, 5, 7, 0.34) 50%,
+    transparent 60%
+  );
   will-change: transform;
+}
+
+/* Lo más cercano se pierde en sombra para que las cartelas se lean */
+.mo-horizon-ground::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 40%,
+    #050506 100%
+  );
+}
+
+/* Bruma en el limbo: el suelo lejano se funde con el aire */
+.mo-horizon-limb {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  will-change: opacity;
+}
+
+.mo-horizon-limb.is-barren {
+  background: radial-gradient(
+    circle closest-side,
+    transparent calc(100% - 70px),
+    rgba(150, 80, 48, 0.2) calc(100% - 20px),
+    rgba(232, 150, 100, 0.4) 100%
+  );
+}
+
+.mo-horizon-limb.is-living {
+  opacity: 0;
+  background: radial-gradient(
+    circle closest-side,
+    transparent calc(100% - 90px),
+    rgba(120, 180, 230, 0.26) calc(100% - 26px),
+    rgba(206, 236, 255, 0.6) 100%
+  );
+}
+
+/* El cielo de día: azul sobre el horizonte, más claro hacia el sol */
+.mo-horizon-sky {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background:
+    radial-gradient(
+      ellipse 60% 55% at var(--sun-x, 72%) var(--rim-y, 70%),
+      rgba(255, 214, 170, 0.22),
+      transparent 70%
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(10, 26, 54, 0.5) 0,
+      rgba(36, 82, 150, 0.5) calc(var(--rim-y, 70%) * 0.6),
+      rgba(110, 170, 230, 0.6) var(--rim-y, 70%)
+    );
+  will-change: opacity;
+}
+
+/* El sol: un disco pequeño tras el borde que GalleryCorridor sube con el scroll */
+.mo-horizon-sun {
+  --size: clamp(16px, 1.6vw, 26px);
+  position: absolute;
+  top: var(--sun-rim, 70%);
+  left: var(--sun-x, 72%);
+  width: var(--size);
+  height: var(--size);
+  margin: calc(var(--size) / -2) 0 0 calc(var(--size) / -2);
+  border-radius: 50%;
+  background: radial-gradient(circle, #fffdf6 0 48%, #ffe9c6 64%, rgba(255, 220, 170, 0) 72%);
+  box-shadow: 0 0 calc(var(--size) * 0.8) calc(var(--size) * 0.15) rgba(255, 236, 206, 0.5);
+  translate: 0 46px;
+  will-change: translate;
+}
+
+/* El halo depende del aire: casi nada en un mundo sin atmósfera */
+.mo-horizon-sun::before {
+  content: '';
+  position: absolute;
+  inset: calc(var(--size) * -7);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 226, 186, 0.3),
+    rgba(255, 168, 112, 0.1) 30%,
+    transparent 68%
+  );
+  opacity: var(--haze, 0.2);
+}
+
+/* Al cruzar el borde, un destello fino a lo largo del horizonte */
+.mo-horizon-sun-flare {
+  position: absolute;
+  top: calc(50% - var(--size) * 0.28);
+  left: 50%;
+  width: min(1100px, 80vw);
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 240, 218, 0.85) 50%, transparent);
+  box-shadow: 0 0 10px rgba(255, 220, 180, 0.6);
+  opacity: var(--crest, 0);
+  transform: translate(-50%, -50%) rotate(var(--sun-tilt, 0deg)) scaleX(calc(0.35 + var(--crest, 0) * 0.65));
+}
+
+/* El cielo se aclara sobre el punto por donde saldrá el sol */
+.mo-horizon-dawn {
+  --wide: min(1400px, 110vw);
+  position: absolute;
+  top: var(--sun-rim, 70%);
+  left: var(--sun-x, 72%);
+  width: var(--wide);
+  height: 360px;
+  margin: -180px 0 0 calc(var(--wide) / -2);
+  background: radial-gradient(
+    ellipse 50% 50%,
+    rgba(255, 200, 150, 0.3),
+    rgba(255, 140, 92, 0.1) 38%,
+    transparent 72%
+  );
+  opacity: 0.2;
+  rotate: var(--sun-tilt, 0deg);
+  will-change: opacity;
+}
+
+/* Reflejo del sol en los mares nuevos, justo bajo el borde */
+.mo-horizon-glint {
+  --wide: min(560px, 50vw);
+  position: absolute;
+  top: var(--sun-rim, 70%);
+  left: var(--sun-x, 72%);
+  width: var(--wide);
+  height: 110px;
+  margin-left: calc(var(--wide) / -2);
+  background: radial-gradient(
+    ellipse 46% 38% at 50% 0,
+    rgba(255, 238, 214, 0.32),
+    rgba(150, 210, 255, 0.08) 52%,
+    transparent 78%
+  );
+  transform-origin: 50% 0;
+  rotate: var(--sun-tilt, 0deg);
+  opacity: 0;
+  will-change: opacity;
+}
+
+@media (max-width: 720px) {
+  .mo-horizon-dawn {
+    height: 260px;
+    margin-top: -130px;
+  }
 }
 
 /* ======================================================================
@@ -619,11 +881,33 @@
   overflow: visible;
 }
 
-/* El planeta se asoma desde abajo y se pierde en la oscuridad */
-.mo-scale.is-planet svg {
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 92%);
-  mask-image: linear-gradient(to bottom, #000 55%, transparent 92%);
+/* Medidor de Kardashev: la escala que alcanza la civilización del grupo */
+.mo-corridor-meter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin: 0 18px 4px 0;
+  line-height: 1;
+}
+
+.mo-corridor-meter b {
+  font-family: var(--mo-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(20px, 1.8vw, 28px);
+  color: var(--mo-ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mo-corridor-meter small {
+  margin-top: 5px;
+  font-family: var(--mo-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--accent, #c9a86a) 75%, #fff);
+  white-space: nowrap;
 }
 
 .mo-scale-rim {
@@ -635,6 +919,24 @@
 
 .mo-scale-city {
   fill: #ffd38c;
+}
+
+/* Lo que aún no se construye: cada pieza aparece al pasar su umbral */
+.mo-scales :is(.mo-scale-city, .mo-scale-satellite, .mo-scale-route, .mo-scale-panel, .mo-scale-swarm-orbit, .mo-scale-network) {
+  opacity: calc(var(--o, 1) * clamp(0, (var(--grow, 1) - var(--t, 0)) * 8, 1));
+}
+
+.mo-scale-sun-glow {
+  opacity: calc(1 - var(--grow, 0) * 0.6);
+}
+
+.mo-scale-sun-waste {
+  opacity: var(--grow, 0);
+}
+
+/* Una colonia existe desde que la red la alcanza */
+.mo-scales g[style*='--t'] {
+  opacity: clamp(0, (var(--grow, 1) - var(--t, 0)) * 12, 1);
 }
 
 /* I · Planeta */
@@ -702,26 +1004,57 @@
   color: var(--accent, #c9a86a);
 }
 
+/* Al pasar la ola, cada estrella toma el color de la civilización */
 .mo-scale-star {
-  fill: color-mix(in srgb, var(--accent, #c9a86a) 30%, #eef0ff);
+  --star: color-mix(in srgb, var(--accent, #c9a86a) 30%, #eef0ff);
+  fill: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--accent, #c9a86a) 75%, #fff) calc(clamp(0, (var(--grow, 0) - var(--t, 2)) * 10, 1) * 100%),
+    var(--star)
+  );
 }
 
 .mo-scale-star.is-warm {
-  fill: #ffe6c8;
+  --star: #ffe6c8;
 }
 
 .mo-scale-network {
   fill: none;
-  stroke: color-mix(in srgb, var(--accent, #c9a86a) 75%, #fff);
-  stroke-width: 0.25;
-  stroke-dasharray: 1 1.4;
-  opacity: 0.7;
+  stroke: color-mix(in srgb, var(--accent, #c9a86a) 70%, #fff);
+  stroke-width: 0.35;
+  stroke-linecap: round;
 }
 
 .mo-scale-colony {
+  fill: color-mix(in srgb, var(--accent, #c9a86a) 40%, #fff);
+  filter: drop-shadow(0 0 1.2px var(--accent, #c9a86a));
+}
+
+/* Pulso de cada colonia recién fundada: se abre y se apaga en bucle */
+.mo-scale-colony-ping {
   fill: none;
   stroke: color-mix(in srgb, var(--accent, #c9a86a) 60%, #fff);
   stroke-width: 0.3;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mo-colony-ping 2.6s ease-out infinite;
+}
+
+@keyframes mo-colony-ping {
+  from {
+    transform: scale(0.2);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mo-scale-colony-ping {
+    display: none;
+  }
 }
 
 /* IV · Tiempo profundo */
@@ -741,35 +1074,73 @@
 
 .mo-scale-photon {
   fill: none;
-  stroke: #ffe8cf;
-  stroke-width: 0.22;
-  opacity: 0.8;
-  filter: drop-shadow(0 0 1px #ffb07a);
+  stroke: #fff1de;
+  stroke-width: 0.35;
+}
+
+.mo-scale-photon.is-halo {
+  stroke: #ffb07a;
+  stroke-width: 2.4;
+  opacity: 0.7;
 }
 
 /* La luz del disco que pasa por detrás se curva y asoma rodeando la sombra */
 .mo-scale-lensed {
   fill: none;
   stroke: url(#mo-scale-disk);
-  stroke-width: 1.3;
+  stroke-width: 0.9;
   stroke-linecap: round;
-  opacity: 0.75;
-  filter: drop-shadow(0 0 1.5px #ff9a66);
+  opacity: 0.9;
+}
+
+.mo-scale-lensed.is-halo {
+  stroke-width: 3.2;
+  opacity: 0.55;
 }
 
 .mo-scale-lensed.is-under {
   stroke-width: 0.5;
-  opacity: 0.4;
+  opacity: 0.45;
 }
 
 .mo-scale-disk {
   fill: none;
   stroke: url(#mo-scale-disk);
-  stroke-width: 0.6;
-  opacity: 0.45;
+  stroke-width: 0.7;
+  stroke-linecap: round;
+  opacity: 0.5;
 }
 
 .mo-scale-disk.is-front {
-  stroke-width: 0.9;
+  stroke-width: 1.1;
+  opacity: 0.95;
+}
+
+.mo-scale-disk.is-halo {
+  stroke-width: 3.6;
+  opacity: 0.35;
+}
+
+.mo-scale-disk-spots {
+  fill: none;
+  stroke: #fff4e6;
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-dasharray: 0.4 9 1.2 14 0.6 22;
+  stroke-dashoffset: calc(var(--spin, 0) * -1px);
+  opacity: 0.35;
+}
+
+.mo-scale-disk-spots.is-front {
+  stroke-dashoffset: calc(var(--spin, 0) * 1px);
   opacity: 0.85;
+}
+
+.mo-scale-flash {
+  mix-blend-mode: screen;
+}
+
+.mo-scale-disk.is-front.is-halo {
+  stroke-width: 4.5;
+  opacity: 0.6;
 }

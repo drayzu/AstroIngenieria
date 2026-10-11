@@ -5,6 +5,7 @@ import type { AstroConcept } from '../../types';
 import type { CorridorKind } from './salaRooms';
 import { RoomHud, RoomProgress } from './RoomHud';
 import { CorridorScene, type SceneParts } from './corridorScenes';
+import { TERRAIN_WIDTH } from './horizonTerrain';
 import { clamp, clamp01, offsetWithin, skyDrift, smoothstep, toRoman, useRoomLoop, wallGain } from './roomShared';
 import './galleryCorridor.css';
 
@@ -23,11 +24,13 @@ import './galleryCorridor.css';
    scroll y se escriben transformaciones. */
 
 // Píxeles de pared por píxel de scroll a velocidad base: acorta el recorrido
-const WALL_SPEED = 1.55;
+// (las obras 21:9 son anchas, así la pared no se vuelve eterna)
+const WALL_SPEED = 2.1;
 const TABLE_STEP = 8;
 
-// Ritmo de cuelgue: alturas y proporciones alternadas, como un muro de salón
-const SHAPES = ['tall', 'wide', 'square', 'wide-low', 'tall', 'square-high', 'wide'] as const;
+// Ritmo de cuelgue: todas las obras son 21:9; el muro de salón alterna su
+// tamaño y la altura a la que cuelgan
+const SHAPES = ['grand', 'mid', 'center', 'low', 'grand', 'high', 'mid'] as const;
 
 /* Velocidad relativa de cada obra en Viaje interestelar, grupo por grupo:
    química, eléctrica, nuclear, velas, viaje interestelar (máxima, frenado,
@@ -42,6 +45,69 @@ const ACCELERATION = [
 ];
 const MIN_SPEED = 0.8;
 const MAX_SPEED = 2.95;
+
+/* Escala de Kardashev: el grupo que se recorre más lo avanzado en él */
+const scaleLevel = (ticks: number[], progress: number) => {
+  if (Number.isNaN(progress) || !ticks.length) return 0;
+  let level = 0;
+  for (let index = 0; index < ticks.length; index++) {
+    const from = ticks[index];
+    const to = ticks[index + 1] ?? 1;
+    if (progress >= from) level = index + clamp01((progress - from) / (to - from || 1));
+  }
+  return level;
+};
+
+const SUPERSCRIPT = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+const power10 = (exponent: number) =>
+  `10${String(exponent).split('').map((digit) => SUPERSCRIPT[Number(digit)]).join('')}`;
+
+/* Medidor: de la humanidad actual (K ≈ 0,73) a una civilización galáctica
+   (K = 3), con su potencia según Sagan, log₁₀ P = 10 K + 6. En el tiempo
+   profundo la escala ya no crece y el medidor pasa a contar años */
+const KARDASHEV = [0.73, 1, 2, 3];
+const kardashevReading = (level: number, years: string) => {
+  if (level >= 3) {
+    const exponent = Math.round(10 + clamp01(level - 3) * 90);
+    return { value: power10(exponent), unit: years };
+  }
+  const index = Math.floor(level);
+  const k = KARDASHEV[index] + (KARDASHEV[index + 1] - KARDASHEV[index]) * (level - index);
+  return {
+    value: `K ${k.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    unit: `${power10(Math.round(10 * k + 6))} W`,
+  };
+};
+
+/* Velocímetro: la velocidad relativa del tramo en escala logarítmica, de un
+   cohete químico (~10 km/s) a una vela de luz (0,2 c) */
+const LIGHT_KMS = 299_792;
+const velocityLabel = (speed: number) => {
+  const share = clamp01((speed - MIN_SPEED) / (MAX_SPEED - MIN_SPEED));
+  const ofLight = 10 ** (-4.6 + share * 3.9);
+  if (ofLight < 0.005) {
+    const kms = ofLight * LIGHT_KMS;
+    return { value: Math.round(kms).toLocaleString('es-CL'), unit: 'km/s' };
+  }
+  const gamma = 1 / Math.sqrt(1 - ofLight * ofLight);
+  return {
+    value: ofLight.toFixed(ofLight < 0.1 ? 3 : 2).replace('.', ','),
+    unit: gamma > 1.0005 ? `c · γ ${gamma.toFixed(3).replace('.', ',')}` : 'c',
+  };
+};
+
+/* Termómetro y barómetro del mundo que se terraforma: de Marte hoy (−63 °C,
+   0,006 atm) a un clima templado como el de la Tierra (15 °C, 1 atm). La
+   presión crece en escala logarítmica, como se espesaría el aire */
+const terraformLife = (progress: number) => smoothstep(0.08, 0.92, progress);
+const atmosphereReading = (life: number) => {
+  const celsius = Math.round(-63 + 78 * life);
+  const atm = 0.006 ** (1 - life);
+  return {
+    value: `${celsius < 0 ? '−' : ''}${Math.abs(celsius)} °C`,
+    unit: `${atm.toLocaleString('es-CL', { maximumFractionDigits: atm < 0.1 ? 3 : 2, minimumFractionDigits: atm < 0.1 ? 3 : 2 })} atm`,
+  };
+};
 
 const TURN: Record<CorridorKind, number> = { acceleration: 16, horizon: 0, kardashev: 30 };
 
@@ -66,6 +132,9 @@ interface Geometry {
   knots: { at: number; speed: number }[];
   pieces: Piece[];
   rimRadius: number;
+  rimTop: number;
+  /* Avance en que la cartela de la terraformación pasa frente al sol */
+  dawnAt: number;
   ticks: number[];
 }
 
@@ -121,9 +190,12 @@ export const GalleryCorridor = memo(({
   const stageRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const fillRef = useRef<HTMLSpanElement>(null);
+  const velocityRef = useRef<HTMLElement>(null);
+  const shipRef = useRef<HTMLSpanElement>(null);
+  const velocityUnitRef = useRef<HTMLElement>(null);
   const scene = useRef<SceneParts>({});
   const geometry = useRef<Geometry>({
-    stageWidth: 1, travel: 0, pinned: 1, table: new Float64Array([0]), knots: [], pieces: [], rimRadius: 1, ticks: [],
+    stageWidth: 1, travel: 0, pinned: 1, table: new Float64Array([0]), knots: [], pieces: [], rimRadius: 1, rimTop: 0, dawnAt: 0.4, ticks: [],
   });
   const live = useRef({
     lastWall: Number.NaN,
@@ -134,12 +206,11 @@ export const GalleryCorridor = memo(({
     loaded: new Set<number>(),
     current: -1,
     started: false,
-    thrust: 1,
+    reading: '',
   });
   const [ticks, setTicks] = useState<number[]>([]);
   const [active, setActive] = useState(0);
   const [started, setStarted] = useState(false);
-  const [thrust, setThrust] = useState(1);
   // Obras cuyas imágenes ya pueden cargarse: el escenario recorta lo que
   // viene por el costado y la carga por cercanía no alcanzaría a verlas
   const [preloaded, setPreloaded] = useState<ReadonlySet<number>>(() => new Set());
@@ -156,7 +227,7 @@ export const GalleryCorridor = memo(({
   const total = works.length;
 
   const paint = (offset: number) => {
-    const { stageWidth, travel, pinned, table, knots, pieces, rimRadius, ticks: tickPositions } = geometry.current;
+    const { stageWidth, travel, pinned, table, knots, pieces, rimRadius, rimTop, dawnAt, ticks: tickPositions } = geometry.current;
     const state = live.current;
     const track = trackRef.current;
     if (!track) return;
@@ -167,6 +238,7 @@ export const GalleryCorridor = memo(({
 
     track.style.transform = `translate3d(${(-wall).toFixed(1)}px, 0, 0)`;
     fillRef.current?.style.setProperty('transform', `scaleX(${progress.toFixed(4)})`);
+    shipRef.current?.style.setProperty('--ship-at', progress.toFixed(4));
 
     // Velocidad real de la pared, suavizada: alimenta Doppler y contracción
     const step = Number.isNaN(state.lastWall) ? 0 : wall - state.lastWall;
@@ -236,18 +308,25 @@ export const GalleryCorridor = memo(({
       }
     }
 
-    paintScene(kind, scene.current, { wall, progress, beta, ticks: tickPositions });
+    paintScene(kind, scene.current, { wall, progress, beta, ticks: tickPositions, rimTop, dawnAt });
+    const showReading = (reading: { value: string; unit: string }) => {
+      const key = reading.value + reading.unit;
+      if (key === state.reading) return;
+      state.reading = key;
+      if (velocityRef.current) velocityRef.current.textContent = reading.value;
+      if (velocityUnitRef.current) velocityUnitRef.current.textContent = reading.unit;
+    };
     if (kind === 'acceleration') {
       const reverse = state.velocity < -0.3 ? true : state.velocity > 0.3 ? false : state.reverse;
       if (reverse !== state.reverse) {
         state.reverse = reverse;
         stageRef.current?.classList.toggle('is-reverse', reverse);
       }
-      const level = Math.max(1, Math.min(5, Math.round(((speed - MIN_SPEED) / (MAX_SPEED - MIN_SPEED)) * 4) + 1));
-      if (level !== state.thrust) {
-        state.thrust = level;
-        setThrust(level);
-      }
+      showReading(velocityLabel(speed));
+    } else if (kind === 'kardashev') {
+      showReading(kardashevReading(scaleLevel(tickPositions, progress), t("años")));
+    } else {
+      showReading(atmosphereReading(terraformLife(progress)));
     }
 
     if (incoming) {
@@ -269,7 +348,7 @@ export const GalleryCorridor = memo(({
     const state = live.current;
     state.velocity = 0;
     state.lastWall = Number.NaN;
-    paintScene(kind, scene.current, { wall: Number.NaN, progress: Number.NaN, beta: 0, ticks: [] });
+    paintScene(kind, scene.current, { wall: Number.NaN, progress: Number.NaN, beta: 0, ticks: [], rimTop: 0, dawnAt: 0 });
   };
 
   const refresh = useRoomLoop(sectionRef, scrollRef, (frame) => paint(frame.offset), { onIdle: settle });
@@ -320,17 +399,32 @@ export const GalleryCorridor = memo(({
 
       // El borde del planeta pasa justo bajo los marcos
       let rimRadius = 1;
+      let rimTop = 0;
+      let dawnAt = 0.4;
       if (kind === 'horizon') {
         rimRadius = stageWidth * (stageWidth < 720 ? 4 : 2.1);
         const frame = items[0]?.querySelector<HTMLElement>('.mo-frame');
         if (frame) {
-          const rimTop = offsetWithin(frame, stage).top + frame.offsetHeight;
+          rimTop = offsetWithin(frame, stage).top + frame.offsetHeight;
           stage.style.setProperty('--rim-y', `${Math.round(rimTop)}px`);
           stage.style.setProperty('--rim-r', `${Math.round(rimRadius)}px`);
+          // El sol sale hacia un costado, donde el borde ya baja e inclina
+          const sunAlong = stageWidth * (stageWidth < 720 ? 0.24 : 0.22);
+          const sunDrop = rimRadius - Math.sqrt(rimRadius * rimRadius - sunAlong * sunAlong);
+          stage.style.setProperty('--sun-x', `${Math.round(stageWidth / 2 + sunAlong)}px`);
+          stage.style.setProperty('--sun-rim', `${Math.round(rimTop + sunDrop)}px`);
+          stage.style.setProperty('--sun-tilt', `${((Math.asin(sunAlong / rimRadius) * 180) / Math.PI).toFixed(2)}deg`);
+          // Amanece cuando la cartela de la terraformación cruza frente al sol:
+          // es texto sin marco, así que el sol se ve asomar detrás del título
+          const dawnPanel = panels[2];
+          if (dawnPanel && travel > 0) {
+            const crossing = offsetWithin(dawnPanel, track).left + dawnPanel.offsetWidth / 2 - stageWidth / 2 - sunAlong;
+            dawnAt = clamp01(scrollAt(table, clamp(crossing, 0, travel)) / pinned);
+          }
         }
       }
 
-      geometry.current = { stageWidth, travel, pinned, table, knots, pieces, rimRadius, ticks: tickPositions };
+      geometry.current = { stageWidth, travel, pinned, table, knots, pieces, rimRadius, rimTop, dawnAt, ticks: tickPositions };
       section.style.height = `${Math.round(pinned + stageHeight)}px`;
       setTicks(tickPositions);
       refresh();
@@ -386,9 +480,10 @@ export const GalleryCorridor = memo(({
           current={active}
           total={total}
         >
-          {kind === 'acceleration' && (
-            <span className="mo-thrust">
-              {[1, 2, 3, 4, 5].map((level) => <i key={level} className={level <= thrust ? 'is-on' : undefined} />)}
+          {kind !== 'acceleration' && (
+            <span className="mo-corridor-meter">
+              <b ref={velocityRef}>—</b>
+              <small ref={velocityUnitRef} />
             </span>
           )}
         </RoomHud>
@@ -422,7 +517,23 @@ export const GalleryCorridor = memo(({
           ))}
         </div>
 
-        <RoomProgress fillRef={fillRef} ticks={ticks} groupIndex={activeGroup} started={started} onTick={jumpToGroup} />
+        <RoomProgress fillRef={fillRef} ticks={ticks} groupIndex={activeGroup} started={started} onTick={jumpToGroup}
+          marker={kind === 'acceleration' && (
+            <span className="mo-ship" ref={shipRef} aria-hidden="true">
+              <span className="mo-velocity">
+                <b ref={velocityRef}>—</b>
+                <small ref={velocityUnitRef} />
+              </span>
+              <svg className="mo-ship-icon" viewBox="0 0 32 16">
+                <path className="mo-ship-flame" d="M6 6.4 0 8l6 1.6Z" />
+                <path className="mo-ship-wing" d="M17 5.4 11 1H8.5l3 4.6ZM17 10.6 11 15H8.5l3-4.6Z" />
+                <rect className="mo-ship-nozzle" x="5.5" y="6.2" width="2" height="3.6" rx="0.5" />
+                <path className="mo-ship-hull" d="M31 8c-4-2.8-10-3.4-19-2.8L7 6v4l5 .8c9 .6 15 0 19-2.8Z" />
+                <ellipse className="mo-ship-window" cx="23.5" cy="7.3" rx="3" ry="1.2" />
+              </svg>
+            </span>
+          )}
+        />
       </div>
     </section>
   );
@@ -435,6 +546,8 @@ interface SceneFrame {
   progress: number;
   beta: number;
   ticks: number[];
+  rimTop: number;
+  dawnAt: number;
 }
 
 const paintScene = (kind: CorridorKind, parts: SceneParts, frame: SceneFrame) => {
@@ -442,8 +555,11 @@ const paintScene = (kind: CorridorKind, parts: SceneParts, frame: SceneFrame) =>
     const doppler = (frame.beta ** 1.4 * 0.9).toFixed(3);
     parts.dopplerLeft?.style.setProperty('opacity', doppler);
     parts.dopplerRight?.style.setProperty('opacity', doppler);
+    // Las estelas corren más rápido que la pared y se alargan con la velocidad
+    parts.streaks?.style.setProperty('opacity', (0.1 + frame.beta * 0.8).toFixed(3));
     if (!Number.isNaN(frame.wall)) {
       parts.backdrop?.style.setProperty('transform', `translate3d(${(-frame.wall * 0.28).toFixed(1)}px, 0, 0)`);
+      parts.streaks?.style.setProperty('transform', `translate3d(${(-((frame.wall * 1.8) % 1600)).toFixed(1)}px, 0, 0) scaleX(${(1 + frame.beta * 2.2).toFixed(3)})`);
     }
     return;
   }
@@ -451,35 +567,104 @@ const paintScene = (kind: CorridorKind, parts: SceneParts, frame: SceneFrame) =>
 
   if (kind === 'horizon') {
     // Del mundo estéril al mundo vivo a lo largo de los cinco grupos
-    const life = smoothstep(0.08, 0.92, frame.progress);
+    const life = terraformLife(frame.progress);
     parts.barren?.style.setProperty('opacity', (1 - life * 0.9).toFixed(3));
     parts.living?.style.setProperty('opacity', life.toFixed(3));
+    parts.groundBarren?.style.setProperty('opacity', (1 - life).toFixed(3));
+    parts.groundLiving?.style.setProperty('opacity', life.toFixed(3));
+    // Amanecer: el sol sube desde detrás del borde, asoma con la cartela de
+    // la terraformación, se detiene un instante sobre el horizonte mientras
+    // destella y termina sobre las obras, ya de día
+    const lift = Math.max(160, frame.rimTop * 0.62);
+    const below = 46;
+    const atCrest = (below - 5) / (below + lift);
+    const rise = frame.progress < frame.dawnAt
+      ? atCrest * smoothstep(0.04, frame.dawnAt, frame.progress)
+      : atCrest + (1 - atCrest) * smoothstep(frame.dawnAt, 1, frame.progress);
+    const sunY = below - rise * (below + lift);
+    const crest = (1 - clamp01(Math.abs(sunY - 5) / 18)) ** 2;
+    const approach = smoothstep(0, atCrest, rise);
+    if (parts.sun) {
+      parts.sun.style.setProperty('translate', `0 ${sunY.toFixed(1)}px`);
+      parts.sun.style.setProperty('--crest', crest.toFixed(3));
+      // Sin aire el sol es un disco duro; la atmósfera lo envuelve en un halo
+      parts.sun.style.setProperty('--haze', (0.2 + life * 0.8).toFixed(3));
+    }
+    parts.dawn?.style.setProperty('opacity', ((0.2 + approach * 0.8) * (1 - smoothstep(0.35, 1, rise) * 0.4) + crest * 0.25).toFixed(3));
+    // Con el sol, la luz barre el suelo desde la derecha y el cielo se vuelve
+    // de día; los mares llenan las zonas bajas y luego la tierra reverdece
+    const day = smoothstep(frame.dawnAt - 0.03, frame.dawnAt + 0.2, frame.progress);
+    parts.night?.style.setProperty('transform', `translate3d(${(-day * 66.667).toFixed(2)}%, 0, 0)`);
+    parts.sky?.style.setProperty('opacity', (day * (0.35 + life * 0.65)).toFixed(3));
+    const seas = smoothstep(frame.dawnAt, (frame.ticks[3] ?? 0.66) + 0.04, frame.progress);
+    const green = smoothstep(frame.ticks[3] ?? 0.66, Math.min(0.98, (frame.ticks[4] ?? 0.86) + 0.06), frame.progress);
+    parts.terrainWater?.style.setProperty('opacity', seas.toFixed(3));
+    parts.terrainLife?.style.setProperty('opacity', green.toFixed(3));
+    // Las curvas oxidadas ceden ante las verdes
+    parts.terrainBarren?.style.setProperty('opacity', (1 - green).toFixed(3));
+    parts.glint?.style.setProperty('opacity', (seas * smoothstep(0.1, 0.45, rise)).toFixed(3));
     parts.clouds?.style.setProperty('opacity', smoothstep(0.42, 0.95, frame.progress).toFixed(3));
     // Superficie y nubes giran con el planeta, más lento que la pared
-    parts.surface?.style.setProperty('transform', `translate3d(${(-((frame.wall * 0.5) % 1200)).toFixed(1)}px, 0, 0)`);
+    const terrain = `translate3d(${(-((frame.wall * 0.55) % TERRAIN_WIDTH)).toFixed(1)}px, 0, 0)`;
+    parts.terrainBarren?.style.setProperty('transform', terrain);
+    parts.terrainWater?.style.setProperty('transform', terrain);
+    parts.terrainLife?.style.setProperty('transform', terrain);
     parts.cloudStrip?.style.setProperty('transform', `translate3d(${(-((frame.wall * 0.3) % 1600)).toFixed(1)}px, 0, 0)`);
     return;
   }
 
-  // kardashev: cada grupo es una escala; al terminar el grupo la cámara se aleja
-  const { ticks, progress } = frame;
+  // kardashev: cada grupo es una escala y la cámara se aleja sin parar,
+  // como en Powers of Ten: cada escala se encoge hasta caber en la siguiente
+  const level = scaleLevel(frame.ticks, frame.progress);
   const layers = [parts.scalePlanet, parts.scaleStar, parts.scaleGalaxy, parts.scaleDeep];
-  let level = 0;
-  for (let index = 0; index < ticks.length; index++) {
-    const from = ticks[index];
-    const to = ticks[index + 1] ?? 1.0001;
-    if (progress >= to) {
-      level = index + 1;
-      continue;
-    }
-    if (progress >= from) level = index + smoothstep(0.6, 1, (progress - from) / (to - from || 1));
-    break;
-  }
-  level = Math.min(level, layers.length - 1);
+  const last = layers.length - 1;
   layers.forEach((layer, index) => {
     if (!layer) return;
-    const local = level - index;
-    layer.style.opacity = clamp01(1 - Math.abs(local)).toFixed(3);
-    layer.style.transform = `scale(${(1 - clamp(local, -1, 1) * 0.28).toFixed(4)})`;
+    const local = Math.min(level - index, index === last ? 1 : 2);
+    // Cada escala domina su grupo y cede el paso solo en su último tramo
+    const shown = smoothstep(-0.28, 0, local) * (index === last ? 1 : 1 - smoothstep(0.72, 1, local));
+    layer.style.opacity = shown.toFixed(3);
+    if (shown <= 0) return;
+    // Lo que se construye en la escala: hoy la Tierra ya tiene sus luces
+    const built = clamp01(local / 0.85);
+    layer.style.setProperty('--grow', (index === 0 ? 0.3 + built * 0.7 : built).toFixed(3));
+    // La cámara siempre se aleja; en el tiempo profundo, más despacio, para
+    // que el agujero se vea crecer con lo que traga
+    const zoom = (index === 0 ? 9 : index === last ? 1.5 : 2.4) ** -local;
+    // El planeta se ve desde muy cerca: al alejarse sube hasta quedar entero al centro
+    const lift = index === 0 ? -81 * zoom * smoothstep(0, 0.8, local) : 0;
+    const roll = index === 1 ? local * 14 : 0;
+    layer.style.transform = `translate3d(0, ${lift.toFixed(2)}%, 0) scale(${zoom.toFixed(4)}) rotate(${roll.toFixed(2)}deg)`;
   });
+  const planetTurn = clamp(level, -0.5, 1.5);
+  parts.cities?.setAttribute('transform', `rotate(${(planetTurn * 9).toFixed(2)} 100 262)`);
+  parts.satellites?.setAttribute('transform', `rotate(${(planetTurn * 34).toFixed(2)} 100 262)`);
+  parts.galaxySpin?.setAttribute('transform', `rotate(${(clamp(level - 2, -1, 2) * 50).toFixed(2)})`);
+  // Tiempo profundo: el agujero devora las últimas estrellas, que caen en
+  // espiral; crece con lo que traga y, ya solo, se evapora en un destello
+  const deep = clamp01(level - 3);
+  const embers = parts.embers?.children;
+  if (embers) {
+    for (let index = 0; index < embers.length; index++) {
+      const ember = embers[index] as SVGGElement;
+      // Todas caen en la primera mitad: la segunda es del agujero solo
+      const fade = (Number(ember.dataset.fade) || 0.95) * 0.5;
+      const fall = smoothstep(fade - 0.3, fade, deep);
+      ember.setAttribute('transform', `rotate(${(fall * fall * 260).toFixed(1)}) scale(${(1 - fall * 0.9).toFixed(3)})`);
+      const light = ember.lastElementChild as SVGGElement | null;
+      if (ember.childElementCount > 1) {
+        light?.setAttribute('opacity', (Number(ember.dataset.glow) * (1 - smoothstep(0.8, 1, fall))).toFixed(3));
+      }
+      ember.style.opacity = (1 - smoothstep(0.9, 1, fall)).toFixed(3);
+    }
+  }
+  // La evaporación es lenta: el agujero se encoge y se calienta, brilla cada
+  // vez más y se deshace en un destello que se apaga suave
+  const evaporate = smoothstep(0.5, 0.94, deep);
+  const fed = 1 + smoothstep(0.05, 0.5, deep) * 0.4;
+  parts.hole?.setAttribute('transform', `scale(${(fed * (1 - evaporate)).toFixed(4)})`);
+  parts.hole?.style.setProperty('--spin', (deep * 260).toFixed(1));
+  const flash = smoothstep(0.62, 0.9, deep) * (1 - smoothstep(0.9, 1, deep) * 0.85);
+  parts.flash?.setAttribute('opacity', flash.toFixed(3));
+  parts.flash?.setAttribute('transform', `scale(${(0.15 + smoothstep(0.62, 1, deep) * 1.1).toFixed(3)})`);
 };
