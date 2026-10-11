@@ -193,10 +193,9 @@
   stroke-width: 18;
 }
 
-/* Dyson, estrella, túnel, galaxia y radar: dibujos centrados que escalan */
+/* Túnel y galaxia: dibujos centrados que escalan */
 .mo-journey-tunnel,
-.mo-journey-galaxy,
-.mo-journey-radar {
+.mo-journey-galaxy {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -322,61 +321,176 @@
   stroke-linecap: round;
 }
 
-/* Radar: anillos de alcance, barrido cónico y señales que se encienden.
-   El centro queda libre para la ventana del capítulo */
-.mo-journey-radar {
+/* Señal: un radar rodea la ventana. El centro queda libre para el mensaje
+   y la ventana; el ruido del cielo solo se ve en la estela del barrido,
+   como el fósforo de una pantalla (--trail lo mueve el viaje) */
+.mo-journey-scope {
+  position: absolute;
+  left: 50%;
+  top: 50%;
   display: block;
+  width: min(120vmin, 1100px);
+  height: min(120vmin, 1100px);
+  translate: -50% -50%;
   border-radius: 50%;
-  -webkit-mask-image: radial-gradient(circle, transparent 24%, #000 30%, #000 68%, transparent 72%);
-  mask-image: radial-gradient(circle, transparent 24%, #000 30%, #000 68%, transparent 72%);
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(circle closest-side, transparent 40%, #000 50%, #000 92%, transparent 99%);
+  mask-image: radial-gradient(circle closest-side, transparent 40%, #000 50%, #000 92%, transparent 99%);
+  will-change: transform, opacity;
 }
 
-.mo-journey-radar > i {
+.mo-journey-scope > i,
+.mo-journey-scope canvas {
   position: absolute;
   inset: 0;
   border-radius: 50%;
 }
 
-.mo-journey-radar .is-range {
-  inset: 22%;
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+.mo-journey-scope canvas {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  -webkit-mask-image: conic-gradient(
+    from var(--trail, 0deg),
+    rgba(0, 0, 0, 0.1) 0deg,
+    #000 139deg,
+    rgba(0, 0, 0, 0.1) 140deg
+  );
+  mask-image: conic-gradient(
+    from var(--trail, 0deg),
+    rgba(0, 0, 0, 0.1) 0deg,
+    #000 139deg,
+    rgba(0, 0, 0, 0.1) 140deg
+  );
 }
 
-.mo-journey-radar .is-range.is-far {
+.mo-journey-scope .is-range {
+  inset: 22%;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.mo-journey-scope .is-range.is-far {
   inset: 6%;
   border-style: dashed;
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
-.mo-journey-radar .is-sweep {
+.mo-journey-scope .is-sweep {
   background: conic-gradient(
     from 0deg,
     transparent 0deg,
     transparent 290deg,
-    color-mix(in srgb, var(--accent) 22%, transparent) 340deg,
-    color-mix(in srgb, var(--accent) 70%, #ffffff) 359deg,
+    color-mix(in srgb, var(--accent) 14%, transparent) 340deg,
+    color-mix(in srgb, var(--accent) 55%, #ffffff) 359deg,
     transparent 360deg
   );
+  will-change: transform, opacity;
 }
 
-.mo-journey-radar .is-blip {
-  position: absolute;
-  width: 7px;
-  height: 7px;
-  margin: -3.5px 0 0 -3.5px;
-  border-radius: 50%;
-  background: #ffffff;
-  box-shadow: 0 0 10px 3px color-mix(in srgb, var(--accent) 70%, transparent);
-  opacity: 0;
+.mo-journey-stage.is-signal circle,
+.mo-journey-stage.is-signal path {
+  fill: none;
 }
 
-/* Disco galáctico inclinado; dentro gira la espiral. Queda detrás de la
-   ventana: el capítulo se abre como un hueco en el núcleo de la galaxia */
+/* Nuestra radio escapando: burbujas finas desde una Tierra diminuta */
+.mo-journey-stage.is-signal .is-ring {
+  stroke: color-mix(in srgb, var(--accent) 60%, #ffffff);
+  stroke-width: 1.5;
+}
+
+.mo-journey-stage.is-signal .is-earth {
+  fill: #cfe6ff;
+  filter: drop-shadow(0 0 6px #7fb6ff);
+}
+
+/* El eco, su halo, los pulsos y los corchetes que lo fijan */
+.mo-journey-stage.is-signal .is-echo {
+  fill: #ffffff;
+}
+
+.mo-journey-stage.is-signal .is-echo-glow {
+  fill: color-mix(in srgb, var(--accent) 55%, transparent);
+  filter: blur(6px);
+}
+
+.mo-journey-stage.is-signal .is-pulse {
+  stroke: color-mix(in srgb, var(--accent) 70%, #ffffff);
+  stroke-width: 1;
+}
+
+.mo-journey-stage.is-signal .is-bracket {
+  stroke: color-mix(in srgb, var(--accent) 80%, #ffffff);
+  stroke-width: 1.5;
+}
+
+/* El mensaje: píxeles de luz y el del centro, por donde se abre la ventana */
+.mo-journey-stage.is-signal .is-pixel {
+  fill: color-mix(in srgb, var(--accent) 45%, #ffffff);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 70%, transparent));
+}
+
+.mo-journey-stage.is-signal .is-window {
+  stroke: color-mix(in srgb, var(--accent) 75%, #ffffff);
+  stroke-width: 1;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 60%, transparent));
+}
+
+/* Disco galáctico; dentro gira la espiral. Queda detrás de la ventana: el
+   capítulo se abre como un hueco en el núcleo de la galaxia. La inclinación
+   la anima el viaje (de canto a casi de frente) */
 .mo-journey-galaxy {
   display: block;
   z-index: -1;
   width: min(160vmin, 1500px);
   height: min(160vmin, 1500px);
-  transform: scaleY(0.56);
+}
+
+.mo-journey-galaxy-tilt {
+  position: absolute;
+  inset: 0;
+  display: block;
+  will-change: transform, opacity;
+}
+
+/* Núcleo abultado: redondo aunque el disco se vea de canto */
+.mo-journey-galaxy-bulge {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22%;
+  height: 22%;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 244, 226, 0.95) 0%,
+    rgba(255, 217, 168, 0.55) 22%,
+    color-mix(in srgb, var(--accent) 22%, transparent) 50%,
+    transparent 72%
+  );
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+}
+
+/* Estrellas que pasan volando durante la zambullida */
+.mo-journey-galaxy-flyby {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.mo-journey-galaxy-flyby line {
+  stroke: #eef2ff;
+  stroke-linecap: round;
+}
+
+.mo-journey-galaxy-flyby line.is-warm {
+  stroke: color-mix(in srgb, var(--accent) 55%, #ffffff);
 }
 
 .mo-journey-galaxy-disc {
@@ -399,6 +513,19 @@
 .mo-journey-galaxy-disc canvas {
   -webkit-mask-image: radial-gradient(circle closest-side, #000 72%, transparent 100%);
   mask-image: radial-gradient(circle closest-side, #000 72%, transparent 100%);
+}
+
+/* La galaxia habitada se revela tras el frente de la colonización, que
+   avanza desde el sistema de origen (--lit lo mueve el viaje) */
+.mo-journey-galaxy-disc canvas.is-lit {
+  -webkit-mask-image:
+    radial-gradient(circle closest-side, #000 72%, transparent 100%),
+    radial-gradient(ellipse var(--lit, 0.1%) var(--lit, 0.1%) at var(--ox) var(--oy), #000 55%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    radial-gradient(circle closest-side, #000 72%, transparent 100%),
+    radial-gradient(ellipse var(--lit, 0.1%) var(--lit, 0.1%) at var(--ox) var(--oy), #000 55%, transparent 100%);
+  mask-composite: intersect;
 }
 
 /* Rutas de colonización: hilos de luz entre sistemas */

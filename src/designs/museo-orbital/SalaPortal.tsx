@@ -11,7 +11,17 @@ import {
 } from 'framer-motion';
 import { useLocale } from '../../i18n/LocaleProvider';
 import type { AstroChapter } from '../../types';
-import { JOURNEY_COVER, JOURNEY_OPEN, JourneyOverlay, journeyClip, journeyFor, journeyWarp } from './portalJourneys';
+import {
+  JOURNEY_COVER,
+  JOURNEY_OPEN,
+  JourneyOverlay,
+  journeyClip,
+  journeyExtra,
+  journeyFor,
+  journeyTime,
+  journeyWarp,
+  type JourneyKind,
+} from './portalJourneys';
 import './salaPortal.css';
 
 const EASE_OUT = cubicBezier(0.16, 1, 0.3, 1);
@@ -34,6 +44,14 @@ const T = {
   imageFade: [0.9, 1],
   warp: [0.28, 0.56],
 } satisfies Record<string, [number, number]>;
+
+// Viajes cuyo número espera a que el dibujo deje libre el centro
+// En la señal el número no crece: aparece en su sitio sobre el mismo número
+// armado en píxeles
+const LATE_NUMBER: Partial<Record<JourneyKind, { in: [number, number]; fill: [number, number]; from?: number }>> = {
+  collapse: { in: [0.22, 0.32], fill: [0.25, 0.34] },
+  signal: { in: [0.29, 0.31], fill: [0.29, 0.315], from: 1 },
+};
 
 /* ---------------- Palabra del título, revelada por scroll ---------------- */
 
@@ -76,11 +94,15 @@ export const SalaPortal = ({
   // Cada capítulo abre su ventana con un viaje propio (toroide, horizonte…)
   const journey = journeyFor(to.id);
   const portalRef = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({
+  const { scrollYProgress: scrolled } = useScroll({
     container: scrollRef,
     target: portalRef,
     offset: ['start start', 'end end'],
   });
+  // Algunos viajes alargan un tramo propio: el scroll extra se gasta solo ahí
+  // y el resto del guion conserva su ritmo
+  const scrollYProgress = useTransform(scrolled, (value) => journeyTime(journey, value));
+  const extraHeight = journeyExtra(journey);
   // Un muelle corto suaviza los saltos de la rueda sin despegarse del dedo
   const progress = useSpring(scrollYProgress, { stiffness: 170, damping: 32, mass: 0.4 });
 
@@ -129,18 +151,20 @@ export const SalaPortal = ({
   const irisOpacity = useTransform(progress, T.imageFade, [1, 0.32]);
 
   // Número monumental: llega desde el fondo, se rellena y lo atravesamos.
-  // En el colapso espera a que la estrella sea un punto y destelle
-  const numberIn: [number, number] = journey === 'collapse' ? [0.22, 0.32] : T.numberIn;
-  const numberFill: [number, number] = journey === 'collapse' ? [0.25, 0.34] : T.numberFill;
+  // En el colapso espera a que la estrella sea un punto y destelle; en la
+  // señal, a que el mensaje esté armado
+  const lateNumber = LATE_NUMBER[journey];
+  const numberIn = lateNumber?.in ?? T.numberIn;
+  const numberFill = lateNumber?.fill ?? T.numberFill;
   const numberScale = useTransform(
     progress,
     [numberIn[0], numberIn[1], T.numberFly[0], T.numberFly[1]],
-    [0.3, 1, 1, 2.4],
+    [lateNumber?.from ?? 0.3, 1, 1, 2.4],
     { ease: [EASE_OUT, (t) => t, EASE_IN_OUT] },
   );
   const numberOpacity = useTransform(
     progress,
-    [numberIn[0], numberIn[0] + 0.1, T.numberFly[0], T.numberFly[1]],
+    [numberIn[0], lateNumber ? numberIn[1] : numberIn[0] + 0.1, T.numberFly[0], T.numberFly[1]],
     [0, 1, 1, 0],
   );
   const numberClip = useTransform(progress, numberFill, [
@@ -172,7 +196,11 @@ export const SalaPortal = ({
       ref={portalRef}
       className={`mo-portal is-${journey}`}
       aria-hidden="true"
-      style={{ '--accent': to.color, '--from-accent': from.color } as CSSProperties}
+      style={{
+        '--accent': to.color,
+        '--from-accent': from.color,
+        ...(extraHeight > 0 && { height: `${300 + extraHeight}svh` }),
+      } as CSSProperties}
     >
       <div className="mo-portal-stage">
         <motion.div className="mo-portal-glow" style={{ opacity: glowOpacity }} />
@@ -189,7 +217,7 @@ export const SalaPortal = ({
           <motion.div className="mo-portal-veil" style={{ opacity: textOpacity }} />
         </motion.div>
 
-        <JourneyOverlay kind={journey} progress={progress} />
+        <JourneyOverlay kind={journey} progress={progress} label={to.number} />
 
         <motion.span
           className="mo-portal-no"
