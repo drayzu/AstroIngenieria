@@ -48,6 +48,9 @@ let resolveReady: () => void = () => {};
 export const livingSignal = {
   /* performance.now() de la ignición; 0 mientras la estrella no se enciende */
   ignitedAt: 0,
+  /* Nacimiento suave (al volver desde el cierre): la estrella se condensa de
+     la nebulosa y se enciende despacio, sin estallido ni destello */
+  gentle: false,
   /* Dónde nace la estrella (fracciones del hero): el centro de la pantalla.
      Después la escena la lleva a su lugar definido por starFrame. */
   intro: { fx: 0.5, fy: 0.5, fr: 0.33 },

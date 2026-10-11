@@ -33,6 +33,21 @@
   transition: none;
 }
 
+/* Al nacer la estrella desde el cierre el texto espera a que despeje la
+   nube; después entra con un fundido (animación, para no pisar sus
+   transiciones propias) */
+.mo-hero[data-birth] .mo-hero-copy,
+.mo-hero[data-birth] .mo-hero-descend,
+.mo-hero[data-birth] .mo-dyson-plate {
+  visibility: hidden;
+}
+
+.mo-hero[data-born] .mo-hero-copy,
+.mo-hero[data-born] .mo-hero-descend,
+.mo-hero[data-born] .mo-dyson-plate {
+  animation: mo-intro-chrome-in 1.1s ease both;
+}
+
 /* Mientras arde la intro no hay barra, marquesina ni riel */
 .mo-hero.is-intro-dark .mo-hero-toolbar,
 .mo-hero.is-intro-dark .mo-hero-carousel,
@@ -204,7 +219,9 @@
   will-change: transform, opacity;
 }
 
-/* Estallido de rayos en el instante de la ignición */
+/* Estallido de rayos en el instante de la ignición: haces irregulares de
+   bordes suaves (--rays lo arma HeroIgnition) que nacen del borde de la
+   estrella y se apagan hacia afuera */
 .mo-ignite-rays {
   position: absolute;
   left: 0;
@@ -213,17 +230,50 @@
   height: calc(var(--star-d) * 2.6);
   translate: -50% -50%;
   border-radius: 50%;
-  background: repeating-conic-gradient(
-    from 0deg,
-    rgba(255, 232, 210, 0.75) 0deg 0.7deg,
-    transparent 0.7deg 7deg,
-    rgba(255, 170, 120, 0.4) 7deg 7.4deg,
-    transparent 7.4deg 13deg
-  );
-  -webkit-mask-image: radial-gradient(circle, transparent 18%, #000 26%, rgba(0, 0, 0, 0.5) 46%, transparent 70%);
-  mask-image: radial-gradient(circle, transparent 18%, #000 26%, rgba(0, 0, 0, 0.5) 46%, transparent 70%);
+  background: var(--rays);
+  -webkit-mask-image: radial-gradient(circle, transparent 17%, #000 24%, rgba(0, 0, 0, 0.55) 40%, rgba(0, 0, 0, 0.18) 56%, transparent 70%);
+  mask-image: radial-gradient(circle, transparent 17%, #000 24%, rgba(0, 0, 0, 0.55) 40%, rgba(0, 0, 0, 0.18) 56%, transparent 70%);
+  filter: blur(1.2px);
+  mix-blend-mode: screen;
   opacity: 0;
   will-change: transform, opacity;
+}
+
+/* Chispas: cada brazo apunta en su ángulo y la veta corre por él */
+.mo-ignite-sparks {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+}
+
+.mo-ignite-spark-arm {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+}
+
+/* Cabeza brillante al frente y cola que se desvanece hacia la estrella */
+.mo-ignite-spark {
+  position: absolute;
+  right: 0;
+  top: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 236, 214, 0.55) 60%, #fffaf2);
+  box-shadow: 0 0 8px 1px rgba(255, 200, 150, 0.45);
+  transform-origin: 100% 50%;
+  mix-blend-mode: screen;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.mo-ignite-spark.is-warm {
+  background: linear-gradient(90deg, transparent, rgba(255, 150, 90, 0.5) 60%, #ffd2a8);
+  box-shadow: 0 0 8px 1px rgba(255, 120, 60, 0.45);
 }
 
 /* Onda de choque con separación cromática: un anillo rojo y uno azul que
@@ -238,4 +288,163 @@
   border-color: rgba(90, 170, 255, 0.7);
   box-shadow: 0 0 22px 3px rgba(60, 140, 255, 0.3);
   mix-blend-mode: screen;
+}
+
+/* ---------- Nacimiento desde el cierre: una protoestrella ----------
+   Sin transform en CSS (el minificador descartaba el translate a su lado):
+   la inclinación del disco y de los chorros va en rotate y scale sueltos */
+
+/* Nube de gas tibio que envuelve al punto mientras se calienta */
+.mo-ignite-cloud {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--star-d) * 3.4);
+  height: calc(var(--star-d) * 3.4);
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 170, 120, 0.22) 0%,
+    rgba(210, 90, 60, 0.13) 30%,
+    rgba(120, 60, 80, 0.06) 55%,
+    transparent 72%
+  );
+  filter: blur(6px);
+  mix-blend-mode: screen;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* Disco de acreción: un anillo de gas inclinado que gira alrededor */
+.mo-ignite-disk {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--star-d) * 2.3);
+  height: calc(var(--star-d) * 2.3);
+  translate: -50% -50%;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.mo-ignite-disk-half {
+  position: absolute;
+  inset: 0;
+}
+
+/* La mitad lejana se abre en un círculo del tamaño de la estrella (--hole lo
+   anima HeroIgnition): ahí la estrella queda por delante del disco */
+.mo-ignite-disk-half.is-back {
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent var(--hole, 0px), #000 calc(var(--hole, 0px) + 4px));
+  mask-image: radial-gradient(circle at 50% 50%, transparent var(--hole, 0px), #000 calc(var(--hole, 0px) + 4px));
+}
+
+.mo-ignite-disk-plane {
+  position: absolute;
+  inset: 0;
+  rotate: -14deg;
+  scale: 1 0.24;
+}
+
+/* Cada mitad del anillo, cortada en el plano del disco (antes de inclinarlo) */
+.mo-ignite-disk-clip {
+  position: absolute;
+  inset: 0;
+}
+
+.mo-ignite-disk-half.is-back .mo-ignite-disk-clip {
+  clip-path: inset(0 0 50% 0);
+}
+
+.mo-ignite-disk-half.is-front .mo-ignite-disk-clip {
+  clip-path: inset(50% 0 0 0);
+}
+
+.mo-ignite-disk-spin {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 210, 170, 0.9) 0deg,
+    rgba(255, 130, 80, 0.35) 60deg,
+    rgba(255, 190, 140, 0.75) 120deg,
+    rgba(200, 90, 60, 0.25) 190deg,
+    rgba(255, 200, 160, 0.85) 250deg,
+    rgba(255, 120, 70, 0.3) 310deg,
+    rgba(255, 210, 170, 0.9) 360deg
+  );
+  -webkit-mask-image: radial-gradient(circle, transparent 18%, #000 26%, rgba(0, 0, 0, 0.7) 40%, transparent 50%);
+  mask-image: radial-gradient(circle, transparent 18%, #000 26%, rgba(0, 0, 0, 0.7) 40%, transparent 50%);
+  filter: blur(1.5px) drop-shadow(0 0 8px rgba(255, 130, 70, 0.5));
+  mix-blend-mode: screen;
+  animation: mo-ignite-disk-spin 3.2s linear infinite;
+}
+
+@keyframes mo-ignite-disk-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* Chorros bipolares, perpendiculares al disco */
+.mo-ignite-jets {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  rotate: -14deg;
+}
+
+.mo-ignite-jet {
+  position: absolute;
+  left: -1px;
+  width: 2px;
+  height: 40vh;
+  background: linear-gradient(to top, rgba(220, 235, 255, 0.95), rgba(150, 190, 255, 0.4) 45%, transparent);
+  box-shadow: 0 0 10px 2px rgba(140, 180, 255, 0.35);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.mo-ignite-jet.is-up {
+  bottom: 0;
+  transform-origin: 50% 100%;
+}
+
+.mo-ignite-jet.is-down {
+  top: 0;
+  transform-origin: 50% 0;
+  background: linear-gradient(to bottom, rgba(220, 235, 255, 0.95), rgba(150, 190, 255, 0.4) 45%, transparent);
+}
+
+/* Nudos de gas que viajan por los chorros */
+.mo-ignite-knot {
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #eef4ff;
+  box-shadow: 0 0 12px 4px rgba(140, 180, 255, 0.55);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* Viento estelar: un frente suave que se expande y despeja la nube */
+.mo-ignite-wind {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--star-d) * 1.4);
+  height: calc(var(--star-d) * 1.4);
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(circle, transparent 55%, rgba(255, 220, 180, 0.25) 66%, rgba(255, 170, 110, 0.12) 72%, transparent 76%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  will-change: transform, opacity;
 }

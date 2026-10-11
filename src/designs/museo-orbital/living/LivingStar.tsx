@@ -83,6 +83,7 @@ const STAR_FRAGMENT = /* glsl */ `
 uniform float uTime;
 uniform float uIgnite;
 uniform float uFlash;
+uniform vec3 uFlashTint;
 uniform float uDim;
 varying vec3 vObject;
 varying vec3 vViewNormal;
@@ -114,7 +115,8 @@ void main() {
   float limb = 0.3 + 0.7 * pow(mu, 0.55);
   vec3 color = palette(heat) * limb * 1.12;
   color += vec3(1.0, 0.24, 0.05) * pow(1.0 - mu, 2.4) * 0.38;
-  color = mix(color, vec3(1.0, 0.94, 0.86) * 1.5, uFlash);
+  // Al nacer es un disco plano y encandilado que se funde con su superficie
+  color = mix(color, uFlashTint, uFlash);
   gl_FragColor = vec4(color * uIgnite * (1.0 - uDim), 1.0);
 }
 `;
@@ -466,6 +468,10 @@ const buildSwarm = (count: number) => {
 
 const easeOut = (t: number) => 1 - (1 - t) ** 3;
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
+// Color del destello con que nace la estrella
+const FLASH_WHITE = new THREE.Vector3(1.5, 1.41, 1.29);
+// Al nacer de la nebulosa del cierre la estrella tarda esto más en encenderse
+const GENTLE_STRETCH = 2.4;
 // Se infla con un pequeño rebote, como si la presión la empujara de más
 const easeOutBack = (t: number) => 1 + 2.4 * (t - 1) ** 3 + 1.4 * (t - 1) ** 2;
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
@@ -486,7 +492,13 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
   const swarm = useMemo(() => buildSwarm(count), [count]);
 
   // Materiales propios: así los uniforms que se actualizan son los que usa la GPU
-  const starUniforms = useMemo(() => ({ uTime: { value: 0 }, uIgnite: { value: 0 }, uFlash: { value: 0 }, uDim: { value: 0 } }), []);
+  const starUniforms = useMemo(() => ({
+    uTime: { value: 0 },
+    uIgnite: { value: 0 },
+    uFlash: { value: 0 },
+    uFlashTint: { value: FLASH_WHITE.clone() },
+    uDim: { value: 0 },
+  }), []);
   const shellUniforms = useMemo(() => ({
     uBuilt: { value: 0 },
     uWindow: { value: 0.01 },
@@ -645,13 +657,20 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
     const time = state.clock.elapsedTime;
     const scroll = clamp01(layout.current.scroll / Math.max(1, layout.current.height));
 
-    // Ignición: la estrella crece desde el punto de luz con un destello blanco
+    // Ignición: la estrella crece desde el punto de luz con un destello blanco.
+    // Al nacer de la nebulosa del cierre crece más lento, sin rebote ni destello
     const since = livingSignal.ignitedAt ? (now - livingSignal.ignitedAt) / 1000 : -1;
-    const lit = since < 0 ? 0 : easeOut(clamp01(since / 0.7));
-    const flash = since < 0 ? 0 : (1 - clamp01(since / 1.6)) ** 2;
+    const gentle = livingSignal.gentle;
+    const age = since < 0 ? -1 : gentle ? since / GENTLE_STRETCH : since;
+    // Al nacer de la nebulosa empieza como una brasa tenue y se enciende de a poco
+    const lit = age < 0 ? 0 : gentle ? clamp01(since / 2.4) ** 1.5 : easeOut(clamp01(age / 0.7));
+    // Nace encandilada y la luz se funde con su superficie (desde el cierre,
+    // un poco más lento, bajo el resplandor que la cubre)
+    const flash = age < 0 ? 0 : (1 - clamp01(since / (gentle ? 2 : 1.6))) ** 2;
     if (star.current) {
       star.current.visible = since >= 0;
-      star.current.scale.setScalar(since < 0 ? 0.001 : 0.02 + 0.98 * easeOutBack(clamp01(since / 0.95)));
+      const grow = clamp01(age / 0.95);
+      star.current.scale.setScalar(age < 0 ? 0.001 : 0.02 + 0.98 * (gentle ? easeInOut(grow) : easeOutBack(grow)));
       star.current.rotation.y = time * 0.018;
     }
     if (corona.current) {
@@ -664,7 +683,8 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
     // su lugar junto al título (starFrame)
     const home = starFrame(size.width, size.height);
     const born = livingSignal.intro;
-    const glide = since < 0 ? 0 : easeInOut(clamp01((since - 0.55) / 1.45));
+    // Desde el cierre espera en el centro hasta que el viento despeja la nube
+    const glide = age < 0 ? 0 : easeInOut(clamp01(gentle ? (since - 2.7) / 2 : (age - 0.55) / 1.45));
     const frame = {
       x: born.fx * size.width + (home.x - born.fx * size.width) * glide,
       y: born.fy * size.height + (home.y - born.fy * size.height) * glide,
@@ -712,7 +732,7 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
     starUniforms.uIgnite.value = lit;
     starUniforms.uFlash.value = flash;
     coronaUniforms.uTime.value = time;
-    coronaUniforms.uIgnite.value = since < 0 ? 0 : easeOut(clamp01((since - 0.25) / 1.3));
+    coronaUniforms.uIgnite.value = age < 0 ? 0 : easeOut(clamp01((age - 0.25) / 1.3));
     coronaUniforms.uFlareAngle.value = livingSignal.flareAngle;
     coronaUniforms.uFlareAge.value = (now - livingSignal.flareAt) / 1000;
     swarmUniforms.uTime.value = time;

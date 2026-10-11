@@ -15,30 +15,34 @@ import './museumFinale.css';
 const EASE_OUT = cubicBezier(0.16, 1, 0.3, 1);
 // El colapso acelera hacia el final, como una estrella que cede a su peso
 const EASE_COLLAPSE = cubicBezier(0.55, 0, 0.85, 0.35);
+// La caída de vuelta al punto: la misma curva con que la intro lo absorbe todo
+const EASE_SWALLOW = cubicBezier(0.6, 0, 0.98, 0.55);
+const linear = (value: number) => value;
 
 const QUOTE = 'La naturaleza necesitó miles de millones de años para engendrar una mente capaz de comprenderla. Bastó una fracción de ese tiempo para que aquella mente aprendiera a crear otras. Y así, de un universo que nunca supo hacia dónde iba, nació algo capaz de elegir hacia dónde irá.';
 const SIGNATURE = 'ASTROINGENIERÍA — EXPOSICIÓN PERMANENTE · MUSEO ORBITAL · MMXXVI';
 
-/* Guion del cierre sobre el tramo fijo, contraparte de la intro: allí todo
-   cae hacia el punto y estalla en una estrella; aquí la estrella vuelve a
-   encenderse, se enfría y se contrae hasta el punto mientras suelta sus
-   capas hacia afuera, y el disco se desenrolla al revés. Sin estallido:
-   la visita termina en el punto, que es donde empieza. */
+/* Guion del cierre sobre el tramo fijo. Es la primera mitad de la intro y
+   no una animación aparte: un rebote, como un universo cíclico. La estrella
+   vuelve a encenderse y muere: se contrae hasta el punto soltando sus capas
+   y su disco hacia afuera. Llegan a su máximo, se detienen y vuelven a caer
+   hacia el punto, cada vez más rápido. El último scroll lo comprime todo y
+   la intro no repite el colapso: sigue directo con el estallido. */
 const T = {
   quote: [0.03, 0.34],
   signature: [0.34, 0.41],
   copyOut: [0.5, 0.58],
   dotIn: [0.52, 0.58],
   starIn: [0.57, 0.66],
-  collapse: [0.68, 0.88],
-  unwind: [0.66, 0.88],
-  close: [0.8, 0.93],
+  collapse: [0.66, 0.78],
+  release: [0.66, 0.8],
+  fall: [0.83, 0.95],
 } satisfies Record<string, [number, number]>;
-// Capas que la estrella suelta mientras se contrae, escalonadas
+// Capas que la estrella suelta, escalonadas: salen, se detienen y vuelven
 const SHELLS = [
-  { range: [0.69, 0.85], to: 2.3, tone: 'is-warm' },
-  { range: [0.73, 0.89], to: 3.1, tone: 'is-cool' },
-  { range: [0.77, 0.93], to: 4, tone: 'is-warm' },
+  { range: [0.67, 0.79], to: 2.3, fall: [0.83, 0.945], tone: 'is-warm' },
+  { range: [0.7, 0.8], to: 3.1, fall: [0.835, 0.948], tone: 'is-cool' },
+  { range: [0.73, 0.81], to: 4, fall: [0.84, 0.95], tone: 'is-warm' },
 ] as const;
 // Pasado este punto bajando, se vuelve al inicio
 const HOME_AT = 0.95;
@@ -61,21 +65,32 @@ const QuoteSentence = ({
   return <motion.span style={{ opacity, y, filter }}>{text}</motion.span>;
 };
 
-/* Una capa de gas que se separa del borde de la estrella y se aleja */
+/* Una capa de gas que se separa del borde de la estrella, se aleja frenando
+   hasta quedar quieta y después cae de vuelta al punto */
 const Shell = ({
   progress,
   range,
   to,
+  fall,
   tone,
 }: {
   progress: MotionValue<number>;
   range: readonly [number, number];
   to: number;
+  fall: readonly [number, number];
   tone: string;
 }) => {
   const [from, until] = range;
-  const scale = useTransform(progress, [from, until], [0.9, to], { ease: EASE_OUT });
-  const opacity = useTransform(progress, [from, from + 0.025, until], [0, 0.8, 0]);
+  const [drop, gone] = fall;
+  const scale = useTransform(progress, [from, until, drop, gone], [0.9, to, to, 0.03], {
+    ease: [EASE_OUT, linear, EASE_SWALLOW],
+  });
+  // Se apaga al quedar quieta y se aviva al comprimirse
+  const opacity = useTransform(
+    progress,
+    [from, from + 0.025, until, drop, drop + 0.03, gone - 0.008, gone],
+    [0, 0.8, 0.35, 0.35, 0.9, 0.9, 0],
+  );
   return <motion.span className={`mo-finale-shell ${tone}`} style={{ scale, opacity }} />;
 };
 
@@ -102,12 +117,14 @@ export const MuseumFinale = ({
   const copyFilter = useTransform(progress, T.copyOut, ['blur(0px)', 'blur(6px)']);
   const signatureOpacity = useTransform(progress, T.signature, [0, 1]);
 
-  // El punto aparece, se esconde en la estrella y queda como su remanente
+  // El punto aparece, se esconde en la estrella y queda como su remanente.
+  // Al caer todo de vuelta se carga y al final contiene el aliento, igual
+  // que en la intro justo antes del estallido
   const dotOpacity = useTransform(progress, T.dotIn, [0, 1]);
   const dotScale = useTransform(
     progress,
-    [T.dotIn[0], T.dotIn[1], T.collapse[1] - 0.04, T.collapse[1], T.close[1]],
-    [0, 1, 1, 1.9, 1],
+    [T.dotIn[0], T.dotIn[1], T.collapse[1] - 0.04, T.collapse[1], T.collapse[1] + 0.04, T.fall[0], T.fall[1] - 0.015, T.fall[1]],
+    [0, 1, 1, 1.9, 1, 1, 2.6, 0.75],
   );
 
   // La estrella fantasma se abre desde el punto, como en la intro, pero sin
@@ -130,21 +147,32 @@ export const MuseumFinale = ({
     ['blur(6px) saturate(1) brightness(1)', 'blur(0px) saturate(0.1) brightness(2.4)'],
   );
 
-  // El disco de acreción al revés: nace pegado a la estrella y se desenrolla
-  // hacia afuera girando en sentido contrario
-  const swirlScale = useTransform(progress, T.unwind, [0.95, 2.6], { ease: EASE_OUT });
-  const swirlRotate = useTransform(progress, T.unwind, [0, -540]);
+  // El disco de acreción: nace pegado a la estrella y se desenrolla hacia
+  // afuera; se frena, invierte el giro y se enrolla de vuelta hasta el punto
+  const swirlScale = useTransform(progress, [T.release[0], T.release[1], ...T.fall], [0.95, 2.6, 2.6, 0.03], {
+    ease: [EASE_OUT, linear, EASE_SWALLOW],
+  });
+  const swirlRotate = useTransform(progress, [T.release[0], T.release[1], ...T.fall], [0, -540, -570, 540], {
+    ease: [EASE_OUT, linear, EASE_SWALLOW],
+  });
   const swirlOpacity = useTransform(
     progress,
-    [T.unwind[0], T.unwind[0] + 0.04, T.unwind[1] - 0.06, T.unwind[1]],
-    [0, 0.85, 0.5, 0],
+    [T.release[0], T.release[0] + 0.04, T.release[1], T.fall[0], T.fall[0] + 0.03, T.fall[1] - 0.01, T.fall[1]],
+    [0, 0.85, 0.45, 0.45, 0.9, 1, 0],
   );
 
-  // El destello no se dispara: se tiende y se recoge en el punto, un ojo que se cierra
-  const flareScale = useTransform(progress, [T.close[0], T.close[0] + 0.05, T.close[1]], [0, 0.9, 0], {
-    ease: [EASE_OUT, EASE_COLLAPSE],
-  });
-  const flareOpacity = useTransform(progress, [T.close[0], T.close[0] + 0.04, T.close[1]], [0, 0.85, 0.2]);
+  // El destello anamórfico se tiende mientras todo cae y se recoge en el
+  // punto: es el mismo que la intro vuelve a disparar al estallar
+  const flareScale = useTransform(
+    progress,
+    [T.fall[0], T.fall[0] + 0.05, T.fall[1] - 0.012, T.fall[1]],
+    [0, 0.55, 0.95, 0.004],
+  );
+  const flareOpacity = useTransform(
+    progress,
+    [T.fall[0], T.fall[0] + 0.05, T.fall[1] - 0.012, T.fall[1]],
+    [0, 0.7, 1, 0],
+  );
 
   // El cielo se estira hacia atrás mientras la estrella se contrae, y la
   // visita vuelve al inicio al terminar
@@ -153,7 +181,7 @@ export const MuseumFinale = ({
   useMotionValueEvent(scrollYProgress, 'change', (value) => {
     const delta = value - last.current;
     last.current = value;
-    if (value > T.collapse[0] && value < T.close[1] && delta > 0.001) {
+    if (value > T.collapse[0] && value < HOME_AT && delta > 0.001) {
       window.dispatchEvent(
         new CustomEvent('mo-warp', { detail: { strength: Math.min(10, delta * 260), direction: -1 } }),
       );
@@ -224,7 +252,7 @@ export const MuseumFinale = ({
 
         <div className="mo-finale-anchor" aria-hidden="true">
           {SHELLS.map((shell) => (
-            <Shell key={shell.range[0]} progress={progress} range={shell.range} to={shell.to} tone={shell.tone} />
+            <Shell key={shell.range[0]} progress={progress} range={shell.range} to={shell.to} fall={shell.fall} tone={shell.tone} />
           ))}
           <motion.span
             className="mo-finale-swirl"

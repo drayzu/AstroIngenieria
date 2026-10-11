@@ -1,7 +1,7 @@
 /* ============ Cierre del recorrido ============
-   Tramo alto con escenario fijo: la cita final y la contraparte de la
-   intro: la estrella se contrae hasta el punto soltando sus capas, y la
-   visita sigue sin corte en la intro desde ese mismo punto. */
+   Tramo alto con escenario fijo: la cita final y la primera mitad de la
+   intro: la estrella se contrae hasta el punto soltando sus capas, que
+   vuelven a caer en él, y la visita sigue sin corte en el estallido. */
 
 .mo-finale {
   position: relative;
@@ -169,7 +169,7 @@
     inset 0 0 26px 3px rgba(90, 200, 210, 0.12);
 }
 
-/* El disco de acreción de la intro, desenrollándose hacia afuera */
+/* El disco de acreción de la intro: se desenrolla hacia afuera y vuelve */
 .mo-finale-swirl {
   position: absolute;
   left: 0;

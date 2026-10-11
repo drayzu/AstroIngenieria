@@ -63,7 +63,7 @@ import { VerticalRoom } from './VerticalRoom';
 import { TopicHeading } from './TopicHeading';
 import { isCorridor, isVertical, roomFor } from './salaRooms';
 import { useVelocityWarp } from './useVelocityWarp';
-import { HeroIgnition, releaseBootScreen, shouldPlayIntro, type IntroPhase } from './HeroIgnition';
+import { HeroIgnition, introSeam, releaseBootScreen, shouldPlayIntro, type IntroPhase } from './HeroIgnition';
 import { FINALE_REST, MuseumFinale } from './MuseumFinale';
 import { isLivingHero, livingSignal } from './living/livingHero';
 import { DysonPlate } from './living/DysonPlate';
@@ -3592,15 +3592,17 @@ export default function MuseoOrbital() {
   // La velocidad del scroll estira las obras y deja atrás sus marcos
   useVelocityWarp(rootRef, Boolean(reduced));
 
-  // Desde el cierre, costura invisible: el cierre termina con el cielo y un
-  // punto de luz en el centro, que es justo el primer cuadro de la intro.
-  // Se salta a la portada y la intro se monta en ese mismo cuadro, así que
-  // el recorrido sigue sin corte y la estrella vuelve a encenderse.
+  // Desde el cierre, costura invisible: el cierre termina con todo comprimido
+  // en un punto de luz en el centro, que es el instante previo al estallido
+  // de la intro. Se salta a la portada y la intro sigue desde ahí, sin
+  // repetir el colapso: el recorrido es un solo ciclo y la estrella renace.
   const returnToStart = useCallback(() => {
     const root = rootRef.current;
     if (!root) return;
     jumpScroll(root, 0);
-    if (!reduced) window.dispatchEvent(new CustomEvent('mo-replay-intro'));
+    if (reduced) return;
+    introSeam.fromFinale = true;
+    window.dispatchEvent(new CustomEvent('mo-replay-intro'));
   }, [reduced]);
 
   const openJourneyConcept = useCallback((concept: AstroConcept) => {

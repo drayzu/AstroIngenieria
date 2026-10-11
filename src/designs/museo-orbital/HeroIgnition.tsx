@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type RefObject } from 'react';
+import { useLayoutEffect, useRef, type CSSProperties, type RefObject } from 'react';
 import { animate, type AnimationPlaybackControls } from 'framer-motion';
 import { lockSmoothScroll } from '../shared/smoothScroll';
 import { livingSignal, starFrame } from './living/livingHero';
@@ -55,6 +55,14 @@ export const releaseBootScreen = (fadeMs = 0) => {
   window.setTimeout(() => boot.remove(), fadeMs);
 };
 
+/* El cierre ya hizo la muerte de la estrella y la caída del gas al punto: al
+   volver desde él la intro no repite el colapso ni estalla. La estrella nace
+   de esa nebulosa como nacen de verdad: el gas forma un disco que gira
+   alrededor del punto, la protoestrella dispara dos chorros por sus polos y,
+   al encenderse la fusión, su viento despeja la nube. Una sola explosión en
+   todo el ciclo, la de la muerte. */
+export const introSeam = { fromFinale: false };
+
 const dispatchWarp = (strength: number) =>
   window.dispatchEvent(new CustomEvent('mo-warp', { detail: { strength, direction: 1 } }));
 
@@ -63,6 +71,46 @@ const dispatchWarp = (strength: number) =>
    estalla con onda de choque y rayos, y la escena la lleva después a su
    lugar junto al título. */
 const LIVING_IGNITE_MIN = 2.05;
+// Pseudoazar con semilla: los rayos y las chispas son iguales en cada visita
+const seeded = (seed: number) => {
+  const value = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
+  return value - Math.floor(value);
+};
+
+/* Rayos del estallido: haces irregulares, cada uno con su ángulo, grosor,
+   brillo y tono, con bordes suaves (un degradado cónico armado a mano) */
+const RAY_COUNT = 46;
+const RAYS_GRADIENT = (() => {
+  const step = 360 / RAY_COUNT;
+  const stops = Array.from({ length: RAY_COUNT }, (_, index) => {
+    const angle = index * step + (seeded(index + 3) - 0.5) * step * 0.7;
+    const width = 0.5 + seeded(index + 17) ** 2 * 2.4;
+    const alpha = 0.25 + seeded(index + 29) * 0.7;
+    const color = seeded(index + 41) > 0.6 ? `rgba(255, 168, 112, ${alpha.toFixed(2)})` : `rgba(255, 222, 186, ${alpha.toFixed(2)})`;
+    return `transparent ${(angle - width).toFixed(2)}deg, ${color} ${angle.toFixed(2)}deg, transparent ${(angle + width).toFixed(2)}deg`;
+  });
+  return `conic-gradient(from 0deg, ${stops.join(', ')})`;
+})();
+
+/* Chispas: vetas de luz que salen disparadas desde el borde de la estrella a
+   distintas velocidades y se frenan al alejarse */
+const SPARKS = Array.from({ length: 40 }, (_, index) => ({
+  angle: (index / 40) * 360 + (seeded(index + 53) - 0.5) * 9,
+  reach: 1.6 + seeded(index + 61) * 2.6,
+  length: 30 + seeded(index + 73) * 120,
+  duration: 0.75 + seeded(index + 89) * 0.75,
+  delay: seeded(index + 97) * 0.14,
+  warm: seeded(index + 101) > 0.55,
+}));
+
+// Desde el cierre: lo que tarda el punto en calentarse antes de encenderse
+const GENTLE_WARM = 0.9;
+// Desde el encendido, cuándo nace la estrella bajo el resplandor ya alto
+const GENTLE_GLOW = 0.35;
+// Desde el encendido, cuándo el viento estelar despeja la nube
+const GENTLE_WIND = 1.3;
+// Y cuánto tiene que estar quieta la rueda para devolver el scroll
+const WHEEL_CALM_MS = 450;
 // Todo cae hacia el punto acelerando, como absorbido
 const EASE_SWALLOW = [0.6, 0, 0.98, 0.55] as const;
 
@@ -87,8 +135,13 @@ export const HeroIgnition = ({
   const implodeEchoRef = useRef<HTMLSpanElement>(null);
   const swirlRef = useRef<HTMLSpanElement>(null);
   const raysRef = useRef<HTMLSpanElement>(null);
+  const sparksRef = useRef<HTMLSpanElement>(null);
   const redRef = useRef<HTMLSpanElement>(null);
   const blueRef = useRef<HTMLSpanElement>(null);
+  const cloudRef = useRef<HTMLSpanElement>(null);
+  const diskRef = useRef<HTMLSpanElement>(null);
+  const jetsRef = useRef<HTMLSpanElement>(null);
+  const windRef = useRef<HTMLSpanElement>(null);
 
   // Layout effect: el punto de React se pinta en el mismo cuadro en que se
   // retira el de index.html, sin parpadeo entre ambos.
@@ -107,9 +160,14 @@ export const HeroIgnition = ({
     const implodeEcho = implodeEchoRef.current;
     const swirl = swirlRef.current;
     const rays = raysRef.current;
+    const sparks = sparksRef.current;
     const red = redRef.current;
     const blue = blueRef.current;
-    if (!hero || !bg || !layer || !dot || !flare || !ring || !echo || !flash || !implode || !implodeEcho || !swirl || !rays || !red || !blue) {
+    const cloud = cloudRef.current;
+    const disk = diskRef.current;
+    const jets = jetsRef.current;
+    const wind = windRef.current;
+    if (!sparks || !cloud || !disk || !jets || !wind || !hero || !bg || !layer || !dot || !flare || !ring || !echo || !flash || !implode || !implodeEcho || !swirl || !rays || !red || !blue) {
       releaseBootScreen();
       onPhase('off');
       return;
@@ -161,6 +219,8 @@ export const HeroIgnition = ({
     const bootY = window.innerHeight * 0.5;
     dot.style.transform = `translateX(${bootX}px) translateY(${bootY}px)`;
     releaseBootScreen();
+    // Se borra al terminar y no aquí: en desarrollo el efecto corre dos veces
+    const fromFinale = introSeam.fromFinale && living;
 
     const controls: AnimationPlaybackControls[] = [];
     const timers: number[] = [];
@@ -171,8 +231,22 @@ export const HeroIgnition = ({
     let ignited = false;
     let finished = false;
     let cancelled = false;
-    // Hasta la ignición el scroll con inercia queda detenido
+    // Hasta la ignición el scroll con inercia queda detenido (desde el cierre,
+    // hasta que la estrella termina de nacer)
+    let scrollFree = false;
+    let lastWheel = 0;
     lockSmoothScroll('intro', true);
+    const releaseScroll = () => {
+      scrollFree = true;
+      lockSmoothScroll('intro', false);
+    };
+    // Quien llega bajando desde el cierre sigue girando la rueda (o arrastra la
+    // inercia del trackpad): el scroll se libera solo cuando la rueda se calma
+    const releaseWhenStill = () => {
+      if (cancelled || scrollFree) return;
+      if (performance.now() - lastWheel > WHEEL_CALM_MS) releaseScroll();
+      else later(releaseWhenStill, 0.15);
+    };
 
     const clearIris = () => {
       hero.style.removeProperty('--ignite-r');
@@ -182,22 +256,37 @@ export const HeroIgnition = ({
     const finish = () => {
       if (finished) return;
       finished = true;
+      introSeam.fromFinale = false;
       onPhase('off');
     };
 
-    // Llegada desde el hiperespacio: el cielo entra estirado y frena
-    dispatchWarp(40);
-    later(() => dispatchWarp(30), 0.16);
-    later(() => dispatchWarp(22), 0.32);
-    later(() => dispatchWarp(12), 0.5);
-
-    run(animate(dot, { x: [bootX, sx], y: [bootY, sy] }, { duration: T.glide, ease: EASE_OUT }));
     let held: AnimationPlaybackControls | null = null;
+    if (fromFinale) {
+      // Desde el cierre todo ya cayó al punto: queda contenido un instante
+      run(animate(dot, { x: sx, y: sy, scale: 0.75 }, { duration: 0 }));
+    } else {
+      // Llegada desde el hiperespacio: el cielo entra estirado y frena
+      dispatchWarp(40);
+      later(() => dispatchWarp(30), 0.16);
+      later(() => dispatchWarp(22), 0.32);
+      later(() => dispatchWarp(12), 0.5);
+      run(animate(dot, { x: [bootX, sx], y: [bootY, sy] }, { duration: T.glide, ease: EASE_OUT }));
+    }
     // El estallido espera a que el colapso termine de verdad: si la escena
     // tarda en compilar, las animaciones arrancan tarde y un reloj fijo
     // haría estallar la estrella con los anillos a medio cerrar
     let gathered: Promise<unknown> = Promise.resolve();
-    if (living) {
+    if (fromFinale) {
+      // El texto de la portada espera a que la estrella termine de nacer
+      hero.setAttribute('data-birth', '');
+      // El gas que cayó queda girando en un disco alrededor del punto, dentro
+      // de una nube tenue, mientras el punto se calienta
+      run(animate(cloud, { opacity: [0, 0.9], scale: [1.3, 1] }, { duration: GENTLE_WARM, ease: EASE_OUT }));
+      run(animate(disk, { opacity: [0, 1], scale: [1.5, 0.85] }, { duration: GENTLE_WARM + 0.1, ease: EASE_OUT }));
+      const warm = animate(dot, { scale: [0.75, 1.8] }, { duration: GENTLE_WARM, ease: 'easeIn' });
+      run(warm);
+      gathered = warm.then(() => undefined);
+    } else if (living) {
       // Colapso: el disco de acreción y los anillos se cierran hasta
       // desaparecer dentro del punto, cada vez más rápido; el latido se
       // acelera con ellos y al final el punto se contrae: contiene el aliento
@@ -221,8 +310,47 @@ export const HeroIgnition = ({
     const ignite = () => {
       if (ignited || finished) return;
       ignited = true;
-      lockSmoothScroll('intro', false);
+      if (!fromFinale) releaseScroll();
       onPhase('reveal');
+      livingSignal.gentle = fromFinale;
+      if (fromFinale) {
+        // Nace la protoestrella bajo un resplandor: la luz sube primero y la
+        // estrella aparece debajo, así nunca se la ve surgir de golpe; después
+        // dispara sus chorros por los polos, con nudos de gas que se alejan
+        run(animate(flash, { opacity: [0, 0.8, 0] }, { duration: 2.4, times: [0, 0.22, 1], ease: 'easeInOut' }));
+        later(() => { livingSignal.ignitedAt = performance.now(); }, GENTLE_GLOW);
+        // La mitad lejana del disco se abre alrededor de la estrella mientras crece
+        run(animate(0, starR / 0.85, {
+          duration: 2.3,
+          ease: 'easeInOut',
+          onUpdate: (value) => disk.style.setProperty('--hole', `${value.toFixed(1)}px`),
+        }));
+        // La estrella ilumina el gas que la rodea al encenderse
+        run(animate([disk, cloud], { filter: ['brightness(0.75)', 'brightness(1.6) saturate(1.15)'] }, { duration: GENTLE_WIND, ease: 'easeIn' }));
+        run(animate([implode, implodeEcho, swirl, flare], { opacity: 0 }, { duration: 0.12 }));
+        run(animate(dot, { scale: 3.2, opacity: 0 }, { duration: 1.4, ease: EASE_OUT }));
+        const reach = window.innerHeight * 0.4;
+        jets.querySelectorAll<HTMLElement>('.mo-ignite-jet').forEach((jet) => {
+          run(animate(jet, { scaleY: [0, 1], opacity: [0, 1, 0.8] }, { duration: 0.6, ease: EASE_OUT }));
+        });
+        jets.querySelectorAll<HTMLElement>('.mo-ignite-knot').forEach((knot, index) => {
+          const side = index % 2 ? 1 : -1;
+          run(animate(knot, { y: [0, side * reach], opacity: [0, 1, 0] }, { duration: 1.7, delay: 0.15 + Math.floor(index / 2) * 0.4, ease: 'easeOut' }));
+        });
+        run(animate(jets, { opacity: [1, 0] }, { duration: 1, delay: 1.7 }));
+        // Al encenderse la fusión el viento estelar despeja la nube y el disco
+        run(animate(wind, { scale: [0.5, 3], opacity: [0, 0.55, 0] }, { duration: 1.9, delay: GENTLE_WIND, ease: EASE_OUT }));
+        run(animate(cloud, { opacity: 0, scale: 1.7 }, { duration: 1.5, delay: GENTLE_WIND, ease: EASE_OUT }));
+        run(animate(disk, { opacity: 0, scale: 1.5 }, { duration: 1.2, delay: GENTLE_WIND + 0.1, ease: EASE_OUT }));
+        later(() => {
+          hero.removeAttribute('data-birth');
+          hero.setAttribute('data-born', '');
+        }, 2.6);
+        later(() => onPhase('chrome'), 3.2);
+        later(releaseWhenStill, 3.4);
+        later(finish, 5.2);
+        return;
+      }
       if (living) {
         // Estalla: la escena infla la estrella, la onda de choque se separa en
         // colores, los rayos se abren y el cielo sale empujado
@@ -231,7 +359,16 @@ export const HeroIgnition = ({
         later(() => dispatchWarp(24), 0.18);
         held?.stop();
         run(animate([implode, implodeEcho, swirl], { opacity: 0 }, { duration: 0.12 }));
-        run(animate(rays, { scale: [0.35, 2.4], opacity: [0, 0.9, 0], rotate: [0, 14] }, { duration: 1.1, times: [0, 0.18, 1], ease: EASE_OUT }));
+        run(animate(rays, { scale: [0.35, 2.4], opacity: [0, 1, 0], rotate: [0, 14] }, { duration: 1.3, times: [0, 0.14, 1], ease: EASE_OUT }));
+        // Las chispas salen del borde de la estrella y se frenan al alejarse
+        sparks.querySelectorAll<HTMLElement>('.mo-ignite-spark').forEach((spark, index) => {
+          const { reach, duration, delay } = SPARKS[index];
+          run(animate(spark, {
+            x: [starR * 0.85, starR * reach],
+            scaleX: [0.15, 1, 0.35],
+            opacity: [0, 1, 0],
+          }, { duration, delay, ease: EASE_OUT, opacity: { duration, delay, times: [0, 0.12, 1] }, scaleX: { duration, delay, times: [0, 0.25, 1] } }));
+        });
         run(animate(red, { scale: [0.15, 3.1], opacity: [0.8, 0] }, { duration: 1.5, delay: 0.03, ease: EASE_OUT }));
         run(animate(blue, { scale: [0.15, 2.85], opacity: [0.8, 0] }, { duration: 1.5, delay: 0.07, ease: EASE_OUT }));
         run(animate(ring, { scale: [0.15, 3], opacity: [1, 0] }, { duration: 1.5, ease: EASE_OUT }));
@@ -262,9 +399,11 @@ export const HeroIgnition = ({
           document.fonts.load('1em "Space Grotesk Variable"'),
         ]).catch(() => undefined)
       : Promise.resolve();
-    const minWait = new Promise<void>((resolve) => later(resolve, living ? LIVING_IGNITE_MIN : T.igniteMin));
+    const minWait = new Promise<void>((resolve) => later(resolve, fromFinale ? GENTLE_WARM : living ? LIVING_IGNITE_MIN : T.igniteMin));
     const maxWait = new Promise<void>((resolve) => later(resolve, T.igniteMax));
-    void Promise.race([Promise.all([preload(), fontsReady, minWait, gathered]), maxWait]).then(() => {
+    // Desde el cierre la escena y las fuentes ya están cargadas: no se esperan
+    const ready = fromFinale ? Promise.all([minWait, gathered]) : Promise.all([preload(), fontsReady, minWait, gathered]);
+    void Promise.race([ready, maxWait]).then(() => {
       if (!cancelled) ignite();
     });
 
@@ -275,12 +414,15 @@ export const HeroIgnition = ({
       held?.stop();
       timers.forEach((timer) => window.clearTimeout(timer));
       timers.length = 0;
+      releaseScroll();
       if (!ignited) {
         ignited = true;
-        lockSmoothScroll('intro', false);
         onPhase('reveal');
         // Saltada: la estrella aparece ya en su lugar
-        if (living) livingSignal.ignitedAt = performance.now() - 3000;
+        if (living) {
+          livingSignal.gentle = false;
+          livingSignal.ignitedAt = performance.now() - 3000;
+        }
       }
       if (!living) run(animate(radius, coverR, { duration: 0.45, ease: EASE_OUT, onUpdate: setRadius }));
       run(animate(layer, { opacity: 0 }, { duration: 0.25 }));
@@ -291,7 +433,8 @@ export const HeroIgnition = ({
     // arrastra el hero ni rompe la escena
     const scrollKeys = new Set([' ', 'PageDown', 'PageUp', 'ArrowDown', 'ArrowUp', 'Home', 'End']);
     const blockScroll = (event: Event) => {
-      if (!ignited) event.preventDefault();
+      lastWheel = performance.now();
+      if (!scrollFree) event.preventDefault();
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -299,7 +442,7 @@ export const HeroIgnition = ({
         return;
       }
       if (event.target instanceof HTMLElement && event.target.closest('button, input, textarea, select')) return;
-      if (!ignited && scrollKeys.has(event.key)) event.preventDefault();
+      if (!scrollFree && scrollKeys.has(event.key)) event.preventDefault();
     };
     window.addEventListener('wheel', blockScroll, { passive: false });
     window.addEventListener('touchmove', blockScroll, { passive: false });
@@ -307,6 +450,8 @@ export const HeroIgnition = ({
 
     return () => {
       cancelled = true;
+      hero.removeAttribute('data-birth');
+      hero.removeAttribute('data-born');
       lockSmoothScroll('intro', false);
       window.removeEventListener('wheel', blockScroll);
       window.removeEventListener('touchmove', blockScroll);
@@ -327,10 +472,41 @@ export const HeroIgnition = ({
         <span ref={echoRef} className="mo-ignite-ring is-echo" />
         <span ref={redRef} className="mo-ignite-ring is-red" />
         <span ref={blueRef} className="mo-ignite-ring is-blue" />
-        <span ref={raysRef} className="mo-ignite-rays" />
+        <span ref={raysRef} className="mo-ignite-rays" style={{ '--rays': RAYS_GRADIENT } as CSSProperties} />
+        <span ref={sparksRef} className="mo-ignite-sparks">
+          {SPARKS.map((spark, index) => (
+            <span key={index} className="mo-ignite-spark-arm" style={{ rotate: `${spark.angle.toFixed(1)}deg` }}>
+              <span
+                className={`mo-ignite-spark${spark.warm ? ' is-warm' : ''}`}
+                style={{ width: `${spark.length.toFixed(0)}px` }}
+              />
+            </span>
+          ))}
+        </span>
         <span ref={swirlRef} className="mo-ignite-swirl" />
         <span ref={implodeRef} className="mo-ignite-implode" />
         <span ref={implodeEchoRef} className="mo-ignite-implode is-echo" />
+        {/* Nacimiento desde el cierre: nube, disco, chorros y viento */}
+        <span ref={cloudRef} className="mo-ignite-cloud" />
+        {/* El disco en dos mitades: la lejana deja ver la estrella y la
+            cercana le pasa por delante, así la estrella queda dentro de él */}
+        <span ref={diskRef} className="mo-ignite-disk">
+          {(['is-back', 'is-front'] as const).map((half) => (
+            <span key={half} className={`mo-ignite-disk-half ${half}`}>
+              <span className="mo-ignite-disk-plane">
+                <span className="mo-ignite-disk-clip">
+                  <span className="mo-ignite-disk-spin" />
+                </span>
+              </span>
+            </span>
+          ))}
+        </span>
+        <span ref={jetsRef} className="mo-ignite-jets">
+          <span className="mo-ignite-jet is-up" />
+          <span className="mo-ignite-jet is-down" />
+          {[0, 1, 2, 3, 4, 5].map((knot) => <span key={knot} className="mo-ignite-knot" />)}
+        </span>
+        <span ref={windRef} className="mo-ignite-wind" />
       </span>
       <span ref={dotRef} className="mo-ignite-dot" />
     </div>
