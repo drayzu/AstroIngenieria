@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useMotionValueEvent, useTransform, type MotionValue } from 'framer-motion';
+import { CHASE, drawChase } from './propulsionChase';
 
 /* Viajes de los portales: cada capítulo abre su ventana de una forma
    distinta, siempre con trazos finos de luz. Comparten el mismo guion:
@@ -40,6 +41,8 @@ export const journeyFor = (chapterId: string): JourneyKind => JOURNEYS[chapterId
    La señal alarga las vueltas de búsqueda del radar y el mensaje */
 interface JourneyHold { range: [number, number]; extra: number }
 const JOURNEY_HOLDS: Partial<Record<JourneyKind, JourneyHold[]>> = {
+  // La persecución: rodear la nave, acelerar y el salto
+  tunnel: [{ range: [0.03, 0.27], extra: 80 }],
   signal: [
     { range: [0.03, 0.17], extra: 170 },
     { range: [0.18, 0.32], extra: 70 },
@@ -95,6 +98,12 @@ const toPx = ({ min, max }: RadiusParts) => {
   const height = window.innerHeight;
   return (min * Math.min(width, height) + max * Math.max(width, height)) / 100;
 };
+
+/* Propulsión: la ventana se abre donde la nave se pierde en el punto de fuga */
+const chaseParts = (p: number): RadiusParts => ({
+  min: 30 * easeOut(seg(p, CHASE.open)),
+  max: 76 * easeInOut(seg(p, JOURNEY_COVER)),
+});
 
 /* Enjambre de Dyson: los paneles se ensamblan alrededor de la estrella y
    solo después, con la luz ya capturada, se abre la ventana */
@@ -181,6 +190,8 @@ export const journeyClip = (kind: JourneyKind, p: number): string => {
       return `circle(${collapseRadius(p)} at 50% 50%)`;
     case 'dyson':
       return `circle(${cssRadius(dysonParts(p))} at 50% 50%)`;
+    case 'tunnel':
+      return `circle(${cssRadius(chaseParts(p))} at 50% 50%)`;
     case 'signal':
       return `circle(${cssRadius(signalParts(p))} at 50% 50%)`;
     default:
@@ -752,74 +763,59 @@ const DysonEclipse = ({ progress }: { progress: MotionValue<number> }) => {
   );
 };
 
-/* ---------------- Hiperespacio: las estrellas se estiran en estelas ---------------- */
+/* ---------------- Propulsión: seguimos a la nave hasta la luz ---------------- */
 
-const WARP_STREAKS = Array.from({ length: 110 }, (_, index) => ({
-  angle: seeded(index + 501) * Math.PI * 2,
-  phase: seeded(index + 777),
-  speed: 0.75 + seeded(index + 913) * 0.6,
-  width: 0.12 + seeded(index + 1201) * 0.22,
-}));
+const accentRgb = (element: Element | null) => {
+  const value = element ? getComputedStyle(element).getPropertyValue('--accent').trim() : '';
+  const hex = value.replace('#', '');
+  if (!/^[0-9a-f]{6}$/i.test(hex)) return [32, 214, 199];
+  return [0, 2, 4].map((at) => parseInt(hex.slice(at, at + 2), 16));
+};
 
-const WarpTunnel = ({ progress }: { progress: MotionValue<number> }) => {
-  const lineRefs = useRef<(SVGLineElement | null)[]>([]);
-
-  // Al principio son estrellas que se alejan despacio del centro; con el
-  // scroll el salto acelera y cada una se estira en una estela larga
-  const place = (p: number) => {
-    const envelope =
-      seg(p, [JOURNEY_OPEN[0], JOURNEY_OPEN[0] + 0.06]) * (1 - seg(p, [JOURNEY_COVER[0], JOURNEY_COVER[0] + 0.14]));
-    const jump = easeInOut(seg(p, [JOURNEY_OPEN[0] + 0.04, JOURNEY_COVER[0]]));
-    // Las estelas nacen en el borde de la ventana: rodean la imagen sin cruzarla
-    const vmin = Math.min(window.innerWidth, window.innerHeight) / 100;
-    const vmax = Math.max(window.innerWidth, window.innerHeight) / 100;
-    const unit = Math.min(150 * vmax, 2200) / 200;
-    const windowMin = 0.7 + 29.3 * easeOut(seg(p, JOURNEY_OPEN));
-    const windowMax = 76 * easeInOut(seg(p, JOURNEY_COVER));
-    const inner = Math.max(10, (windowMin * vmin + windowMax * vmax) / unit + 2);
-    WARP_STREAKS.forEach((streak, index) => {
-      const line = lineRefs.current[index];
-      if (!line) return;
-      const travel = (streak.phase + p * streak.speed * (2.2 + jump * 3)) % 1;
-      // Perspectiva: cerca del centro avanzan lento, en los bordes salen disparadas
-      const near = inner + 140 * travel ** 2.4;
-      const length = (0.6 + jump * 46) * (0.25 + travel) * streak.speed;
-      const far = near + length;
-      const cos = Math.cos(streak.angle);
-      const sin = Math.sin(streak.angle);
-      line.setAttribute('x1', (cos * near).toFixed(2));
-      line.setAttribute('y1', (sin * near).toFixed(2));
-      line.setAttribute('x2', (cos * far).toFixed(2));
-      line.setAttribute('y2', (sin * far).toFixed(2));
-      line.setAttribute('stroke-width', (streak.width * (0.5 + travel * 1.1)).toFixed(3));
-      line.setAttribute('opacity', (Math.sin(Math.PI * travel) * envelope).toFixed(3));
-    });
-  };
-  useMotionValueEvent(progress, 'change', place);
-  useEffect(() => place(progress.get()));
-
-  return (
-    <svg className="mo-journey-tunnel" viewBox="-100 -100 200 200" aria-hidden="true">
-      <defs>
-        {/* Corrimiento Doppler: azul hacia donde vas, rojo en lo que queda atrás */}
-        <radialGradient id="mo-warp-doppler" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="120">
-          <stop offset="0.1" stopColor="#cfe6ff" stopOpacity="0" />
-          <stop offset="0.22" stopColor="#e4f1ff" stopOpacity="0.95" />
-          <stop offset="0.5" style={{ stopColor: 'var(--accent, #7aa7ff)' }} stopOpacity="0.9" />
-          <stop offset="0.85" stopColor="#ff9a7a" stopOpacity="0.55" />
-          <stop offset="1" stopColor="#ff6a5a" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      {WARP_STREAKS.map((_, index) => (
-        <line
-          key={index}
-          ref={(element) => {
-            lineRefs.current[index] = element;
-          }}
-        />
-      ))}
-    </svg>
+const PropulsionChase = ({ progress }: { progress: MotionValue<number> }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const size = useRef({ width: 1, height: 1, ratio: 1 });
+  const tint = useRef<number[]>([84, 160, 255]);
+  const opacity = useTransform(
+    progress,
+    [JOURNEY_OPEN[0], JOURNEY_OPEN[0] + 0.03, JOURNEY_COVER[0] + 0.08, JOURNEY_COVER[0] + 0.18],
+    [0, 1, 1, 0],
   );
+
+  const draw = useCallback((p: number) => {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext('2d');
+    if (!canvas || !context) return;
+    const { width, height, ratio } = size.current;
+
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    if (p > JOURNEY_COVER[0] + 0.18 || p < JOURNEY_OPEN[0]) return;
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    const opening = seg(p, CHASE.open) > 0 ? toPx(chaseParts(p)) : 0;
+    drawChase(context, p, width, height, tint.current, opening);
+  }, []);
+
+  useMotionValueEvent(progress, 'change', draw);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    tint.current = accentRgb(canvas);
+    const measure = () => {
+      const width = canvas.clientWidth || 1;
+      const height = canvas.clientHeight || 1;
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      size.current = { width, height, ratio };
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+      draw(progress.get());
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [progress, draw]);
+
+  return <motion.canvas ref={canvasRef} className="mo-journey-stage is-chase" style={{ opacity }} aria-hidden="true" />;
 };
 
 /* ---------------- Señal: un radar que escucha radio hasta encontrar a alguien ---------------- */
@@ -1510,12 +1506,7 @@ export const JourneyOverlay = ({
     case 'starburst':
       return <BlackHole progress={progress} />;
     case 'tunnel':
-      return (
-        <>
-          <IrisRing progress={progress} />
-          <WarpTunnel progress={progress} />
-        </>
-      );
+      return <PropulsionChase progress={progress} />;
     case 'galaxy':
       return <Galaxy progress={progress} />;
     case 'signal':

@@ -193,8 +193,7 @@
   stroke-width: 18;
 }
 
-/* Túnel y galaxia: dibujos centrados que escalan */
-.mo-journey-tunnel,
+/* Galaxia: un dibujo centrado que escala */
 .mo-journey-galaxy {
   position: absolute;
   left: 50%;
@@ -308,17 +307,6 @@
 
 .mo-journey-stage.is-dyson .is-hidden {
   opacity: 0;
-}
-
-/* Hiperespacio: estelas que nacen cerca del centro y salen disparadas */
-.mo-journey-tunnel {
-  width: min(150vmax, 2200px);
-  height: min(150vmax, 2200px);
-}
-
-.mo-journey-tunnel line {
-  stroke: url(#mo-warp-doppler);
-  stroke-linecap: round;
 }
 
 /* Señal: un radar rodea la ventana. El centro queda libre para el mensaje

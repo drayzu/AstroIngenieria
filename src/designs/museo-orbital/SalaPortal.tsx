@@ -51,6 +51,8 @@ const T = {
 const LATE_NUMBER: Partial<Record<JourneyKind, { in: [number, number]; fill: [number, number]; from?: number }>> = {
   collapse: { in: [0.22, 0.32], fill: [0.25, 0.34] },
   signal: { in: [0.29, 0.31], fill: [0.29, 0.315], from: 1 },
+  // En la persecución, desde el punto de fuga donde se perdió la nave
+  tunnel: { in: [0.26, 0.3], fill: [0.27, 0.31], from: 0.15 },
 };
 
 /* ---------------- Palabra del título, revelada por scroll ---------------- */
