@@ -514,7 +514,8 @@ const Hero = memo(({
     return () => window.clearTimeout(timeout);
   }, [heroOrder, heroPosition, heroVisible, introPhase, living, pageVisible, playgroundEntryState, reduced, showHeroAt]);
 
-  // Estrella viva: las pistas del cielo solo aparecen si el visitante se queda quieto
+  // Estrella viva: la pista del cielo aparece si el visitante se queda quieto
+  // y se retira para siempre en cuanto toca o baja
   useEffect(() => {
     const hero = heroRef.current;
     if (!living || !hero || introPhase !== 'off') return;
@@ -524,14 +525,25 @@ const Hero = memo(({
       window.clearTimeout(timer);
       timer = window.setTimeout(() => hero.classList.add('is-idle'), 6_000);
     };
-    wake();
-    window.addEventListener('pointermove', wake, { passive: true });
-    window.addEventListener('pointerdown', wake, { passive: true });
-    return () => {
+    const dismiss = () => {
+      hero.classList.remove('is-idle');
+      hero.classList.add('is-hint-done');
+      stop();
+    };
+    const stop = () => {
       window.clearTimeout(timer);
       window.removeEventListener('pointermove', wake);
-      window.removeEventListener('pointerdown', wake);
+      window.removeEventListener('pointerdown', dismiss);
+      window.removeEventListener('wheel', dismiss);
+      window.removeEventListener('keydown', dismiss);
     };
+    if (hero.classList.contains('is-hint-done')) return;
+    wake();
+    window.addEventListener('pointermove', wake, { passive: true });
+    window.addEventListener('pointerdown', dismiss, { passive: true });
+    window.addEventListener('wheel', dismiss, { passive: true });
+    window.addEventListener('keydown', dismiss);
+    return stop;
   }, [heroRef, introPhase, living]);
 
   useEffect(() => {
@@ -1635,20 +1647,31 @@ const Hero = memo(({
           animate={revealed ? { opacity: 1 } : { opacity: 0, transition: { duration: 0 } }}
           transition={{ delay: reduced ? 0 : 2.8, duration: 1 }}
         >
-          <span className="mo-sky-action">
-            <kbd className="mo-sky-key is-pulse">{t("clic mantenido")}</kbd>
-            <span>{t("supernova")}</span>
-          </span>
-          <i className="mo-sky-sep" aria-hidden="true" />
-          <span className="mo-sky-action">
-            <kbd className="mo-sky-key is-pulse is-step-2">{t("clic + arrastre")}</kbd>
-            <span>{t("meteorito")}</span>
-          </span>
-          <i className="mo-sky-sep" aria-hidden="true" />
-          <span className="mo-sky-action">
-            <kbd className="mo-sky-key is-pulse is-step-3">{t("shift + clic")}</kbd>
-            <span>{t("constelación")}</span>
-          </span>
+          {living ? (
+            <>
+              <em className="mo-sky-lead">{t("El cielo responde")}</em>
+              <span className="mo-sky-quiet">
+                {t("mantén")} <b>·</b> {t("arrastra")} <b>·</b> shift + {t("clic")}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="mo-sky-action">
+                <kbd className="mo-sky-key is-pulse">{t("clic mantenido")}</kbd>
+                <span>{t("supernova")}</span>
+              </span>
+              <i className="mo-sky-sep" aria-hidden="true" />
+              <span className="mo-sky-action">
+                <kbd className="mo-sky-key is-pulse is-step-2">{t("clic + arrastre")}</kbd>
+                <span>{t("meteorito")}</span>
+              </span>
+              <i className="mo-sky-sep" aria-hidden="true" />
+              <span className="mo-sky-action">
+                <kbd className="mo-sky-key is-pulse is-step-3">{t("shift + clic")}</kbd>
+                <span>{t("constelación")}</span>
+              </span>
+            </>
+          )}
         </motion.span>
       </div>
     </section>
