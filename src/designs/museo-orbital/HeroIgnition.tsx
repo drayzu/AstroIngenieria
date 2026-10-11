@@ -62,7 +62,9 @@ const dispatchWarp = (strength: number) =>
    pantalla: el punto colapsa (disco de acreción y anillos que se cierran),
    estalla con onda de choque y rayos, y la escena la lleva después a su
    lugar junto al título. */
-const LIVING_IGNITE_MIN = 1.95;
+const LIVING_IGNITE_MIN = 2.05;
+// Todo cae hacia el punto acelerando, como absorbido
+const EASE_SWALLOW = [0.6, 0, 0.98, 0.55] as const;
 
 export const HeroIgnition = ({
   heroRef,
@@ -121,7 +123,7 @@ export const HeroIgnition = ({
     if (living) {
       // Nace en el centro, donde aparece el punto de arranque, algo más grande
       lx = rect.width / 2;
-      ly = (window.innerHeight - 46) * 0.4675 - rect.top;
+      ly = window.innerHeight * 0.5 - rect.top;
       starR = starFrame(rect.width, rect.height).r * 1.12;
       livingSignal.intro = { fx: lx / rect.width, fy: ly / rect.height, fr: starR / rect.height };
       livingSignal.ignitedAt = 0;
@@ -156,7 +158,7 @@ export const HeroIgnition = ({
 
     // El punto nace donde estaba el de arranque y viaja al centro de la estrella
     const bootX = window.innerWidth / 2;
-    const bootY = (window.innerHeight - 46) * 0.4675;
+    const bootY = window.innerHeight * 0.5;
     dot.style.transform = `translateX(${bootX}px) translateY(${bootY}px)`;
     releaseBootScreen();
 
@@ -190,14 +192,27 @@ export const HeroIgnition = ({
     later(() => dispatchWarp(12), 0.5);
 
     run(animate(dot, { x: [bootX, sx], y: [bootY, sy] }, { duration: T.glide, ease: EASE_OUT }));
+    let held: AnimationPlaybackControls | null = null;
+    // El estallido espera a que el colapso termine de verdad: si la escena
+    // tarda en compilar, las animaciones arrancan tarde y un reloj fijo
+    // haría estallar la estrella con los anillos a medio cerrar
+    let gathered: Promise<unknown> = Promise.resolve();
     if (living) {
-      // Colapso: el latido se acelera, el disco de acreción gira y se encoge
-      // y dos anillos se cierran hasta el tamaño exacto de la estrella
-      run(animate(dot, { scale: [1, 1.8, 1.3, 2.1, 1.5, 2.6, 1.8] }, { duration: 1.4, delay: 0.45, ease: 'easeInOut' }));
-      run(animate(flare, { scaleX: [0, 0.55, 0.85], opacity: [0, 0.7, 0.95] }, { duration: 1.3, delay: 0.55, ease: EASE_OUT }));
-      run(animate(swirl, { scale: [1.5, 0.75], opacity: [0, 0.85, 1], rotate: [0, 720] }, { duration: 1.45, delay: 0.5, ease: 'easeIn' }));
-      run(animate(implode, { scale: [3.4, 1], opacity: [0, 0.95] }, { duration: 1.35, delay: 0.6, ease: [0.55, 0, 0.9, 0.5] }));
-      run(animate(implodeEcho, { scale: [4.6, 1.05], opacity: [0, 0.55] }, { duration: 1.25, delay: 0.75, ease: [0.55, 0, 0.9, 0.5] }));
+      // Colapso: el disco de acreción y los anillos se cierran hasta
+      // desaparecer dentro del punto, cada vez más rápido; el latido se
+      // acelera con ellos y al final el punto se contrae: contiene el aliento
+      run(animate(swirl, { scale: [1.6, 0.03], rotate: [0, 1080], opacity: [0, 0.9, 1, 0] }, { duration: 1.3, delay: 0.45, ease: EASE_SWALLOW, opacity: { duration: 1.3, delay: 0.45, times: [0, 0.2, 0.86, 1] } }));
+      run(animate(implode, { scale: [3.4, 0.03], opacity: [0, 0.95, 0.95, 0] }, { duration: 1.25, delay: 0.55, ease: EASE_SWALLOW, opacity: { duration: 1.25, delay: 0.55, times: [0, 0.25, 0.88, 1] } }));
+      run(animate(implodeEcho, { scale: [4.6, 0.03], opacity: [0, 0.55, 0.55, 0] }, { duration: 1.15, delay: 0.7, ease: EASE_SWALLOW, opacity: { duration: 1.15, delay: 0.7, times: [0, 0.25, 0.88, 1] } }));
+      const inhale = animate(dot, { scale: [1, 1.5, 1.15, 1.8, 1.35, 2.3, 2.9, 0.75] }, { duration: 1.5, delay: 0.45, times: [0, 0.18, 0.32, 0.46, 0.58, 0.72, 0.86, 1], ease: 'easeInOut' });
+      run(inhale);
+      gathered = new Promise<void>((resolve) => { void inhale.then(() => later(resolve, 0.12)); });
+      run(animate(flare, { scaleX: [0, 0.55, 0.95, 0.004], opacity: [0, 0.7, 1, 0] }, { duration: 1.5, delay: 0.45, times: [0, 0.4, 0.78, 1], ease: 'easeInOut' }));
+      // Si la página aún no está lista, el punto late contenido en lugar de
+      // dejar los anillos congelados
+      void gathered.then(() => {
+        if (!ignited && !cancelled) held = animate(dot, { scale: [0.75, 1.05, 0.75] }, { duration: 0.9, repeat: Infinity, ease: 'easeInOut' });
+      });
     } else {
       run(animate(dot, { scale: [1, 2.2, 1.5] }, { duration: 0.9, delay: T.chargeAt, ease: 'easeInOut' }));
       run(animate(flare, { scaleX: [0, 1], opacity: [0, 0.9] }, { duration: 0.9, delay: T.chargeAt + 0.1, ease: EASE_OUT }));
@@ -214,7 +229,8 @@ export const HeroIgnition = ({
         livingSignal.ignitedAt = performance.now();
         dispatchWarp(40);
         later(() => dispatchWarp(24), 0.18);
-        run(animate([implode, implodeEcho, swirl], { opacity: 0 }, { duration: 0.18 }));
+        held?.stop();
+        run(animate([implode, implodeEcho, swirl], { opacity: 0 }, { duration: 0.12 }));
         run(animate(rays, { scale: [0.35, 2.4], opacity: [0, 0.9, 0], rotate: [0, 14] }, { duration: 1.1, times: [0, 0.18, 1], ease: EASE_OUT }));
         run(animate(red, { scale: [0.15, 3.1], opacity: [0.8, 0] }, { duration: 1.5, delay: 0.03, ease: EASE_OUT }));
         run(animate(blue, { scale: [0.15, 2.85], opacity: [0.8, 0] }, { duration: 1.5, delay: 0.07, ease: EASE_OUT }));
@@ -228,7 +244,9 @@ export const HeroIgnition = ({
         }, T.coverAt);
       }
       run(animate(dot, { scale: 5, opacity: 0 }, { duration: 0.4, ease: EASE_OUT }));
-      run(animate(flare, { scaleX: living ? 2.6 : 1.8, opacity: 0 }, { duration: living ? 1.2 : 1, ease: EASE_OUT }));
+      // Con la estrella viva la línea estaba fundida en el punto: vuelve a dispararse desde él
+      if (living) run(animate(flare, { scaleX: [0.02, 2.6], opacity: [1, 0] }, { duration: 1.2, ease: EASE_OUT }));
+      else run(animate(flare, { scaleX: 1.8, opacity: 0 }, { duration: 1, ease: EASE_OUT }));
       run(animate(flash, { opacity: [0, 1, 0] }, { duration: living ? 1.3 : 1, times: [0, 0.1, 1] }));
       if (!living) {
         run(animate(ring, { scale: [1, 2.8], opacity: [0.95, 0] }, { duration: 1.4, ease: EASE_OUT }));
@@ -246,7 +264,7 @@ export const HeroIgnition = ({
       : Promise.resolve();
     const minWait = new Promise<void>((resolve) => later(resolve, living ? LIVING_IGNITE_MIN : T.igniteMin));
     const maxWait = new Promise<void>((resolve) => later(resolve, T.igniteMax));
-    void Promise.race([Promise.all([preload(), fontsReady, minWait]), maxWait]).then(() => {
+    void Promise.race([Promise.all([preload(), fontsReady, minWait, gathered]), maxWait]).then(() => {
       if (!cancelled) ignite();
     });
 
@@ -254,6 +272,7 @@ export const HeroIgnition = ({
     const skip = () => {
       if (finished || cancelled) return;
       controls.forEach((control) => control.stop());
+      held?.stop();
       timers.forEach((timer) => window.clearTimeout(timer));
       timers.length = 0;
       if (!ignited) {
@@ -293,6 +312,7 @@ export const HeroIgnition = ({
       window.removeEventListener('touchmove', blockScroll);
       window.removeEventListener('keydown', onKeyDown);
       controls.forEach((control) => control.stop());
+      held?.stop();
       timers.forEach((timer) => window.clearTimeout(timer));
       if (finished) clearIris();
     };

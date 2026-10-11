@@ -50,7 +50,7 @@ export const livingSignal = {
   ignitedAt: 0,
   /* Dónde nace la estrella (fracciones del hero): el centro de la pantalla.
      Después la escena la lleva a su lugar definido por starFrame. */
-  intro: { fx: 0.5, fy: 0.4675, fr: 0.33 },
+  intro: { fx: 0.5, fy: 0.5, fr: 0.33 },
   /* Llamarada pedida con un clic: ángulo en el disco y momento */
   flareAngle: 0,
   flareAt: -100,

@@ -57,7 +57,7 @@
   --star-r: min(26vmin, 240px);
   position: absolute;
   left: 50%;
-  top: calc((100vh - 46px) * 0.4675);
+  top: 50vh;
   width: 0;
   height: 0;
 }
@@ -130,7 +130,7 @@
   position: absolute;
   inset: 0;
   background: radial-gradient(
-    circle at 50% calc((100vh - 46px) * 0.4675),
+    circle at 50% 50vh,
     rgba(255, 238, 218, 0.95) 0%,
     rgba(255, 140, 80, 0.4) 18%,
     rgba(255, 80, 40, 0.1) 42%,

@@ -9,6 +9,23 @@
   inset: -7% 0;
 }
 
+/* La imagen aparece cuando terminó de cargar: mientras tanto queda la
+   ventana oscura del marco, sin cortinas que abran sobre el vacío */
+.mo-frame-zoom {
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+
+.mo-frame-zoom.is-developed {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mo-frame-zoom {
+    transition: none;
+  }
+}
+
 .mo-frame-mask {
   /* clip y no hidden: hidden la convierte en contenedor de scroll y la
      deriva (view()) se ataría a ella en vez de al recorrido del museo */
