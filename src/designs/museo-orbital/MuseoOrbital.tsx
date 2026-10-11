@@ -6,6 +6,7 @@ import '@fontsource-variable/fraunces';
 import '@fontsource-variable/space-grotesk';
 import '@fontsource-variable/jetbrains-mono';
 import {
+  Fragment,
   lazy,
   memo,
   Suspense,
@@ -1681,11 +1682,29 @@ const Hero = memo(({
 const Marquee = memo(() => {
   const { t } = useLocale();
   const phrase = t("{0} CAPÍTULOS · {1} TEMAS · MATERIA · ENERGÍA · CALOR · GRAVEDAD · TIEMPO · DISTANCIA · VIDA · ", chapters.length, totalWorks);
+  const words = phrase.split('·').map((word) => word.trim()).filter(Boolean);
+  const run = (
+    <span>
+      {[0, 1, 2].flatMap((round) => words.map((word, index) => (
+        <Fragment key={`${round}-${index}`}>
+          <em>{word}</em>
+          <i>✦</i>
+        </Fragment>
+      )))}
+    </span>
+  );
   return (
     <div className="mo-marquee mo-layer" aria-hidden="true">
       <div className="mo-marquee-track">
-        <span>{phrase.repeat(3)}</span>
-        <span>{phrase.repeat(3)}</span>
+        {run}
+        {run}
+      </div>
+      {/* Copia dorada, visible solo en el centro: las palabras se encienden al pasar */}
+      <div className="mo-marquee-gold">
+        <div className="mo-marquee-track">
+          {run}
+          {run}
+        </div>
       </div>
     </div>
   );
@@ -1693,10 +1712,12 @@ const Marquee = memo(() => {
 
 /* ---------------- Índice de salas ---------------- */
 
-const HallIndex = memo(({ activeId }: { activeId: string | null }) => {
+const HallIndex = memo(({ activeId, fillRef }: { activeId: string | null; fillRef: RefObject<HTMLElement | null> }) => {
   const { locale, t } = useLocale();
   const { chapters } = getCatalog(locale);
   const navRef = useRef<HTMLElement>(null);
+  const markRef = useRef<HTMLSpanElement>(null);
+  const activeChapter = chapters.find((chapter) => chapter.id === activeId);
   // En una sola fila puede no caber: el capítulo activo se desliza al centro
   useEffect(() => {
     const nav = navRef.current;
@@ -1704,7 +1725,32 @@ const HallIndex = memo(({ activeId }: { activeId: string | null }) => {
     if (!nav || !chip || nav.scrollWidth <= nav.clientWidth) return;
     nav.scrollTo({ left: chip.offsetLeft - nav.clientWidth / 2 + chip.offsetWidth / 2, behavior: 'smooth' });
   }, [activeId]);
+  // La línea del capítulo activo viaja de un capítulo al siguiente
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    const mark = markRef.current;
+    if (!nav || !mark) return;
+    const place = () => {
+      const chip = nav.querySelector<HTMLElement>('.mo-hall-chip.is-active');
+      mark.classList.toggle('is-on', Boolean(chip));
+      if (!chip) return;
+      mark.style.transform = `translateX(${chip.offsetLeft + 7}px)`;
+      mark.style.width = `${Math.max(0, chip.offsetWidth - 14)}px`;
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [activeId, locale]);
   return <nav ref={navRef} className="mo-halls mo-layer" aria-label={t('Capítulos de la exposición')}>
+    <span
+      ref={markRef}
+      className="mo-halls-mark"
+      style={{ '--accent': activeChapter?.color ?? '#c9a86a' } as CSSProperties}
+      aria-hidden="true"
+    >
+      <i ref={fillRef} />
+    </span>
     {chapters.map((chapter) => (
       <button
         key={chapter.id}
@@ -1718,6 +1764,7 @@ const HallIndex = memo(({ activeId }: { activeId: string | null }) => {
         {chapter.title}
       </button>
     ))}
+    <i className="mo-halls-divider" aria-hidden="true" />
     <button
       type="button"
       className={`mo-hall-chip is-extra${activeId === 'vitrina' ? ' is-active' : ''}`}
@@ -2589,6 +2636,7 @@ export default function MuseoOrbital() {
   const playgroundAudioPreloaderRef = useRef<HTMLAudioElement | null>(null);
   const railFillRef = useRef<HTMLSpanElement>(null);
   const pillFillRef = useRef<HTMLElement>(null);
+  const hallFillRef = useRef<HTMLElement>(null);
   const railRef = useRef<HTMLElement>(null);
   const atmosRef = useRef<HTMLDivElement>(null);
   const museumKeyboardVelocityRef = useRef(0);
@@ -3437,7 +3485,9 @@ export default function MuseoOrbital() {
           const segmentLength = lastChapter ? 0.5 : 1;
           progress = (activeIndex + chapterFraction * segmentLength) / (chapters.length - 0.5);
           pillFillRef.current?.style.setProperty('transform', `scaleX(${chapterFraction.toFixed(4)})`);
+          hallFillRef.current?.style.setProperty('transform', `scaleX(${chapterFraction.toFixed(4)})`);
         }
+        if (activeIndex >= chapters.length) hallFillRef.current?.style.setProperty('transform', 'scaleX(1)');
         fill.style.transform = `scaleY(${progress})`;
       }
       setActiveHallId((current) => current === nextId ? current : nextId);
@@ -3862,7 +3912,7 @@ export default function MuseoOrbital() {
         playgroundEntryState={playgroundEntryState}
       />
       <Marquee />
-      <HallIndex activeId={activeHallId} />
+      <HallIndex activeId={activeHallId} fillRef={hallFillRef} />
 
       {chapters.map((chapter, index) => {
         const offset = plateOffset;
