@@ -1,4 +1,4 @@
-import { memo, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
+import { memo, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { useLocale } from '../../i18n/LocaleProvider';
 import { smoothScrollTo } from '../shared/smoothScroll';
 import type { AstroConcept } from '../../types';
@@ -8,18 +8,61 @@ import { clamp, clamp01, smoothstep, useRoomLoop } from './roomShared';
 import './orbitRoom.css';
 
 /* Energía estelar: las obras orbitan una estrella. El scroll hace girar la
-   órbita y cada obra se detiene un momento al frente para leerla. Al llegar
-   a las estructuras Dyson aparecen los anillos del enjambre y la estrella se
-   apaga en el visible: solo queda su resplandor infrarrojo, la luz capturada. */
+   órbita y cada obra pasa más lento al frente para leerla. Desde el primer
+   tema se lanzan colectores alrededor de la estrella y con cada obra se
+   suman más: el enjambre de Dyson se construye a lo largo de la sala. Los
+   que pasan por delante tapan el disco y la estrella se apaga en el visible
+   hasta que solo queda su resplandor infrarrojo, la luz capturada. */
 
 // Scroll por obra, en alturas de pantalla
 const STEP = 0.7;
-const DYSON_RINGS = [
-  { size: 31, tilt: -12, speed: 46 },
-  { size: 39, tilt: 9, speed: 62 },
-  { size: 48, tilt: -4, speed: 80 },
-  { size: 57, tilt: 15, speed: 104 },
+// Cuánto se frena la órbita al frente: 0 es giro parejo, 1 se detiene
+const KEPLER_EASE = 0.55;
+
+/* Órbitas del enjambre en unidades del dibujo (el disco mide ~12 de radio):
+   inclinación en el cielo, segundos por vuelta y cuántos colectores caben */
+const SWARM_ORBITS = [
+  { radius: 17, tilt: -14, speed: 38, count: 14 },
+  { radius: 21, tilt: 9, speed: 50, count: 18 },
+  { radius: 26, tilt: -4, speed: 64, count: 22 },
+  { radius: 31, tilt: 16, speed: 82, count: 26 },
+  { radius: 36, tilt: -21, speed: 100, count: 30 },
+  { radius: 41, tilt: 4, speed: 124, count: 34 },
 ];
+
+interface Collector {
+  orbit: number;
+  angle: number;
+  order: number;
+}
+
+// Pseudoazar con semilla: el enjambre se arma igual en cada visita
+const seeded = (seed: number) => () => {
+  seed = (seed + 0x6d2b79f5) | 0;
+  let value = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+  value = (value + Math.imul(value ^ (value >>> 7), 61 | value)) ^ value;
+  return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+};
+
+/* Orden de lanzamiento: al azar, pero las órbitas cercanas a la estrella se
+   llenan antes que las lejanas */
+const SWARM: Collector[] = (() => {
+  const random = seeded(5);
+  const collectors = SWARM_ORBITS.flatMap((orbit, orbitIndex) =>
+    Array.from({ length: orbit.count }, (_, index) => ({
+      orbit: orbitIndex,
+      angle: ((index + random() * 0.6) / orbit.count) * 360,
+      key: random() + orbitIndex * 0.22,
+    })));
+  return collectors
+    .sort((a, b) => a.key - b.key)
+    .map(({ orbit, angle }, order) => ({ orbit, angle, order }));
+})();
+
+/* Parte del enjambre construida según la obra en que va la sala: la estrella
+   parte desnuda y los colectores se lanzan al dejar atrás la primera obra */
+const builtShare = (position: number, total: number) =>
+  clamp01(position / Math.max(1, total - 1)) ** 1.35;
 
 interface Geometry {
   pinned: number;
@@ -53,10 +96,13 @@ export const OrbitRoom = memo(({
   const fillRef = useRef<HTMLSpanElement>(null);
   const starRef = useRef<HTMLSpanElement>(null);
   const infraredRef = useRef<HTMLSpanElement>(null);
-  const ringRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const swarmRef = useRef<HTMLDivElement>(null);
+  // Colectores por orden de lanzamiento (cada uno dibujado delante y detrás)
+  const collectorRefs = useRef<Element[][]>([]);
+  const orbitRefs = useRef<Element[][]>([]);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const geometry = useRef<Geometry>({ pinned: 1, radiusX: 1, radiusY: 1, ticks: [] });
-  const live = useRef({ current: -1, started: false, layers: [] as number[], live: false });
+  const live = useRef({ current: -1, started: false, layers: [] as number[], live: false, built: 0 });
   const [ticks, setTicks] = useState<number[]>([]);
   const [path, setPath] = useState('');
   const [active, setActive] = useState(0);
@@ -65,17 +111,15 @@ export const OrbitRoom = memo(({
   const works = useMemo(() => groups.flatMap((group, groupIndex) =>
     group.works.map((work) => ({ ...work, groupIndex }))), [groups]);
   const total = works.length;
-  // Primera obra de las estructuras Dyson: desde ahí la estrella se envuelve
-  const dysonFrom = Math.max(1, works.findIndex((work) => work.groupIndex === groups.length - 1));
 
   const paint = (offset: number, viewport: number) => {
     const { pinned, radiusX, radiusY } = geometry.current;
     const state = live.current;
     const progress = clamp01(offset / pinned);
-    // Cada obra se detiene al frente: el giro se concentra entre una y otra
+    // Como en una órbita de Kepler, el giro se frena al frente y acelera entre
+    // una obra y otra, pero nunca se detiene: el scroll no se siente trabado
     const raw = progress * (total - 1);
-    const step = Math.min(total - 1, Math.floor(raw));
-    const position = raw >= total - 1 ? total - 1 : step + smoothstep(0.18, 0.82, raw - step);
+    const position = raw - (KEPLER_EASE * Math.sin(raw * Math.PI * 2)) / (Math.PI * 2);
 
     fillRef.current?.style.setProperty('transform', `scaleX(${progress.toFixed(4)})`);
 
@@ -98,16 +142,30 @@ export const OrbitRoom = memo(({
       }
     }
 
-    // La luz capturada: la estrella se apaga y queda el infrarrojo
-    const capture = smoothstep(dysonFrom - 0.6, total - 1, position);
-    starRef.current?.style.setProperty('opacity', (1 - capture * 0.85).toFixed(3));
-    starRef.current?.style.setProperty('transform', `scale(${(1 - capture * 0.18).toFixed(4)})`);
-    infraredRef.current?.style.setProperty('opacity', capture.toFixed(3));
-    ringRefs.current.forEach((ring, index) => {
-      ring?.style.setProperty('opacity', (smoothstep(index / 4, (index + 1) / 4, capture) * 0.9).toFixed(3));
-    });
+    // El enjambre crece con cada obra: se lanzan los colectores que faltan
+    const share = builtShare(position, total);
+    const built = Math.round(share * SWARM.length);
+    if (built !== state.built) {
+      const from = Math.min(built, state.built);
+      const to = Math.max(built, state.built);
+      for (let order = from; order < to; order++) {
+        collectorRefs.current[order]?.forEach((element) => element.classList.toggle('is-built', order < built));
+      }
+      state.built = built;
+      // Cada órbita se dibuja al recibir su primer colector
+      orbitRefs.current.forEach((elements, orbit) => {
+        const open = SWARM.some((collector) => collector.orbit === orbit && collector.order < built);
+        elements.forEach((element) => element.classList.toggle('is-open', open));
+      });
+    }
 
-    // Los anillos solo giran mientras la sala está a la vista
+    // La luz capturada: la estrella se apaga en el visible y queda el infrarrojo
+    const capture = smoothstep(0.15, 1, share);
+    starRef.current?.style.setProperty('opacity', (1 - capture * 0.82).toFixed(3));
+    starRef.current?.style.setProperty('transform', `scale(${(1 - capture * 0.16).toFixed(4)})`);
+    infraredRef.current?.style.setProperty('opacity', capture.toFixed(3));
+
+    // El enjambre y la estrella solo se animan mientras la sala está a la vista
     const isLive = offset > -viewport && offset < pinned + viewport;
     if (isLive !== state.live) {
       state.live = isLive;
@@ -124,6 +182,20 @@ export const OrbitRoom = memo(({
       setStarted(true);
     }
   };
+
+  useLayoutEffect(() => {
+    const swarm = swarmRef.current;
+    if (!swarm) return;
+    collectorRefs.current = SWARM.map(() => []);
+    swarm.querySelectorAll<SVGElement>('[data-order]').forEach((element) => {
+      collectorRefs.current[Number(element.dataset.order)].push(element);
+    });
+    orbitRefs.current = SWARM_ORBITS.map(() => []);
+    swarm.querySelectorAll<SVGElement>('[data-orbit]').forEach((element) => {
+      orbitRefs.current[Number(element.dataset.orbit)].push(element);
+    });
+    live.current.built = 0;
+  }, []);
 
   const refresh = useRoomLoop(sectionRef, scrollRef, (frame) => paint(frame.offset, frame.viewport));
 
@@ -197,27 +269,21 @@ export const OrbitRoom = memo(({
                 <span className="mo-sun-cells" />
                 <span className="mo-sun-cells is-counter" />
               </span>
-              {/* Protuberancias: arcos de plasma anclados al borde */}
+              {/* Protuberancias: arcos de plasma bajos, pegados al borde del disco */}
               <svg className="mo-sun-loops" viewBox="-50 -50 100 100">
-                <path className="is-glow" d="M -11.5 -13.9 Q -14 -34 -2.8 -17.8" />
-                <path d="M -11.5 -13.9 Q -14 -34 -2.8 -17.8" />
-                <path className="is-glow is-b" d="M 17.4 4.6 Q 33 4 16.3 7.8" />
-                <path className="is-b" d="M 17.4 4.6 Q 33 4 16.3 7.8" />
-                <path className="is-glow is-c" d="M -14.6 10.6 Q -22 27 -8.2 16.1" />
-                <path className="is-c" d="M -14.6 10.6 Q -22 27 -8.2 16.1" />
+                <path className="is-glow" d="M -9.5 -15.3 Q -11.4 -24.5 -5.6 -17.1" />
+                <path d="M -9.5 -15.3 Q -11.4 -24.5 -5.6 -17.1" />
+                <path className="is-glow is-b" d="M 17.8 2.5 Q 25.1 6.7 16.7 6.7" />
+                <path className="is-b" d="M 17.8 2.5 Q 25.1 6.7 16.7 6.7" />
+                <path className="is-glow is-c" d="M -12.3 13.2 Q -19.9 16.7 -15.1 9.8" />
+                <path className="is-c" d="M -12.3 13.2 Q -19.9 16.7 -15.1 9.8" />
               </svg>
               <span className="mo-sun-flare" />
             </span>
-            {DYSON_RINGS.map((ring, index) => (
-              <span
-                key={ring.size}
-                className="mo-orbit-ring"
-                ref={(element) => { ringRefs.current[index] = element; }}
-                style={{ '--ring-size': `${ring.size}vmin`, '--ring-tilt': `${ring.tilt}deg`, '--ring-speed': `${ring.speed}s` } as CSSProperties}
-              >
-                <span className="mo-orbit-ring-spin" />
-              </span>
-            ))}
+            <div ref={swarmRef}>
+              <DysonSwarm side="back" />
+              <DysonSwarm side="front" />
+            </div>
           </div>
 
           {works.map(({ concept, plate }, index) => (
@@ -242,5 +308,42 @@ export const OrbitRoom = memo(({
         />
       </div>
     </section>
+  );
+});
+
+/* Media órbita del enjambre: la de atrás va bajo la estrella y muestra la cara
+   iluminada de los colectores; la de adelante la cubre y se ve a contraluz.
+   El giro es CSS, así ambas mitades quedan sincronizadas */
+const DysonSwarm = memo(({ side }: { side: 'back' | 'front' }) => {
+  const clipId = useId();
+  return (
+    <svg className={`mo-swarm is-${side}`} viewBox="-50 -50 100 100" aria-hidden="true">
+      <defs>
+        <clipPath id={clipId} clipPathUnits="userSpaceOnUse">
+          <rect x="-60" y={side === 'front' ? 0 : -60} width="120" height="60" />
+        </clipPath>
+      </defs>
+      {SWARM_ORBITS.map((orbit, orbitIndex) => (
+        <g key={orbit.radius} transform={`rotate(${orbit.tilt}) scale(1 0.26)`}>
+          <g clipPath={`url(#${clipId})`}>
+            <g className="mo-swarm-spin" style={{ '--swarm-speed': `${orbit.speed}s` } as CSSProperties}>
+              <circle className="mo-swarm-orbit" r={orbit.radius} data-orbit={orbitIndex} />
+              {SWARM.filter((collector) => collector.orbit === orbitIndex).map((collector) => (
+                <rect
+                  key={collector.order}
+                  className="mo-swarm-collector"
+                  data-order={collector.order}
+                  x={-1.7}
+                  y={-0.7}
+                  width={3.4}
+                  height={1.4}
+                  transform={`rotate(${collector.angle.toFixed(1)}) translate(${orbit.radius} 0) rotate(90)`}
+                />
+              ))}
+            </g>
+          </g>
+        </g>
+      ))}
+    </svg>
   );
 });

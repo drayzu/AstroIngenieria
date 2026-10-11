@@ -175,9 +175,9 @@
 .mo-sun-loops path {
   fill: none;
   stroke: #ffd9a8;
-  stroke-width: 0.35;
+  stroke-width: 0.3;
   stroke-linecap: round;
-  stroke-dasharray: 0.9 1.9;
+  stroke-dasharray: 0.7 1.4;
   opacity: 0.85;
   animation: mo-sun-plasma 2.6s linear infinite;
   animation-play-state: paused;
@@ -185,7 +185,7 @@
 
 .mo-sun-loops path.is-glow {
   stroke: #ff8a4c;
-  stroke-width: 1.3;
+  stroke-width: 0.9;
   stroke-dasharray: none;
   opacity: 0.4;
   animation: mo-sun-loop-pulse 5s ease-in-out infinite;
@@ -306,42 +306,68 @@
   will-change: opacity;
 }
 
-/* Anillos del enjambre: círculos punteados inclinados que giran en su plano */
-.mo-orbit-ring {
+/* Enjambre de Dyson: colectores en órbitas inclinadas que se lanzan de a
+   poco. La mitad trasera va bajo la estrella; la delantera la tapa */
+.mo-swarm {
   position: absolute;
-  top: calc(var(--ring-size) / -2);
-  left: calc(var(--ring-size) / -2);
-  z-index: 16;
-  width: var(--ring-size);
-  height: var(--ring-size);
-  opacity: 0;
-  transform: rotateX(74deg) rotate(var(--ring-tilt));
-  will-change: opacity;
+  top: -22vmin;
+  left: -22vmin;
+  z-index: 14;
+  width: 44vmin;
+  height: 44vmin;
+  overflow: visible;
+  pointer-events: none;
 }
 
-/* Hilo de luz con un destello que lo recorre al girar */
-.mo-orbit-ring-spin {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: conic-gradient(
-    from 0deg,
-    #fff8e6 0deg,
-    color-mix(in srgb, var(--accent, #c9a86a) 80%, #fff) 8deg,
-    color-mix(in srgb, var(--accent, #c9a86a) 38%, transparent) 60deg,
-    color-mix(in srgb, var(--accent, #c9a86a) 16%, transparent) 180deg,
-    color-mix(in srgb, var(--accent, #c9a86a) 12%, transparent) 300deg,
-    color-mix(in srgb, var(--accent, #c9a86a) 30%, transparent) 352deg,
-    #fff8e6 360deg
-  );
-  -webkit-mask-image: radial-gradient(closest-side, transparent calc(100% - 2.5px), #000 calc(100% - 1.5px), #000 calc(100% - 0.5px), transparent 100%);
-  mask-image: radial-gradient(closest-side, transparent calc(100% - 2.5px), #000 calc(100% - 1.5px), #000 calc(100% - 0.5px), transparent 100%);
-  animation: mo-orbit-spin var(--ring-speed) linear infinite;
+.mo-swarm.is-front {
+  z-index: 16;
+}
+
+.mo-swarm-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mo-orbit-spin var(--swarm-speed) linear infinite;
   animation-play-state: paused;
 }
 
+.mo-swarm-orbit {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent, #c9a86a) 45%, transparent);
+  stroke-width: 0.6;
+  stroke-dasharray: 1 5;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+
+.mo-swarm-orbit.is-open {
+  opacity: 0.55;
+}
+
+.mo-swarm-collector {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+.mo-swarm-collector.is-built {
+  opacity: 1;
+}
+
+/* Detrás: la cara que mira a la estrella, encendida por su luz */
+.mo-swarm.is-back .mo-swarm-collector {
+  fill: color-mix(in srgb, var(--accent, #c9a86a) 70%, #fff4d4);
+}
+
+/* Delante: el dorso del colector a contraluz, con un filo de luz */
+.mo-swarm.is-front .mo-swarm-collector {
+  fill: #120d07;
+  stroke: color-mix(in srgb, var(--accent, #c9a86a) 75%, #fff);
+  stroke-width: 0.5;
+  vector-effect: non-scaling-stroke;
+}
+
 .mo-orbit.is-live .mo-orbit-star *,
-.mo-orbit.is-live .mo-orbit-ring-spin {
+.mo-orbit.is-live .mo-swarm-spin {
   animation-play-state: running;
 }
 
@@ -438,5 +464,12 @@
     left: -20vmin;
     width: 40vmin;
     height: 40vmin;
+  }
+
+  .mo-swarm {
+    top: -29vmin;
+    left: -29vmin;
+    width: 58vmin;
+    height: 58vmin;
   }
 }
