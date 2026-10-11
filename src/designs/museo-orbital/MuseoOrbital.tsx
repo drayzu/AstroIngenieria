@@ -3468,9 +3468,9 @@ export default function MuseoOrbital() {
           const chapterFraction = end > start
             ? clamp((readingLine - start) / (end - start), 0, 1)
             : 0;
-          const lastChapter = activeIndex === chapters.length - 1;
-          const segmentLength = lastChapter ? 0.5 : 1;
-          progress = (activeIndex + chapterFraction * segmentLength) / (chapters.length - 0.5);
+          // El riel va del punto de la portada al del final: cada capítulo
+          // llena el tramo hasta el punto siguiente (el último, hasta el final)
+          progress = (activeIndex + 1 + chapterFraction) / (chapters.length + 1);
           pillFillRef.current?.style.setProperty('transform', `scaleX(${chapterFraction.toFixed(4)})`);
           hallFillRef.current?.style.setProperty('transform', `scaleX(${chapterFraction.toFixed(4)})`);
         }
@@ -3936,6 +3936,23 @@ export default function MuseoOrbital() {
         <div className="mo-rail-track" aria-hidden="true">
           <span ref={railFillRef} className="mo-rail-fill" />
         </div>
+        {/* Extremos del recorrido: la portada arriba, vitrina y archivo abajo */}
+        <button
+          type="button"
+          className="is-terminal"
+          aria-label={t("Volver a la portada")}
+          onClick={(event) => {
+            if (event.detail > 0) event.currentTarget.blur();
+            window.dispatchEvent(new CustomEvent('mo-warp'));
+            if (!smoothScrollTo(0)) rootRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        >
+          <span className="mo-rail-disc" aria-hidden="true" />
+          <span className="mo-rail-tooltip" aria-hidden="true">
+            <strong>{t("Inicio")}</strong>
+            <span>↑</span>
+          </span>
+        </button>
         {chapters.map((chapter) => (
           <button
             key={chapter.id}
@@ -3957,6 +3974,22 @@ export default function MuseoOrbital() {
             </span>
           </button>
         ))}
+        <button
+          type="button"
+          className={`is-terminal${activeHallId === 'vitrina' || activeHallId === 'archivo' ? ' is-eclipsed' : ''}`}
+          aria-label={t("Vitrina y archivo")}
+          aria-current={activeHallId === 'vitrina' || activeHallId === 'archivo' ? 'location' : undefined}
+          onClick={(event) => {
+            if (event.detail > 0) event.currentTarget.blur();
+            scrollToId('vitrina');
+          }}
+        >
+          <span className="mo-rail-disc" aria-hidden="true" />
+          <span className="mo-rail-tooltip" aria-hidden="true">
+            <strong>{t("Vitrina y archivo")}</strong>
+            <span>✦</span>
+          </span>
+        </button>
       </nav>
 
       <ChapterPill activeId={activeHallId} fillRef={pillFillRef} onOpen={openMenu} hidden={menuOpen || Boolean(active)} />
