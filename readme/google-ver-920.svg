@@ -262,31 +262,6 @@
         }
 
         /* Mini constellation (bottom right) */
-        .cst2-line {
-            stroke-dasharray: 240;
-            animation: cst2Draw 26s ease-in-out infinite;
-        }
-        .cst2-dot { opacity: 0; }
-        .c2d1 { animation: cst2Dot 26s ease-out infinite; }
-        .c2d2 { animation: cst2Dot 26s ease-out infinite 0.9s; }
-        .c2d3 { animation: cst2Dot 26s ease-out infinite 1.8s; }
-        .c2d4 { animation: cst2Dot 26s ease-out infinite 2.7s; }
-
-        @keyframes cst2Draw {
-            0%   { stroke-dashoffset: 240; opacity: 0; }
-            8%   { opacity: 0.55; }
-            30%  { stroke-dashoffset: 0; opacity: 0.55; }
-            58%  { stroke-dashoffset: 0; opacity: 0.55; }
-            72%  { stroke-dashoffset: 0; opacity: 0; }
-            100% { stroke-dashoffset: 240; opacity: 0; }
-        }
-        @keyframes cst2Dot {
-            0%   { opacity: 0; }
-            10%  { opacity: 0.8; }
-            62%  { opacity: 0.8; }
-            74%  { opacity: 0; }
-            100% { opacity: 0; }
-        }
 
         /* Stardust drift */
         .dust { animation: dustDrift 46s ease-in-out infinite alternate; }
@@ -334,6 +309,69 @@
             0%, 100% { transform: scale(1); }
             50%      { transform: scale(1.02); }
         }
+
+        /* ---- v2: looping staggered reveal of the narrative (30s cycle) ---- */
+        .r1 { animation: rv1 30s cubic-bezier(.2,.7,.2,1) infinite; }
+        .r2 { animation: rv2 30s cubic-bezier(.2,.7,.2,1) infinite; }
+        .r3 { animation: rv3 30s cubic-bezier(.2,.7,.2,1) infinite; }
+        .r4 { animation: rv4 30s cubic-bezier(.2,.7,.2,1) infinite; }
+        .r5 { animation: rv5 30s cubic-bezier(.2,.7,.2,1) infinite; }
+        .r6 { animation: rv6 30s cubic-bezier(.2,.7,.2,1) infinite; }
+        .r7 { animation: rv7 30s cubic-bezier(.2,.7,.2,1) infinite; }
+        .r8 { animation: rv8 30s cubic-bezier(.2,.7,.2,1) infinite; }
+        @keyframes rv1 {
+            0%, 0.67% { opacity: 0; transform: translateY(14px); }
+            6.00%, 83.33% { opacity: 1; transform: translateY(0); }
+            88.67%, 100% { opacity: 0; transform: translateY(-8px); }
+        }
+        @keyframes rv2 {
+            0%, 2.33% { opacity: 0; transform: translateY(14px); }
+            7.67%, 83.80% { opacity: 1; transform: translateY(0); }
+            89.13%, 100% { opacity: 0; transform: translateY(-8px); }
+        }
+        @keyframes rv3 {
+            0%, 5.00% { opacity: 0; transform: translateY(14px); }
+            10.33%, 84.27% { opacity: 1; transform: translateY(0); }
+            89.60%, 100% { opacity: 0; transform: translateY(-8px); }
+        }
+        @keyframes rv4 {
+            0%, 8.33% { opacity: 0; transform: translateY(14px); }
+            13.67%, 84.73% { opacity: 1; transform: translateY(0); }
+            90.07%, 100% { opacity: 0; transform: translateY(-8px); }
+        }
+        @keyframes rv5 {
+            0%, 11.33% { opacity: 0; transform: translateY(14px); }
+            16.67%, 85.20% { opacity: 1; transform: translateY(0); }
+            90.53%, 100% { opacity: 0; transform: translateY(-8px); }
+        }
+        @keyframes rv6 {
+            0%, 14.33% { opacity: 0; transform: translateY(14px); }
+            19.67%, 85.67% { opacity: 1; transform: translateY(0); }
+            91.00%, 100% { opacity: 0; transform: translateY(-8px); }
+        }
+        @keyframes rv7 {
+            0%, 18.00% { opacity: 0; transform: translateY(14px); }
+            23.33%, 86.13% { opacity: 1; transform: translateY(0); }
+            91.47%, 100% { opacity: 0; transform: translateY(-8px); }
+        }
+        @keyframes rv8 {
+            0%, 21.33% { opacity: 0; transform: translateY(14px); }
+            26.67%, 86.60% { opacity: 1; transform: translateY(0); }
+            91.93%, 100% { opacity: 0; transform: translateY(-8px); }
+        }
+        .ornament-line { animation: ornamentGrow 30s cubic-bezier(.2,.7,.2,1) infinite; transform-box: fill-box; }
+        .ol-left  { transform-origin: right center; }
+        .ol-right { transform-origin: left center; }
+        @keyframes ornamentGrow {
+            0%, 3.33% { transform: scaleX(0); opacity: 0; }
+            9.33%, 83.33% { transform: scaleX(1); opacity: 1; }
+            88.67%, 100% { transform: scaleX(0); opacity: 0; }
+        }
+
+        /* Key words of the arc: distancia -> destino -> obra, warming up */
+        .kw1 { fill: #d6cbb4; }
+        .kw2 { fill: #e2d2ae; }
+        .kw3 { fill: url(#title-shine-2); font-style: italic; }
 
         @media (prefers-reduced-motion: reduce) {
             * { animation: none !important; }
@@ -570,16 +608,6 @@
         </circle>
     </g>
 
-    <!-- Mini constellation (bottom right) -->
-    <g stroke="#EADCB9" fill="#EADCB9">
-        <polyline class="cst2-line" points="940,1000 1015,955 1085,1005 1150,962"
-            fill="none" stroke-width="0.7"/>
-        <circle class="cst2-dot c2d1" cx="940"  cy="1000" r="1.8" filter="url(#glow)"/>
-        <circle class="cst2-dot c2d2" cx="1015" cy="955"  r="2.2" filter="url(#glow)"/>
-        <circle class="cst2-dot c2d3" cx="1085" cy="1005" r="1.8" filter="url(#glow)"/>
-        <circle class="cst2-dot c2d4" cx="1150" cy="962"  r="2.4" filter="url(#glow)"/>
-    </g>
-
     <!-- Orbiter circling the header block -->
     <g opacity="0.6">
         <circle r="1.4" fill="#fff6df" filter="url(#glow)">
@@ -591,21 +619,31 @@
     <!-- ==================== FOREGROUND CONTENT ==================== -->
 
     <!-- Header Section -->
-    <text x="600" y="180" class="subtitle">MUSEO ORBITAL</text>
-    <text x="600" y="255" class="title">ASTROINGENIERIA</text>
+    <g class="reveal r1"><text x="600" y="180" class="subtitle">MUSEO ORBITAL</text></g>
+    <g class="reveal r2"><text x="600" y="255" class="title">ASTROINGENIERIA</text></g>
+
+    <!-- Ornament under the title -->
+    <g>
+        <rect class="ornament-line ol-left"  x="460" y="299.6" width="128" height="0.8" fill="url(#fade-left)"/>
+        <path class="reveal r3" d="M600,294 L604,300 L600,306 L596,300 Z" fill="#EADCB9" opacity="0.8"/>
+        <rect class="ornament-line ol-right" x="612" y="299.6" width="128" height="0.8" fill="url(#fade-right)"/>
+    </g>
 
     <!-- Main Paragraphs -->
-    <text x="600" y="390" class="body-text">Durante casi toda nuestra historia, mirar hacia arriba</text>
-    <text x="600" y="430" class="body-text">significó observar algo fuera de nuestro alcance.</text>
+    <g class="reveal r3">
+        <text x="600" y="390" class="body-text">Durante casi toda nuestra historia, mirar hacia arriba</text>
+        <text x="600" y="430" class="body-text">significó observar algo fuera de nuestro alcance.</text>
+    </g>
 
-    <text x="600" y="495" class="body-text">El cielo era distancia.</text>
+    <g class="reveal r4"><text x="600" y="495" class="body-text">El cielo era <tspan class="kw1">distancia</tspan>.</text></g>
 
-    <text x="600" y="555" class="body-text">Después se convirtió en destino.</text>
+    <g class="reveal r5"><text x="600" y="555" class="body-text">Después se convirtió en <tspan class="kw2">destino</tspan>.</text></g>
 
-    <text x="600" y="615" class="body-text">Quizá algún día se convierta en nuestra obra.</text>
+    <g class="reveal r6"><text x="600" y="615" class="body-text">Quizá algún día se convierta en nuestra <tspan class="kw3">obra</tspan>.</text></g>
 
-    <text x="600" y="675" class="body-text"><tspan class="bold-text">AstroIngeniería</tspan> explora lo que viene después de alcanzar las estrellas.</text>
+    <g class="reveal r7"><text x="600" y="675" class="body-text"><tspan class="bold-text">AstroIngeniería</tspan> explora lo que viene después de alcanzar las estrellas.</text></g>
 
+    <g class="reveal r8">
     <!-- Orbital system circling the ENTRAR button (constant motion) -->
     <g transform="rotate(-12 600 848)" opacity="0.55">
         <ellipse cx="600" cy="848" rx="250" ry="72" fill="none" stroke="#EADCB9"
@@ -637,12 +675,14 @@
         <text x="607" y="870" class="entrar-title entrar-press">ENTRAR</text>
 
         <!-- Underline with fading edges + pulsing core -->
-        <line x1="470" y1="902" x2="590" y2="902" stroke="url(#fade-left)" stroke-width="1"/>
+        <rect x="470" y="901.5" width="120" height="1" fill="url(#fade-left)"/>
         <circle cx="600" cy="902" r="2" fill="#e3ccaa" filter="url(#glow)">
             <animate attributeName="opacity" values="0.6;1;0.6" dur="4.5s" repeatCount="indefinite"/>
         </circle>
-        <line x1="610" y1="902" x2="730" y2="902" stroke="url(#fade-right)" stroke-width="1"/>
+        <rect x="610" y="901.5" width="120" height="1" fill="url(#fade-right)"/>
         <circle class="ul-pulse" cx="470" cy="902" r="1.5" fill="#fff6df"/>
+    </g>
+
     </g>
 
 </svg>
