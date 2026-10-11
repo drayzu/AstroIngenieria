@@ -26,8 +26,11 @@ export const toRoman = (value: number) => {
 
 /* Lo leen el cielo de estrellas y la deformación por velocidad: dentro de
    un pasillo el scroll mueve la pared de lado (lateral = 1) y, en los
-   tramos rápidos, más píxeles de pared por píxel de scroll (gain) */
-export const skyDrift = { lateral: 0, gain: 1 };
+   tramos rápidos, más píxeles de pared por píxel de scroll (gain).
+   spin: el cielo gira alrededor de un eje (x, y en pantalla); quien lo
+   mueve suma el ángulo (rad, horario) y el cielo lo consume en su cuadro.
+   depth 0 gira todo igual (la cámara rueda); 1, lo lejano gira menos */
+export const skyDrift = { lateral: 0, gain: 1, spin: { x: 0, y: 0, angle: 0, depth: 0 } };
 export const wallGain = new WeakMap<Element, number>();
 
 export interface RoomFrame {
@@ -45,21 +48,26 @@ interface RoomLoopOptions {
   enabled?: boolean;
   /* Al detenerse el bucle: apagar lo que depende de la velocidad */
   onIdle?: () => void;
+  /* Sigue dibujando con el scroll quieto mientras devuelva true (algo de la
+     sala anima con su propio tiempo) */
+  busy?: () => boolean;
 }
 
 export const useRoomLoop = (
   sectionRef: RefObject<HTMLElement | null>,
   scrollRef: RefObject<HTMLElement | null>,
   paint: (frame: RoomFrame) => void,
-  { continuous = false, enabled = true, onIdle }: RoomLoopOptions = {},
+  { continuous = false, enabled = true, onIdle, busy }: RoomLoopOptions = {},
 ) => {
   const paintRef = useRef(paint);
   const idleRef = useRef(onIdle);
+  const busyRef = useRef(busy);
   const refreshRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     paintRef.current = paint;
     idleRef.current = onIdle;
+    busyRef.current = busy;
   });
 
   useEffect(() => {
@@ -84,7 +92,7 @@ export const useRoomLoop = (
 
     const loop = (now: number) => {
       const top = root.scrollTop;
-      if (top === lastTop && !continuous) {
+      if (top === lastTop && !continuous && !busyRef.current?.()) {
         still += 1;
         if (still > 8) {
           raf = 0;

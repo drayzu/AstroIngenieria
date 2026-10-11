@@ -40,12 +40,14 @@ export const RoomProgress = ({
   groupIndex,
   started,
   onTick,
+  marker,
 }: {
   fillRef: RefObject<HTMLSpanElement | null>;
   ticks: number[];
   groupIndex: number;
   started: boolean;
   onTick?: (index: number) => void;
+  marker?: ReactNode;
 }) => {
   const { t } = useLocale();
   return (
@@ -67,6 +69,7 @@ export const RoomProgress = ({
             aria-hidden="true"
           />
         ))}
+        {marker}
       </div>
     </footer>
   );

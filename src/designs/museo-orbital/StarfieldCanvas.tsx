@@ -2731,9 +2731,23 @@ export const StarfieldCanvas = ({
       // con un margen de 80px; salir por un borde es reaparecer por el opuesto
       const spanW = width + 160;
       const spanH = height + 160;
+      // Giro pedido desde el último cuadro (la rueda de los hábitats, el
+      // atraque); acotado por si el cielo estuvo en pausa
+      const spin = skyDrift.spin;
+      const spinAngle = Math.max(-0.5, Math.min(0.5, spin.angle));
+      spin.angle = 0;
       for (const [starIndex, star] of stars.entries()) {
         star.x -= 0.05 * star.z + effectiveScrollVelocity * 0.045 * star.z * lateralGain;
         star.y -= effectiveScrollVelocity * 0.045 * star.z * (1 - lateralMix);
+        if (spinAngle) {
+          const turn = spinAngle * (1 - spin.depth + spin.depth * star.z);
+          const sx = wrapSpan(star.x - camX, spanW) - 80 - spin.x;
+          const sy = wrapSpan(star.y - camY, spanH) - 80 - spin.y;
+          const cos = Math.cos(turn);
+          const sin = Math.sin(turn);
+          star.x += sx * cos - sy * sin - sx;
+          star.y += sx * sin + sy * cos - sy;
+        }
 
         const bx = wrapSpan(star.x - camX, spanW) - 80;
         const by = wrapSpan(star.y - camY, spanH) - 80;

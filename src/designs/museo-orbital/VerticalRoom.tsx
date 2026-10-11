@@ -4,7 +4,10 @@ import type { AstroConcept } from '../../types';
 import type { VerticalKind } from './salaRooms';
 import type { CorridorGroup } from './GalleryCorridor';
 import { TopicHeading } from './TopicHeading';
-import { clamp, clamp01, offsetWithin, smoothstep, useRoomLoop } from './roomShared';
+import { selectedStudyImages } from '../../data/selectedStudyImages';
+import { ASSEMBLY_MAX, assemblyEnd, assemblySides, drawAssembly, endAssembly, startAssembly, type Assembly, type Box } from './tileAssembly';
+import { clamp, clamp01, offsetWithin, skyDrift, smoothstep, useRoomLoop } from './roomShared';
+import { drawWheel, sizeWheel, wheelRadius, wheelSpokes, wheelStops, type Wheel, type WheelStop } from './wheelHabitat';
 import './verticalRooms.css';
 
 /* Salas que se recorren en vertical, cada una con su física:
@@ -12,11 +15,15 @@ import './verticalRooms.css';
    - spotlight (Introducción): la primera obra espera a oscuras y su foco se
      enciende, con un parpadeo, cuando llegas frente a ella
    - wheel (Hábitats): las obras van montadas en la rueda de un hábitat; el
-     scroll la hace girar y se inclinan siguiendo su borde
-   - blueprint (Industria): cada obra llega como plano técnico y se imprime
-     línea a línea al pasar, y toda la sala es la subida por un ascensor
-     espacial: la cápsula sigue el scroll de la superficie a la órbita
-     geoestacionaria, el cielo se apaga y la Tierra se curva y se aleja
+     scroll la hace girar, se inclinan siguiendo su borde y el cielo gira
+     con ella. La rueda crece de obra en obra, de la ISS al Ringworld
+     (wheelHabitat dibuja el casco, los radios y el cubo en un lienzo)
+   - blueprint (Industria): cada obra llega como un hueco vacío y, al
+     asomar, una flota de remolcadores trae las teselas de su imagen desde
+     fuera de la pantalla, por la derecha, donde un resplandor delata de
+     dónde viene la materia (tileAssembly lo dibuja en un lienzo). El vuelo
+     lleva su propio tiempo (el scroll solo lo dispara); una obra armada
+     queda armada, y vuelve a armarse si te alejas hacia arriba y regresas
    - starlight (Estelar): el borde de una estrella hierve al pie de la sala y
      cada obra sale de ella al rojo vivo, como materia extraída, disparada en
      arco y frenando mientras sube y se enfría. La estrella gira con el scroll
@@ -31,35 +38,12 @@ import './verticalRooms.css';
 
 const RADAR_PERIOD = 7200;
 
-/* Ascensor espacial: altitud en escala logarítmica, de 0 km a la órbita
-   geoestacionaria, para que la atmósfera no se pase en un instante */
-const GEO_KM = 35_786;
-const climbAt = (km: number) => Math.log1p(km) / Math.log1p(GEO_KM);
-const CLIMB_MARKS = [
-  { km: 12, label: 'Aviones comerciales' },
-  { km: 100, label: 'Línea de Kármán' },
-  { km: 408, label: 'Estación espacial' },
-  { km: 2_000, label: 'Fin de la órbita baja' },
-  { km: 20_200, label: 'Satélites de navegación' },
-  { km: GEO_KM, label: 'Órbita geoestacionaria' },
-].map((mark) => ({ ...mark, at: climbAt(mark.km) }));
-const CLIMB_ZONES = [
-  { below: 12, label: 'Troposfera' },
-  { below: 50, label: 'Estratosfera' },
-  { below: 100, label: 'Mesosfera' },
-  { below: 2_000, label: 'Órbita baja' },
-  { below: GEO_KM - 1, label: 'Órbita media' },
-  { below: Infinity, label: 'Órbita geoestacionaria' },
-];
-const kmLabel = (km: number) => km.toLocaleString('es-CL', { maximumFractionDigits: km < 10 ? 1 : 0 });
 const DARK_FOREST = 'dark-forest';
 
 interface ItemParts {
   root?: HTMLElement | null;
   heat?: HTMLElement | null;
   glow?: HTMLElement | null;
-  print?: HTMLElement | null;
-  sheet?: HTMLElement | null;
   cone?: HTMLElement | null;
   ping?: HTMLElement | null;
   label?: HTMLElement | null;
@@ -67,8 +51,10 @@ interface ItemParts {
 
 interface SkyParts {
   sky?: HTMLElement | null;
-  spokes?: HTMLElement | null;
+  wheel?: HTMLElement | null;
   forge?: HTMLElement | null;
+  source?: HTMLElement | null;
+  sourceLeft?: HTMLElement | null;
   surface?: HTMLElement | null;
   granules?: HTMLElement | null;
   cooled?: HTMLElement | null;
@@ -76,18 +62,16 @@ interface SkyParts {
   motes?: HTMLElement | null;
   beam?: HTMLElement | null;
   blips?: (HTMLElement | null)[];
-  air?: HTMLElement | null;
-  earth?: HTMLElement | null;
-  altitude?: HTMLElement | null;
-  zone?: HTMLElement | null;
-  marks?: (HTMLElement | null)[];
 }
 
 interface Geometry {
   width: number;
   bodyHeight: number;
-  items: { top: number; height: number; centerX: number; width: number; frameHeight: number }[];
+  items: { top: number; height: number; centerX: number; width: number; frameHeight: number; window: Box }[];
   groups: { top: number; height: number }[];
+  // Hábitats: el radio de la rueda en cada obra y la distancia al casco
+  wheel: WheelStop[];
+  gap: number;
 }
 
 // Pseudoaleatorio estable para los ecos falsos del radar
@@ -123,29 +107,38 @@ export const VerticalRoom = memo(({
   const { t } = useLocale();
   const bodyRef = useRef<HTMLDivElement>(null);
   const items = useRef<ItemParts[]>([]);
-  const sky = useRef<SkyParts>({ blips: [], marks: [] });
-  const geometry = useRef<Geometry>({ width: 1, bodyHeight: 1, items: [], groups: [] });
+  const sky = useRef<SkyParts>({ blips: [] });
+  const geometry = useRef<Geometry>({ width: 1, bodyHeight: 1, items: [], groups: [], wheel: [], gap: 0 });
+  const wheel = useRef<Wheel | null>(null);
   const live = useRef({
     touched: new Set<number>(),
     lit: new Set<number>(),
     pointer: { x: -9999, y: -9999 },
-    altitude: '',
-    zone: '',
     // Radar: ángulo desde el último barrido, señal fijada y su intensidad
     since: [] as number[],
     locked: new Set<number>(),
     lock: [] as number[],
     lastNow: 0,
+    // Industria: cuándo empezó a armarse cada obra (ms; -Infinity si se
+    // dio por armada), si ya quedó armada, su lienzo mientras se arma y si
+    // hay alguna obra armándose
+    start: [] as number[],
+    built: [] as boolean[],
+    assembly: [] as (Assembly | null)[],
+    assembling: false,
+    // Hábitats: el punto de la sala en el centro de la pantalla en el último cuadro
+    wheelCenter: Number.NaN,
   });
   const radar = useRef<Animation | null>(null);
 
   const works = useMemo(() => groups.flatMap((group, groupIndex) =>
     group.works.map((work) => ({ ...work, groupIndex }))), [groups]);
+  const sources = useMemo(() => works.map(({ concept }) => selectedStudyImages[concept.id]?.[0]), [works]);
 
   const part = (index: number, key: keyof ItemParts) => (element: HTMLElement | null) => {
     items.current[index] = { ...items.current[index], [key]: element };
   };
-  const skyPart = (key: Exclude<keyof SkyParts, 'blips' | 'marks'>) => (element: HTMLElement | null) => {
+  const skyPart = (key: Exclude<keyof SkyParts, 'blips'>) => (element: HTMLElement | null) => {
     sky.current[key] = element;
   };
 
@@ -175,25 +168,44 @@ export const VerticalRoom = memo(({
     }
 
     if (kind === 'blueprint') {
-      const climb = clamp01(offset / Math.max(1, bodyHeight - viewport));
-      paintClimb(sky.current, climb, viewport);
-      const km = Math.expm1(climb * Math.log1p(GEO_KM));
-      const altitude = kmLabel(climb > 0.999 ? GEO_KM : km);
-      if (altitude !== state.altitude && sky.current.altitude) {
-        state.altitude = altitude;
-        sky.current.altitude.textContent = altitude;
-      }
-      const zone = t(CLIMB_ZONES.find((band) => km < band.below)?.label ?? '');
-      if (zone !== state.zone && sky.current.zone) {
-        state.zone = zone;
-        sky.current.zone.textContent = zone;
-      }
+      // El borde de donde viene la materia brilla mientras alguna obra se
+      // arma; mientras tanto el bucle sigue aunque no haya scroll
+      // Brilla el borde por donde llega cada flota en camino
+      let left = false;
+      let right = false;
+      state.start.forEach((start, index) => {
+        if (start === undefined || (now - start) / 1000 >= assemblyEnd(index)) return;
+        const sides = assemblySides(index);
+        left ||= sides.left;
+        right ||= sides.right;
+      });
+      state.assembling = state.start.some((start) => start !== undefined && (now - start) / 1000 < ASSEMBLY_MAX);
+      sky.current.source?.style.setProperty('opacity', right ? '1' : '0');
+      sky.current.sourceLeft?.style.setProperty('opacity', left ? '1' : '0');
     }
 
-    if (kind === 'wheel' && sky.current.spokes) {
-      // La rueda gira lo mismo que avanzan las obras sobre su borde
-      const radius = viewport * (width < 720 ? 3.2 : 1.7);
-      sky.current.spokes.style.transform = `rotate(${((offset / radius) * 180 / Math.PI).toFixed(3)}deg)`;
+    let wheelR = 1;
+    if (kind === 'wheel') {
+      // La rueda gira lo mismo que avanzan las obras sobre su borde y crece
+      // con los hábitats
+      const center = offset + viewport / 2;
+      const stops = geometry.current.wheel;
+      wheelR = wheelRadius(stops, center);
+      if (wheel.current) {
+        drawWheel(wheel.current, { center, radius: wheelR, gap: geometry.current.gap, spokes: wheelSpokes(stops, wheelR), masts: stops.map((stop) => stop.at) });
+        // Se desvanece antes de que termine la sala: no llega al portal siguiente
+        const remaining = bodyHeight - offset - viewport;
+        wheel.current.canvas.style.opacity = smoothstep(viewport * 0.1, viewport * 0.9, remaining).toFixed(3);
+      }
+      // El cielo gira con ella alrededor del eje; lo lejano, más despacio
+      const moved = center - state.wheelCenter;
+      if (Math.abs(moved) < viewport) {
+        skyDrift.spin.x = width / 2 + wheelR;
+        skyDrift.spin.y = viewport / 2;
+        skyDrift.spin.depth = 1;
+        skyDrift.spin.angle += (moved / wheelR) * 0.5;
+      }
+      state.wheelCenter = center;
     }
 
     for (let index = 0; index < placed.length; index++) {
@@ -206,6 +218,19 @@ export const VerticalRoom = memo(({
       if (centerY < -viewport * 0.6 || centerY > viewport * 1.6) {
         if (state.touched.delete(index)) {
           settleItem(parts);
+          delete state.built[index];
+          endAssembly(state.assembly[index], false);
+          state.assembly[index] = null;
+          if (state.start[index] !== undefined) {
+            if (centerY > 0) {
+              // Quedó por debajo (volviste más arriba): al bajar de nuevo
+              // hasta ella, la flota la arma otra vez
+              delete state.start[index];
+            } else {
+              // Quedó atrás a medio armar: queda armada
+              state.start[index] = -Infinity;
+            }
+          }
           if (kind === 'silence') {
             state.locked.delete(index);
             state.lock[index] = 0;
@@ -228,17 +253,38 @@ export const VerticalRoom = memo(({
           root.classList.add('is-on');
         }
       } else if (kind === 'wheel') {
-        const radius = viewport * (width < 720 ? 3.2 : 1.7);
-        const angle = Math.asin(clamp((centerY - viewport / 2) / radius, -0.8, 0.8));
-        const shift = radius * (1 - Math.cos(angle));
+        const angle = Math.asin(clamp((centerY - viewport / 2) / wheelR, -0.8, 0.8));
+        const shift = wheelR * (1 - Math.cos(angle));
         root.style.transform = `translate3d(${shift.toFixed(1)}px, 0, 0) rotate(${(-angle * (width < 720 ? 0.55 : 0.8) * 180 / Math.PI).toFixed(3)}deg)`;
       } else if (kind === 'blueprint') {
-        // La impresión baja por la ventana del marco mientras la obra sube
-        const printed = clamp01((viewport * 0.84 - top) / (viewport * 0.46));
-        const percent = (printed * 100).toFixed(2);
-        parts.print?.style.setProperty('transform', `translate3d(0, ${percent}%, 0)`);
-        parts.sheet?.style.setProperty('transform', `translate3d(0, -${percent}%, 0)`);
-        parts.print?.classList.toggle('is-printing', printed > 0.001 && printed < 0.999);
+        if (state.built[index]) continue;
+        // Al asomar la ventana despega la flota (sin movimiento reducido,
+        // queda armada de una vez)
+        const windowTop = top + box.window.top;
+        if (state.start[index] === undefined && windowTop < viewport * 0.88 && windowTop + box.window.height > 0) {
+          state.start[index] = reducedMotion() ? -Infinity : now;
+          state.assembling = true;
+        }
+        const start = state.start[index];
+        if (start === undefined) continue;
+        const elapsed = (now - start) / 1000;
+        // Cada obra tiene su coreografía (orden, vuelo, altura de entrada)
+        if (elapsed >= assemblyEnd(index)) {
+          // Armada: la imagen real queda sola (el lienzo era el mismo dibujo)
+          endAssembly(state.assembly[index]);
+          state.assembly[index] = null;
+          state.built[index] = true;
+          root.classList.add('is-built');
+          root.classList.remove('is-building');
+          continue;
+        }
+        const itemLeft = box.centerX - box.width / 2;
+        const assembly = state.assembly[index] ??= startAssembly(root, box.window, itemLeft, width, viewport, sources[index], index);
+        root.classList.add('is-building');
+        // Las teselas salen de fuera de la pantalla, por los bordes a media
+        // altura: su posición respecto a la ventana
+        const windowLeft = itemLeft + box.window.left;
+        if (assembly) drawAssembly(assembly, elapsed, width - windowLeft, -windowLeft, viewport / 2 - windowTop, viewport);
       } else if (kind === 'starlight') {
         // Al asomar desde la estrella la obra llega incandescente; al subir se
         // enfría de arriba abajo y queda en sus colores hacia la mitad
@@ -304,9 +350,14 @@ export const VerticalRoom = memo(({
   };
 
   const pauseRadar = () => radar.current?.pause();
+  // Al detenerse la rueda, el próximo cuadro no arrastra el cielo
+  const forgetWheel = () => {
+    live.current.wheelCenter = Number.NaN;
+  };
   const refresh = useRoomLoop(bodyRef, scrollRef, (frame) => paint(frame.offset, frame.viewport, frame.now), {
     continuous: kind === 'silence',
-    onIdle: kind === 'silence' ? pauseRadar : undefined,
+    busy: kind === 'blueprint' ? () => live.current.assembling : undefined,
+    onIdle: kind === 'silence' ? pauseRadar : kind === 'wheel' ? forgetWheel : undefined,
   });
 
   useLayoutEffect(() => {
@@ -316,15 +367,21 @@ export const VerticalRoom = memo(({
       const bodyLeft = body.getBoundingClientRect().left;
       const placed = items.current.map((parts) => {
         const root = parts?.root;
-        if (!root) return { top: 0, height: 0, centerX: 0, width: 0, frameHeight: 0 };
+        const opening = { top: 0, left: 0, width: 0, height: 0 };
+        if (!root) return { top: 0, height: 0, centerX: 0, width: 0, frameHeight: 0, window: opening };
         const { top, left } = offsetWithin(root, body);
         const frame = root.querySelector<HTMLElement>('.mo-frame');
+        const mask = root.querySelector<HTMLElement>('.mo-frame-mask');
+        if (kind === 'blueprint' && mask) {
+          Object.assign(opening, offsetWithin(mask, root), { width: mask.offsetWidth, height: mask.offsetHeight });
+        }
         return {
           top,
           height: root.offsetHeight,
           centerX: bodyLeft + left + root.offsetWidth / 2,
           width: root.offsetWidth,
           frameHeight: frame?.offsetHeight ?? root.offsetHeight,
+          window: opening,
         };
       });
       const groupBoxes = Array.from(body.querySelectorAll<HTMLElement>('.mo-topic-group')).map((group) => ({
@@ -332,10 +389,32 @@ export const VerticalRoom = memo(({
         height: group.offsetHeight,
       }));
       const width = document.documentElement.clientWidth;
-      geometry.current = { width, bodyHeight: body.offsetHeight, items: placed, groups: groupBoxes };
-      if (kind === 'wheel' && sky.current.sky) {
+      geometry.current = { width, bodyHeight: body.offsetHeight, items: placed, groups: groupBoxes, wheel: [], gap: 0 };
+      // Con otro tamaño los lienzos ya no calzan: lo que se armaba queda armado
+      live.current.assembly.forEach((assembly, index) => {
+        if (!assembly) return;
+        endAssembly(assembly, false);
+        live.current.assembly[index] = null;
+        live.current.start[index] = -Infinity;
+      });
+      live.current.built = [];
+      if (kind === 'wheel') {
+        // Cada obra trae su radio; el casco va por fuera de la más ancha
         const viewport = scrollRef.current?.clientHeight ?? window.innerHeight;
-        sky.current.sky.style.setProperty('--wheel-r', `${Math.round(viewport * (width < 720 ? 3.2 : 1.7))}px`);
+        geometry.current.wheel = wheelStops(placed.map((box) => box.top + box.height / 2), viewport, width < 720);
+        const half = Math.max(0, ...placed.map((box) => box.width / 2));
+        geometry.current.gap = Math.max(0, Math.min(half + 104, width / 2 - 24));
+        // Los títulos de grupo empiezan dentro de la cubierta, no cruzan el casco
+        const deck = Math.max(width / 2 - half + 16, width / 2 - geometry.current.gap + 62);
+        body.querySelectorAll<HTMLElement>('.mo-topic-group').forEach((group) => {
+          group.style.setProperty('--wheel-deck', `${Math.max(0, deck - group.getBoundingClientRect().left).toFixed(0)}px`);
+        });
+        const canvas = sky.current.wheel;
+        const host = canvas?.parentElement;
+        if (canvas instanceof HTMLCanvasElement && host) {
+          const accent = getComputedStyle(body).getPropertyValue('--accent');
+          wheel.current = sizeWheel(canvas, host.getBoundingClientRect().left, width, viewport, accent, wheel.current);
+        }
       }
       refresh();
     };
@@ -370,16 +449,9 @@ export const VerticalRoom = memo(({
     };
   }, [kind]);
 
-  const overlayFor = (index: number, concept: AstroConcept, plate: number) => {
-    if (kind === 'blueprint') {
-      return (
-        <span className="mo-print" ref={part(index, 'print')} aria-hidden="true">
-          <span className="mo-print-sheet" ref={part(index, 'sheet')}>
-            <BlueprintDrawing title={concept.title} plate={plate} label={t("Plano de fabricación")} />
-          </span>
-        </span>
-      );
-    }
+  const overlayFor = (index: number) => {
+    // El hueco donde se arma la obra: la grilla de sus teselas, vacía
+    if (kind === 'blueprint') return <span className="mo-bay" aria-hidden="true" />;
     if (kind === 'starlight') return <span className="mo-forge-heat" ref={part(index, 'heat')} aria-hidden="true" />;
     return undefined;
   };
@@ -390,32 +462,14 @@ export const VerticalRoom = memo(({
       <div className="mo-room-sky" ref={skyPart('sky')} aria-hidden="true">
         {kind === 'wheel' && (
           <div className="mo-wheel">
-            <span className="mo-wheel-rim" />
-            <span className="mo-wheel-spokes" ref={skyPart('spokes')} />
+            <canvas className="mo-wheel-canvas" ref={skyPart('wheel')} />
           </div>
         )}
         {kind === 'blueprint' && (
-          <div className="mo-climb">
-            <span className="mo-climb-air" ref={skyPart('air')} />
-            <span className="mo-climb-earth" ref={skyPart('earth')} />
-            <span className="mo-drafting-grid" />
-            {CLIMB_MARKS.map((mark, markIndex) => (
-              <span className="mo-climb-mark" key={mark.km} ref={(element) => { sky.current.marks![markIndex] = element; }}>
-                <span>
-                  <b>{kmLabel(mark.km)} km</b>
-                  {t(mark.label)}
-                </span>
-              </span>
-            ))}
-            <span className="mo-climb-cable" />
-            <span className="mo-climb-capsule">
-              <span className="mo-climb-reading">
-                <b ref={skyPart('altitude')}>0</b>
-                <small>km</small>
-                <em ref={skyPart('zone')}>{t('Troposfera')}</em>
-              </span>
-            </span>
-          </div>
+          <>
+            <span className="mo-source" ref={skyPart('source')} />
+            <span className="mo-source is-left" ref={skyPart('sourceLeft')} />
+          </>
         )}
         {kind === 'starlight' && (
           <div className="mo-forge" ref={skyPart('forge')}>
@@ -485,7 +539,7 @@ export const VerticalRoom = memo(({
                       </span>
                     </span>
                   )}
-                  {renderObra(concept, plate, false, overlayFor(current, concept, plate))}
+                  {renderObra(concept, plate, false, overlayFor(current))}
                 </div>
               );
             })}
@@ -522,30 +576,10 @@ const settleItem = (parts: ItemParts) => {
   parts.heat?.style.removeProperty('transform');
   parts.heat?.style.removeProperty('opacity');
   parts.glow?.style.removeProperty('opacity');
-  parts.print?.style.removeProperty('transform');
-  parts.sheet?.style.removeProperty('transform');
+  parts.root?.classList.remove('is-built', 'is-building');
 };
 
-/* Plano técnico de cada obra: retícula, cotas y su cajetín */
-const BlueprintDrawing = ({ title, plate, label }: { title: string; plate: number; label: string }) => (
-  <>
-    <svg className="mo-print-lines" viewBox="0 0 210 90">
-      <rect x="4" y="4" width="202" height="82" />
-      <path className="is-faint" d="M4 4 L206 86 M206 4 L4 86" />
-      <path className="is-dashed" d="M105 6 V84 M6 45 H204" />
-      <circle cx="105" cy="45" r="31" />
-      <circle className="is-faint" cx="105" cy="45" r="19" />
-      <circle cx="105" cy="45" r="2.2" />
-      <path d="M58 79 H152 M58 76.5 V81.5 M152 76.5 V81.5" />
-      <path className="is-faint" d="M16 14 h10 M16 14 v6 M194 14 h-10 M194 14 v6" />
-    </svg>
-    <span className="mo-print-code">N.º {String(plate).padStart(2, '0')}</span>
-    <span className="mo-print-title">
-      {title}
-      <small>{label}</small>
-    </span>
-  </>
-);
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* Grupo que se recorre más lo avanzado en él: 0 al entrar al primero */
 const groupLevel = (groups: Geometry['groups'], at: number) => {
@@ -585,24 +619,4 @@ const paintStar = (sky: SkyParts, level: number, offset: number, width: number, 
     sky.hole.style.setProperty('--swallow', swallow.toFixed(3));
     sky.hole.style.transform = `translate3d(-50%, ${rise.toFixed(1)}px, 0) scale(${scale.toFixed(4)})`;
   }
-};
-
-/* Subida por el ascensor: el aire se apaga pasada la línea de Kármán, la
-   Tierra se hunde y se curva, y las marcas de altitud pasan por la cápsula */
-const paintClimb = (sky: SkyParts, climb: number, viewport: number) => {
-  sky.air?.style.setProperty('opacity', (1 - smoothstep(0.18, 0.5, climb)).toFixed(3));
-  if (sky.earth) {
-    const fall = smoothstep(0, 1, climb);
-    sky.earth.style.transform = `translate3d(0, ${(fall * viewport * 0.22).toFixed(1)}px, 0) scale(${(1 - fall * 0.72).toFixed(4)})`;
-    sky.earth.style.opacity = (1 - smoothstep(0.75, 1, climb) * 0.6).toFixed(3);
-  }
-  sky.marks?.forEach((mark, index) => {
-    if (!mark) return;
-    // Pasan más despacio que las obras: están lejos
-    const y = (climb - CLIMB_MARKS[index].at) * viewport * 3.2;
-    mark.style.transform = `translate3d(0, ${y.toFixed(1)}px, 0)`;
-    // Al cruzar la cápsula la cota se apaga y la lectura del altímetro la toma
-    const distance = Math.abs(y);
-    mark.style.opacity = (smoothstep(60, 150, distance) * (1 - smoothstep(viewport * 0.3, viewport * 0.55, distance))).toFixed(3);
-  });
 };

@@ -51,6 +51,10 @@ const T = {
 const LATE_NUMBER: Partial<Record<JourneyKind, { in: [number, number]; fill: [number, number]; from?: number }>> = {
   collapse: { in: [0.22, 0.32], fill: [0.25, 0.34] },
   signal: { in: [0.29, 0.31], fill: [0.29, 0.315], from: 1 },
+  // En el atraque el número aparece en la escotilla, ya alineados con el eje
+  torus: { in: [0.25, 0.3], fill: [0.26, 0.31], from: 0.5 },
+  // En el astillero, cuando la imagen ya está armada al fondo del dique
+  blueprint: { in: [0.27, 0.31], fill: [0.28, 0.32], from: 0.5 },
   // En la persecución, desde el punto de fuga donde se perdió la nave
   tunnel: { in: [0.26, 0.3], fill: [0.27, 0.31], from: 0.15 },
 };
@@ -219,7 +223,7 @@ export const SalaPortal = ({
           <motion.div className="mo-portal-veil" style={{ opacity: textOpacity }} />
         </motion.div>
 
-        <JourneyOverlay kind={journey} progress={progress} label={to.number} />
+        <JourneyOverlay kind={journey} progress={progress} label={to.number} image={near ? image : undefined} />
 
         <motion.span
           className="mo-portal-no"

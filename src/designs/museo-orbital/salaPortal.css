@@ -110,37 +110,6 @@
   pointer-events: none;
 }
 
-/* Plano: retícula técnica y marco con esquinas que sigue a la ventana */
-.mo-journey-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(color-mix(in srgb, var(--accent) 22%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--accent) 22%, transparent) 1px, transparent 1px);
-  background-size: 52px 52px;
-  background-position: center;
-  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, #000 20%, transparent 75%);
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, #000 20%, transparent 75%);
-  pointer-events: none;
-}
-
-.mo-journey-frame {
-  --tick: color-mix(in srgb, var(--accent) 85%, #ffffff);
-  position: absolute;
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-  background:
-    linear-gradient(var(--tick), var(--tick)) top left / 18px 1.5px no-repeat,
-    linear-gradient(var(--tick), var(--tick)) top left / 1.5px 18px no-repeat,
-    linear-gradient(var(--tick), var(--tick)) top right / 18px 1.5px no-repeat,
-    linear-gradient(var(--tick), var(--tick)) top right / 1.5px 18px no-repeat,
-    linear-gradient(var(--tick), var(--tick)) bottom left / 18px 1.5px no-repeat,
-    linear-gradient(var(--tick), var(--tick)) bottom left / 1.5px 18px no-repeat,
-    linear-gradient(var(--tick), var(--tick)) bottom right / 18px 1.5px no-repeat,
-    linear-gradient(var(--tick), var(--tick)) bottom right / 1.5px 18px no-repeat;
-  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 25%, transparent);
-  pointer-events: none;
-}
-
 /* Horizonte: borde del planeta, atmósfera que se forma y el sol que asoma */
 .mo-journey-stage.is-horizon .is-glow,
 .mo-journey-stage.is-horizon .is-line,
@@ -213,39 +182,6 @@
   height: 100%;
   overflow: visible;
   pointer-events: none;
-}
-
-/* Hábitat toroidal: banda con volumen, costillas, radios y bordes de luz */
-.mo-journey-stage.is-torus .is-band {
-  fill: url(#mo-torus-band);
-}
-
-.mo-journey-stage.is-torus line {
-  stroke: color-mix(in srgb, var(--accent) 70%, #ffffff);
-  stroke-width: 1;
-}
-
-.mo-journey-stage.is-torus .is-spoke {
-  stroke-width: 1.5;
-}
-
-.mo-journey-stage.is-torus ellipse {
-  fill: none;
-}
-
-.mo-journey-stage.is-torus .is-rim {
-  stroke: color-mix(in srgb, var(--accent) 70%, #ffffff);
-  stroke-width: 1.5;
-}
-
-.mo-journey-stage.is-torus .is-rim.is-outer {
-  stroke: color-mix(in srgb, var(--accent) 55%, transparent);
-  stroke-width: 1;
-}
-
-.mo-journey-stage.is-torus .is-glow {
-  stroke: color-mix(in srgb, var(--accent) 30%, transparent);
-  stroke-width: 14;
 }
 
 /* Agujero negro: halo lensado, anillo de fotones y disco de acreción en capas */

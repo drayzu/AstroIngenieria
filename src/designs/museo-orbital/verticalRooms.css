@@ -101,8 +101,12 @@
   will-change: transform;
 }
 
+/* El título y su línea arrancan a la derecha del casco (VerticalRoom mide --wheel-deck) */
+.mo-room.is-wheel .mo-topic-group > h3 {
+  margin-left: var(--wheel-deck, 0px);
+}
+
 .mo-wheel {
-  --band: 52px;
   position: absolute;
   inset: 0;
   /* Entra y sale de la pantalla en vez de cortarse */
@@ -110,320 +114,84 @@
   mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
 }
 
-/* El borde de la rueda pasa por el centro de la pantalla; el eje queda
-   fuera, a la derecha (--wheel-r lo fija VerticalRoom) */
-.mo-wheel-rim,
-.mo-wheel-spokes {
+/* El casco, los radios y el cubo (wheelHabitat): un lienzo del ancho de la
+   pantalla; VerticalRoom fija su posición y tamaño */
+.mo-wheel-canvas {
   position: absolute;
-  top: calc(50% - var(--wheel-r, 1500px));
-  left: 50%;
-  width: calc(var(--wheel-r, 1500px) * 2);
-  height: calc(var(--wheel-r, 1500px) * 2);
-  border-radius: 50%;
-}
-
-/* Casco del anillo: el borde exterior recibe la luz y el interior queda en
-   sombra; un riel fino recorre la cara interna */
-.mo-wheel-rim {
-  background: radial-gradient(
-    circle closest-side,
-    transparent calc(100% - var(--band) - 1px),
-    color-mix(in srgb, var(--accent, #c9a86a) 30%, transparent) calc(100% - var(--band)),
-    color-mix(in srgb, var(--accent, #c9a86a) 4%, transparent) calc(100% - var(--band) + 1px),
-    color-mix(in srgb, var(--accent, #c9a86a) 3%, transparent) calc(100% - var(--band) * 0.72),
-    color-mix(in srgb, var(--accent, #c9a86a) 18%, transparent) calc(100% - var(--band) * 0.72 + 1px),
-    color-mix(in srgb, var(--accent, #c9a86a) 6%, transparent) calc(100% - var(--band) * 0.72 + 2px),
-    color-mix(in srgb, var(--accent, #c9a86a) 13%, transparent) calc(100% - 3px),
-    color-mix(in srgb, var(--accent, #c9a86a) 55%, #fff 10%) calc(100% - 1px),
-    transparent 100%
-  );
-}
-
-/* Juntas de los módulos: giran con el scroll al mismo paso que las obras */
-.mo-wheel-spokes {
-  background: repeating-conic-gradient(
-    from 0deg,
-    color-mix(in srgb, var(--accent, #c9a86a) 34%, transparent) 0deg 0.07deg,
-    transparent 0.07deg 5deg
-  );
-  -webkit-mask-image: radial-gradient(circle closest-side, transparent calc(100% - var(--band)), #000 calc(100% - var(--band) + 1px), #000 calc(100% - 1px), transparent 100%);
-  mask-image: radial-gradient(circle closest-side, transparent calc(100% - var(--band)), #000 calc(100% - var(--band) + 1px), #000 calc(100% - 1px), transparent 100%);
-  will-change: transform;
+  top: 0;
 }
 
 /* ======================================================================
-   Industria: el plano que se construye
+   Industria: las obras se arman con teselas que llegan volando
    ====================================================================== */
 
-.mo-drafting-grid {
-  position: absolute;
+/* La ventana de la obra mientras espera: el hueco con la grilla de sus
+   teselas. Sin deriva ni zoom: la imagen debe calzar con las teselas */
+.mo-room.is-blueprint .mo-frame-zoom {
   inset: 0;
-  background-image:
-    linear-gradient(rgba(150, 220, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(150, 220, 255, 0.035) 1px, transparent 1px);
-  background-size: 48px 48px;
-  -webkit-mask-image: radial-gradient(ellipse at center, #000 25%, transparent 75%);
-  mask-image: radial-gradient(ellipse at center, #000 25%, transparent 75%);
+  animation: none;
+  transform: none !important;
 }
 
-/* La hoja del plano cubre la ventana; al imprimirse baja y deja la imagen */
-.mo-print {
+.mo-bay {
   position: absolute;
   inset: 0;
   z-index: 3;
-  overflow: hidden;
-  pointer-events: none;
-  will-change: transform;
-}
-
-.mo-print::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 2;
-  height: 2px;
-  background: color-mix(in srgb, var(--accent, #c9a86a) 70%, #fff);
-  box-shadow: 0 0 16px 3px color-mix(in srgb, var(--accent, #c9a86a) 50%, transparent);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.mo-print.is-printing::before {
-  opacity: 1;
-}
-
-.mo-print-sheet {
-  position: absolute;
-  inset: 0;
-  display: block;
-  color: color-mix(in srgb, var(--accent, #c9a86a) 50%, #8fd8ff);
-  background-color: #07121b;
+  background-color: #080b0e;
   background-image:
-    linear-gradient(rgba(143, 216, 255, 0.09) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(143, 216, 255, 0.09) 1px, transparent 1px),
-    linear-gradient(rgba(143, 216, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(143, 216, 255, 0.035) 1px, transparent 1px);
-  background-size: 60px 60px, 60px 60px, 12px 12px, 12px 12px;
-  will-change: transform;
+    linear-gradient(90deg, rgba(160, 205, 235, 0.07) 1px, transparent 1px),
+    linear-gradient(rgba(160, 205, 235, 0.07) 1px, transparent 1px),
+    radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--accent, #c9a86a) 6%, transparent), transparent 70%);
+  background-size: calc(100% / 10) calc(100% / 5), calc(100% / 10) calc(100% / 5), 100% 100%;
+  pointer-events: none;
 }
 
-.mo-print-lines {
+.mo-room-item.is-built .mo-bay {
+  visibility: hidden;
+}
+
+/* El lienzo del armado (tileAssembly): encima de la obra mientras se arma;
+   al terminar se desvanece sobre la imagen real, que es el mismo dibujo */
+.mo-assembly-canvas {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  z-index: 5;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
 }
 
-.mo-print-lines * {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-  opacity: 0.75;
-}
-
-.mo-print-lines .is-faint {
-  opacity: 0.3;
-}
-
-.mo-print-lines .is-dashed {
-  stroke-dasharray: 5 5;
-  opacity: 0.45;
-}
-
-.mo-print-code {
-  position: absolute;
-  top: 9%;
-  left: 3.5%;
-  font-family: var(--mo-mono);
-  font-size: 10px;
-  letter-spacing: 0.26em;
-}
-
-.mo-print-title {
-  position: absolute;
-  right: 3%;
-  bottom: 9%;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-width: 46%;
-  padding: 7px 11px;
-  border: 1px solid color-mix(in srgb, currentColor 55%, transparent);
-  background: rgba(7, 18, 27, 0.75);
-  color: rgba(225, 242, 255, 0.92);
-  font-family: var(--mo-serif);
-  font-style: italic;
-  font-size: clamp(12px, 1.2vw, 15px);
-  line-height: 1.2;
-  text-align: right;
-}
-
-.mo-print-title small {
-  font-family: var(--mo-mono);
-  font-style: normal;
-  font-size: 8.5px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--accent, #c9a86a) 50%, #8fd8ff);
-}
-
-/* Ascensor espacial: la sala entera es la subida. El cable corre por el
-   margen izquierdo, la cápsula se queda a media pantalla con su altímetro y
-   lo que cambia es el cielo: la Tierra, el aire y las marcas de altitud */
-.mo-climb {
-  --cable-x: max(14px, calc(50% - 590px));
-  /* Lo que queda entre el cable y el muro de obras */
-  --gutter: calc(50% - 480px - var(--cable-x) - 34px);
-  position: absolute;
-  inset: 0;
-}
-
-.mo-climb-air {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(120, 190, 255, 0.34) 0%,
-    rgba(70, 140, 230, 0.16) 30%,
-    rgba(40, 90, 180, 0.05) 62%,
-    transparent 85%
-  );
-  will-change: opacity;
-}
-
-.mo-climb-earth {
-  position: absolute;
-  top: 84vh;
-  left: 50%;
-  width: 260vmax;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  transform-origin: 50% 0;
-  translate: -50% 0;
-  background: radial-gradient(closest-side, #0b2236 0%, #0d2a44 90%, #1b4d7a 98.6%, #69b6ff 100%);
-  box-shadow:
-    0 0 3vh 0.6vh rgba(110, 185, 255, 0.45),
-    0 0 14vh 4vh rgba(70, 150, 255, 0.16);
-  will-change: transform, opacity;
-}
-
-.mo-climb-cable {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: var(--cable-x);
-  width: 1px;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    color-mix(in srgb, var(--accent, #c9a86a) 50%, transparent) 10%,
-    color-mix(in srgb, var(--accent, #c9a86a) 50%, transparent) 90%,
-    transparent
-  );
-}
-
-.mo-climb-capsule {
-  position: absolute;
-  top: 50%;
-  left: var(--cable-x);
-  width: 10px;
-  height: 20px;
-  translate: -50% -50%;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--accent, #c9a86a) 60%, #fff);
-  box-shadow: 0 0 16px 3px color-mix(in srgb, var(--accent, #c9a86a) 55%, transparent);
-}
-
-.mo-climb-reading {
-  position: absolute;
-  top: 50%;
-  left: 18px;
-  display: grid;
-  gap: 3px;
-  translate: 0 -50%;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.mo-climb-reading em {
-  width: 92px;
-  white-space: normal;
-  letter-spacing: 0.12em;
-  line-height: 1.3;
-}
-
-.mo-climb-reading b {
-  font-family: var(--mo-serif);
-  font-style: italic;
-  font-weight: 400;
-  font-size: 22px;
-  color: var(--mo-ink);
-  font-variant-numeric: tabular-nums;
-}
-
-.mo-climb-reading small,
-.mo-climb-reading em {
-  font-family: var(--mo-mono);
-  font-style: normal;
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-
-.mo-climb-reading small {
-  color: color-mix(in srgb, var(--accent, #c9a86a) 75%, #fff);
-}
-
-.mo-climb-reading em {
-  color: var(--mo-muted);
-}
-
-/* Marcas de altitud: una línea tenue de lado a lado con su cota junto al cable */
-.mo-climb-mark {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  display: block;
-  padding: 0 0 6px calc(var(--cable-x) + 18px);
-  border-bottom: 1px dashed rgba(170, 215, 255, 0.16);
-  font-family: var(--mo-mono);
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--mo-muted);
-  translate: 0 -100%;
+.mo-assembly-canvas.is-done {
   opacity: 0;
-  will-change: transform, opacity;
 }
 
-.mo-climb-mark span {
-  display: block;
-  width: var(--gutter);
-  min-width: 70px;
-  line-height: 1.35;
+.mo-room.is-blueprint {
+  --tile-hot: color-mix(in srgb, var(--accent, #c9a86a) 18%, #ff9450);
 }
 
-.mo-climb-mark b {
-  display: block;
-  margin-bottom: 3px;
-  font-weight: 400;
-  color: color-mix(in srgb, var(--accent, #c9a86a) 50%, #bfe2ff);
-}
-
-/* Sin margen para el cable, la cápsula y su lectura se esconden */
-@media (max-width: 1179px) {
-  .mo-climb-cable,
-  .mo-climb-capsule {
+@media (prefers-reduced-motion: reduce) {
+  .mo-bay {
     display: none;
   }
+}
 
-  .mo-climb-mark {
-    padding-left: 20px;
-  }
+/* De dónde viene la materia: un resplandor cálido en el borde por donde
+   llega la flota, encendido mientras se arma (VerticalRoom fija su opacidad) */
+.mo-source {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(34vw, 420px);
+  background:
+    radial-gradient(ellipse 60% 42% at 100% 50%, color-mix(in srgb, var(--tile-hot) 26%, transparent), transparent 70%),
+    radial-gradient(ellipse 22% 18% at 100% 50%, color-mix(in srgb, var(--tile-hot) 40%, #fff 10%), transparent 80%);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.mo-source.is-left {
+  right: auto;
+  left: 0;
+  scale: -1 1;
 }
 
 /* ======================================================================
@@ -870,11 +638,4 @@
   box-shadow: 0 0 12px 3px color-mix(in srgb, var(--accent, #c9a86a) 45%, transparent);
   opacity: 0;
   will-change: opacity;
-}
-
-@media (max-width: 720px) {
-  /* En vertical la rueda es más grande y su banda más fina */
-  .mo-wheel {
-    --band: 24px;
-  }
 }
