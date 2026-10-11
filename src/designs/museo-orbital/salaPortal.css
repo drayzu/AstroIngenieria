@@ -141,24 +141,56 @@
   pointer-events: none;
 }
 
-/* Horizonte: el borde iluminado del planeta, dibujado en píxeles reales */
-.mo-journey-horizon {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
+/* Horizonte: borde del planeta, atmósfera que se forma y el sol que asoma */
+.mo-journey-stage.is-horizon .is-glow,
+.mo-journey-stage.is-horizon .is-line,
+.mo-journey-stage.is-horizon .is-gleam,
+.mo-journey-stage.is-horizon .is-heat {
+  fill: none;
 }
 
-.mo-journey-horizon .is-glow {
+/* Sombra de la esfera vista desde lejos */
+.mo-journey-stage.is-horizon .is-shade {
+  fill: url(#mo-horizon-shade);
+}
+
+/* Entrada atmosférica: el borde incandescente y el plasma que pasa */
+.mo-journey-stage.is-horizon .is-heat {
+  stroke: #ff8a4c;
+}
+
+.mo-journey-stage.is-horizon .is-heat-1 {
+  stroke: #ffe2c2;
+}
+
+.mo-journey-stage.is-horizon .is-plasma {
+  stroke: #ffc49a;
+  stroke-linecap: round;
+}
+
+.mo-journey-stage.is-horizon .is-glow {
   stroke: color-mix(in srgb, var(--accent) 30%, transparent);
   stroke-width: 14;
 }
 
-.mo-journey-horizon .is-line {
+.mo-journey-stage.is-horizon .is-line {
   stroke: color-mix(in srgb, var(--accent) 80%, #ffffff);
   stroke-width: 1.5;
+}
+
+.mo-journey-stage.is-horizon .is-gleam {
+  stroke: url(#mo-horizon-gleam);
+  stroke-width: 3;
+}
+
+.mo-journey-stage.is-horizon .is-flare {
+  stroke: url(#mo-horizon-flare);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.mo-journey-stage.is-horizon .is-flare.is-soft {
+  stroke-width: 18;
 }
 
 /* Dyson, estrella, túnel, galaxia y radar: dibujos centrados que escalan */

@@ -86,6 +86,27 @@ const horizonRise = (p: number) => ({
   vmax: 12 * easeInOut(seg(p, JOURNEY_COVER)),
 });
 
+/* Horizonte: primero un planeta entero que nace de un punto; luego caemos
+   hacia él y su borde se aplana hasta volverse el horizonte. En píxeles,
+   compartido por el recorte y el dibujo */
+const HORIZON_APPROACH: [number, number] = [0.12, JOURNEY_OPEN[1]];
+const planetCircle = (p: number, width: number, height: number) => {
+  const vmin = Math.min(width, height) / 100;
+  const vmax = Math.max(width, height) / 100;
+  const big = HORIZON_R * vmax;
+  if (p >= JOURNEY_OPEN[1]) {
+    const { vh, vmax: lift } = horizonRise(p);
+    return { r: big, cy: height + big - (vh * height) / 100 - lift * vmax };
+  }
+  const small = 13 * vmin * easeOut(seg(p, [JOURNEY_OPEN[0], 0.1]));
+  const approach = easeInOut(seg(p, HORIZON_APPROACH));
+  if (approach <= 0 || small <= 0) return { r: small, cy: height / 2 };
+  // El tamaño crece en escala geométrica: se siente como caer, no como estirar
+  const r = small * (big / small) ** approach;
+  const top = height / 2 - small + (height * 0.56 - (height / 2 - small)) * approach;
+  return { r, cy: top + r };
+};
+
 const torusTilt = (p: number) =>
   0.14 + 0.86 * easeInOut(seg(p, [JOURNEY_OPEN[0] + 0.04, JOURNEY_OPEN[1] + 0.06]));
 
@@ -112,8 +133,8 @@ export const journeyClip = (kind: JourneyKind, p: number): string => {
       return `inset(${top.toFixed(2)}% ${side.toFixed(2)}% ${top.toFixed(2)}% ${side.toFixed(2)}%)`;
     }
     case 'horizon': {
-      const { vh, vmax } = horizonRise(p);
-      return `circle(${HORIZON_R}vmax at 50% calc(100% + ${HORIZON_R}vmax - ${vh.toFixed(2)}vh - ${vmax.toFixed(2)}vmax))`;
+      const { r, cy } = planetCircle(p, window.innerWidth, window.innerHeight);
+      return `circle(${r.toFixed(1)}px at 50% ${cy.toFixed(1)}px)`;
     }
     case 'galaxy':
       return `circle(${irisRadius(p, 22)} at 50% 50%)`;
@@ -297,44 +318,186 @@ const BlueprintFrame = ({ progress }: { progress: MotionValue<number> }) => {
   );
 };
 
-/* ---------------- Horizonte: el borde de un planeta que amanece ---------------- */
+/* ---------------- Horizonte: del planeta entero a su superficie ---------------- */
+
+const PLASMA_STREAKS = Array.from({ length: 70 }, (_, index) => ({
+  angle: (seeded(index + 3301) - 0.5) * 1.9,
+  phase: seeded(index + 3407),
+  width: 0.8 + seeded(index + 3511) * 1.4,
+}));
 
 const HorizonRim = ({ progress }: { progress: MotionValue<number> }) => {
-  const svgRef = useRef<SVGSVGElement>(null);
   const glowRef = useRef<SVGCircleElement>(null);
   const lineRef = useRef<SVGCircleElement>(null);
+  const gleamRef = useRef<SVGCircleElement>(null);
+  const shadeRef = useRef<SVGCircleElement>(null);
+  const heatRefs = useRef<(SVGCircleElement | null)[]>([]);
+  const plasmaRefs = useRef<(SVGLineElement | null)[]>([]);
+  const planetMaskRef = useRef<SVGCircleElement>(null);
+  const dustRef = useRef<SVGCircleElement>(null);
+  const lushRef = useRef<SVGCircleElement>(null);
+  const dustGradientRef = useRef<SVGRadialGradientElement>(null);
+  const lushGradientRef = useRef<SVGRadialGradientElement>(null);
+  const dustStopRef = useRef<SVGStopElement>(null);
+  const lushStopRef = useRef<SVGStopElement>(null);
+  const sunRef = useRef<SVGGElement>(null);
+  const sunCoreRef = useRef<SVGCircleElement>(null);
+  const gleamGradientRef = useRef<SVGRadialGradientElement>(null);
+  const flareRef = useRef<SVGLineElement>(null);
+  const flareGlowRef = useRef<SVGLineElement>(null);
+  const flareGradientRef = useRef<SVGLinearGradientElement>(null);
   const opacity = useOverlayOpacity(progress, 0.12);
 
-  // Se dibuja en píxeles reales para que el arco coincida con el recorte
-  const draw = (p: number) => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const width = svg.clientWidth;
-    const height = svg.clientHeight;
-    const vmax = Math.max(window.innerWidth, window.innerHeight) / 100;
-    const { vh, vmax: lift } = horizonRise(p);
-    const r = HORIZON_R * vmax;
-    const cy = height + r - (vh * window.innerHeight) / 100 - lift * vmax;
-    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-    for (const circle of [glowRef.current, lineRef.current]) {
-      circle?.setAttribute('cx', `${width / 2}`);
-      circle?.setAttribute('cy', `${cy}`);
-      circle?.setAttribute('r', `${r}`);
+  // Se dibuja en píxeles reales sobre el mismo círculo que recorta la imagen
+  const draw = useCallback((p: number, width: number, height: number) => {
+    const planet = planetCircle(p, width, height);
+    const r = Math.max(0.5, planet.r);
+    const cy = planet.cy - height / 2;
+    const base = Math.min(width, height);
+    const approach = easeInOut(seg(p, HORIZON_APPROACH));
+    for (const circle of [glowRef.current, lineRef.current, gleamRef.current, shadeRef.current, ...heatRefs.current]) {
+      circle?.setAttribute('cy', cy.toFixed(1));
+      circle?.setAttribute('r', r.toFixed(1));
     }
-  };
-  useMotionValueEvent(progress, 'change', draw);
-  useEffect(() => {
-    draw(progress.get());
-    const onResize = () => draw(progress.get());
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-    // draw solo lee refs y el progreso actual: basta con re-suscribir por progreso
-  }, [progress]);
+    planetMaskRef.current?.setAttribute('cy', cy.toFixed(1));
+    planetMaskRef.current?.setAttribute('r', Math.max(0, r - 1).toFixed(1));
+    // Visto desde lejos es una esfera: luz arriba a la izquierda y noche abajo
+    shadeRef.current?.setAttribute('opacity', (1 - approach).toFixed(3));
+
+    // Atmósfera: polvo fino y anaranjado que con la terraformación se vuelve
+    // espeso y del color del capítulo
+    const terraform = easeInOut(seg(p, [0.06, 0.27]));
+    const atmospheres = [
+      { circle: dustRef.current, gradient: dustGradientRef.current, stop: dustStopRef.current, depth: Math.min(base * 0.05, r * 0.16), alpha: 1 - terraform * 0.85 },
+      { circle: lushRef.current, gradient: lushGradientRef.current, stop: lushStopRef.current, depth: Math.min(base * (0.03 + terraform * 0.11), r * 0.3), alpha: terraform },
+    ];
+    for (const { circle, gradient, stop, depth, alpha } of atmospheres) {
+      circle?.setAttribute('cy', cy.toFixed(1));
+      circle?.setAttribute('r', (r + depth).toFixed(1));
+      circle?.setAttribute('opacity', alpha.toFixed(3));
+      gradient?.setAttribute('cy', cy.toFixed(1));
+      gradient?.setAttribute('r', (r + depth).toFixed(1));
+      stop?.setAttribute('offset', (r / (r + depth)).toFixed(4));
+    }
+
+    // Entrada atmosférica: mientras caemos, el borde arde y el plasma pasa a
+    // nuestro lado hacia afuera
+    const entry = Math.sin(Math.PI * seg(p, [0.15, 0.285])) ** 1.4;
+    heatRefs.current.forEach((heat, index) => {
+      heat?.setAttribute('stroke-width', (base * (index === 0 ? 0.05 : 0.008)).toFixed(1));
+      heat?.setAttribute('opacity', (entry * (index === 0 ? 0.32 : 0.9)).toFixed(3));
+    });
+    PLASMA_STREAKS.forEach((streak, index) => {
+      const line = plasmaRefs.current[index];
+      if (!line) return;
+      // Nacen pegadas al borde ardiente y se desprenden hacia afuera
+      const travel = (streak.phase + p * 14) % 1;
+      const near = r + base * 0.16 * travel ** 1.3;
+      const far = near + base * (0.015 + 0.06 * entry) * (1 - travel * 0.5);
+      const sin = Math.sin(streak.angle);
+      const cos = Math.cos(streak.angle);
+      line.setAttribute('x1', (sin * near).toFixed(1));
+      line.setAttribute('y1', (cy - cos * near).toFixed(1));
+      line.setAttribute('x2', (sin * far).toFixed(1));
+      line.setAttribute('y2', (cy - cos * far).toFixed(1));
+      line.setAttribute('stroke-width', streak.width.toFixed(2));
+      line.setAttribute('opacity', (entry * (1 - travel) ** 1.5).toFixed(3));
+    });
+
+    // El sol es del espacio: asoma tras el planeta pequeño y se apaga al
+    // entrar en la atmósfera; al aterrizar solo queda el horizonte
+    const daylight = 1 - seg(p, [0.13, 0.19]);
+    const angle = Math.asin(Math.max(-0.9, (-0.17 * width) / Math.max(r, 1)));
+    const sun = base * 0.03;
+    const rise = -2.6 * sun + 3.1 * sun * easeOut(seg(p, [0.08, 0.2]));
+    const distance = r + rise;
+    sunCoreRef.current?.setAttribute('r', (sun * 7).toFixed(1));
+    sunRef.current?.setAttribute('opacity', daylight.toFixed(3));
+    sunRef.current?.setAttribute('transform', `translate(${(distance * Math.sin(angle)).toFixed(1)} ${(cy - distance * Math.cos(angle)).toFixed(1)})`);
+    const dawn = seg(p, [0.11, 0.18]);
+    const flare = Math.max(Math.exp(-((rise / (1.1 * sun)) ** 2)), 0.5 * dawn) * daylight;
+    const limbX = r * Math.sin(angle);
+    const limbY = cy - r * Math.cos(angle);
+    // El destello corre a lo largo del borde, tangente a él
+    // Con el planeta pequeño el destello es corto: crece con el horizonte
+    const reach = Math.min(width * 0.42, r * 1.6);
+    const tx = Math.cos(angle) * reach;
+    const ty = Math.sin(angle) * reach;
+    const ends = { x1: limbX - tx, y1: limbY - ty, x2: limbX + tx, y2: limbY + ty };
+    for (const [key, value] of Object.entries(ends)) {
+      flareRef.current?.setAttribute(key, value.toFixed(1));
+      flareGlowRef.current?.setAttribute(key, value.toFixed(1));
+      flareGradientRef.current?.setAttribute(key, value.toFixed(1));
+    }
+    flareRef.current?.setAttribute('opacity', flare.toFixed(3));
+    flareGlowRef.current?.setAttribute('opacity', (flare * 0.6).toFixed(3));
+    gleamGradientRef.current?.setAttribute('cx', limbX.toFixed(1));
+    gleamGradientRef.current?.setAttribute('cy', limbY.toFixed(1));
+    gleamGradientRef.current?.setAttribute('r', (width * 0.32).toFixed(1));
+    gleamRef.current?.setAttribute('opacity', (dawn * daylight).toFixed(3));
+  }, []);
+  const svgRef = useStageSvg(progress, draw);
 
   return (
-    <motion.svg ref={svgRef} className="mo-journey-horizon" style={{ opacity }} aria-hidden="true">
-      <circle ref={glowRef} className="is-glow" fill="none" />
-      <circle ref={lineRef} className="is-line" fill="none" />
+    <motion.svg ref={svgRef} className="mo-journey-stage is-horizon" style={{ opacity }} aria-hidden="true">
+      <defs>
+        {/* Solo el cielo: lo que queda tras el planeta no se ve */}
+        <mask id="mo-horizon-sky" maskUnits="userSpaceOnUse" x="-8000" y="-8000" width="16000" height="16000">
+          <rect x="-8000" y="-8000" width="16000" height="16000" fill="#fff" />
+          <circle ref={planetMaskRef} cx="0" fill="#000" />
+        </mask>
+        <radialGradient id="mo-horizon-shade" cx="0.5" cy="0.5" r="0.5" fx="0.32" fy="0.28">
+          <stop offset="0" stopColor="#000" stopOpacity="0" />
+          <stop offset="0.55" stopColor="#000" stopOpacity="0.12" />
+          <stop offset="0.86" stopColor="#020403" stopOpacity="0.62" />
+          <stop offset="1" stopColor="#020403" stopOpacity="0.9" />
+        </radialGradient>
+        <radialGradient id="mo-horizon-dust" ref={dustGradientRef} gradientUnits="userSpaceOnUse" cx="0">
+          <stop ref={dustStopRef} stopColor="#ff9466" stopOpacity="0.5" />
+          <stop offset="1" stopColor="#ff9466" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="mo-horizon-lush" ref={lushGradientRef} gradientUnits="userSpaceOnUse" cx="0">
+          <stop ref={lushStopRef} style={{ stopColor: 'var(--accent)' }} stopOpacity="0.55" />
+          <stop offset="1" stopColor="#7fb8ff" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="mo-horizon-sun">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="0.12" stopColor="#fff6dc" />
+          <stop offset="0.3" stopColor="#ffe2a8" stopOpacity="0.5" />
+          <stop offset="1" stopColor="#ffd28a" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="mo-horizon-gleam" ref={gleamGradientRef} gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#ffffff" stopOpacity="1" />
+          <stop offset="0.35" stopColor="#fff2d6" stopOpacity="0.5" />
+          <stop offset="1" stopColor="#fff2d6" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="mo-horizon-flare" ref={flareGradientRef} gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#fff6e6" stopOpacity="0" />
+          <stop offset="0.42" stopColor="#fff6e6" stopOpacity="0.55" />
+          <stop offset="0.5" stopColor="#ffffff" stopOpacity="1" />
+          <stop offset="0.58" stopColor="#fff6e6" stopOpacity="0.55" />
+          <stop offset="1" stopColor="#fff6e6" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <circle ref={shadeRef} cx="0" className="is-shade" />
+      <g mask="url(#mo-horizon-sky)">
+        <circle ref={dustRef} cx="0" fill="url(#mo-horizon-dust)" />
+        <circle ref={lushRef} cx="0" fill="url(#mo-horizon-lush)" />
+        <g ref={sunRef}>
+          <circle ref={sunCoreRef} className="is-sun" fill="url(#mo-horizon-sun)" />
+        </g>
+        {PLASMA_STREAKS.map((_, index) => (
+          <line key={index} className="is-plasma" ref={(element) => { plasmaRefs.current[index] = element; }} />
+        ))}
+      </g>
+      <circle ref={glowRef} cx="0" className="is-glow" />
+      {[0, 1].map((index) => (
+        <circle key={index} cx="0" className={`is-heat is-heat-${index}`} ref={(element) => { heatRefs.current[index] = element; }} />
+      ))}
+      <circle ref={lineRef} cx="0" className="is-line" />
+      <circle ref={gleamRef} cx="0" className="is-gleam" />
+      <line ref={flareGlowRef} className="is-flare is-soft" />
+      <line ref={flareRef} className="is-flare" />
     </motion.svg>
   );
 };
