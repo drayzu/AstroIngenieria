@@ -205,15 +205,15 @@
   filter: drop-shadow(0 0 1.5px color-mix(in srgb, var(--accent) 80%, transparent));
 }
 
-/* Túnel: anillos que crecen en perspectiva hacia quien mira */
+/* Hiperespacio: estelas que nacen cerca del centro y salen disparadas */
 .mo-journey-tunnel {
   width: min(150vmax, 2200px);
   height: min(150vmax, 2200px);
 }
 
-.mo-journey-tunnel circle {
-  fill: none;
-  stroke: color-mix(in srgb, var(--accent) 60%, #ffffff);
+.mo-journey-tunnel line {
+  stroke: url(#mo-warp-doppler);
+  stroke-linecap: round;
 }
 
 /* Radar: anillos de alcance, barrido cónico y señales que se encienden.

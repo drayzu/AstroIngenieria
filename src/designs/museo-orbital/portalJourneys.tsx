@@ -325,25 +325,47 @@ const DysonSwarm = ({ progress }: { progress: MotionValue<number> }) => {
   );
 };
 
-/* ---------------- Túnel: anillos de luz que vienen hacia ti ---------------- */
+/* ---------------- Hiperespacio: las estrellas se estiran en estelas ---------------- */
 
-const TUNNEL_RINGS = 10;
+const WARP_STREAKS = Array.from({ length: 110 }, (_, index) => ({
+  angle: seeded(index + 501) * Math.PI * 2,
+  phase: seeded(index + 777),
+  speed: 0.75 + seeded(index + 913) * 0.6,
+  width: 0.12 + seeded(index + 1201) * 0.22,
+}));
 
 const WarpTunnel = ({ progress }: { progress: MotionValue<number> }) => {
-  const ringRefs = useRef<(SVGCircleElement | null)[]>([]);
+  const lineRefs = useRef<(SVGLineElement | null)[]>([]);
 
-  // Cada anillo nace en el centro y crece en perspectiva hasta salir de la
-  // pantalla; el scroll los hace avanzar, como cruzar puertas de salto
+  // Al principio son estrellas que se alejan despacio del centro; con el
+  // scroll el salto acelera y cada una se estira en una estela larga
   const place = (p: number) => {
     const envelope =
-      seg(p, [JOURNEY_OPEN[0], JOURNEY_OPEN[0] + 0.05]) * (1 - seg(p, [JOURNEY_COVER[0], JOURNEY_COVER[0] + 0.16]));
-    ringRefs.current.forEach((ring, index) => {
-      if (!ring) return;
-      const phase = (p * 6 + index / TUNNEL_RINGS) % 1;
-      const radius = 4 * 35 ** phase;
-      ring.setAttribute('r', radius.toFixed(2));
-      ring.setAttribute('stroke-width', (0.15 + phase * 1.3).toFixed(2));
-      ring.setAttribute('opacity', (Math.sin(Math.PI * phase) ** 1.5 * envelope).toFixed(3));
+      seg(p, [JOURNEY_OPEN[0], JOURNEY_OPEN[0] + 0.06]) * (1 - seg(p, [JOURNEY_COVER[0], JOURNEY_COVER[0] + 0.14]));
+    const jump = easeInOut(seg(p, [JOURNEY_OPEN[0] + 0.04, JOURNEY_COVER[0]]));
+    // Las estelas nacen en el borde de la ventana: rodean la imagen sin cruzarla
+    const vmin = Math.min(window.innerWidth, window.innerHeight) / 100;
+    const vmax = Math.max(window.innerWidth, window.innerHeight) / 100;
+    const unit = Math.min(150 * vmax, 2200) / 200;
+    const windowMin = 0.7 + 29.3 * easeOut(seg(p, JOURNEY_OPEN));
+    const windowMax = 76 * easeInOut(seg(p, JOURNEY_COVER));
+    const inner = Math.max(10, (windowMin * vmin + windowMax * vmax) / unit + 2);
+    WARP_STREAKS.forEach((streak, index) => {
+      const line = lineRefs.current[index];
+      if (!line) return;
+      const travel = (streak.phase + p * streak.speed * (2.2 + jump * 3)) % 1;
+      // Perspectiva: cerca del centro avanzan lento, en los bordes salen disparadas
+      const near = inner + 140 * travel ** 2.4;
+      const length = (0.6 + jump * 46) * (0.25 + travel) * streak.speed;
+      const far = near + length;
+      const cos = Math.cos(streak.angle);
+      const sin = Math.sin(streak.angle);
+      line.setAttribute('x1', (cos * near).toFixed(2));
+      line.setAttribute('y1', (sin * near).toFixed(2));
+      line.setAttribute('x2', (cos * far).toFixed(2));
+      line.setAttribute('y2', (sin * far).toFixed(2));
+      line.setAttribute('stroke-width', (streak.width * (0.5 + travel * 1.1)).toFixed(3));
+      line.setAttribute('opacity', (Math.sin(Math.PI * travel) * envelope).toFixed(3));
     });
   };
   useMotionValueEvent(progress, 'change', place);
@@ -351,12 +373,21 @@ const WarpTunnel = ({ progress }: { progress: MotionValue<number> }) => {
 
   return (
     <svg className="mo-journey-tunnel" viewBox="-100 -100 200 200" aria-hidden="true">
-      {Array.from({ length: TUNNEL_RINGS }, (_, index) => (
-        <circle
+      <defs>
+        {/* Corrimiento Doppler: azul hacia donde vas, rojo en lo que queda atrás */}
+        <radialGradient id="mo-warp-doppler" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="120">
+          <stop offset="0.1" stopColor="#cfe6ff" stopOpacity="0" />
+          <stop offset="0.22" stopColor="#e4f1ff" stopOpacity="0.95" />
+          <stop offset="0.5" style={{ stopColor: 'var(--accent, #7aa7ff)' }} stopOpacity="0.9" />
+          <stop offset="0.85" stopColor="#ff9a7a" stopOpacity="0.55" />
+          <stop offset="1" stopColor="#ff6a5a" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      {WARP_STREAKS.map((_, index) => (
+        <line
           key={index}
-          r={0}
           ref={(element) => {
-            ringRefs.current[index] = element;
+            lineRefs.current[index] = element;
           }}
         />
       ))}
@@ -470,7 +501,12 @@ export const JourneyOverlay = ({ kind, progress }: { kind: JourneyKind; progress
         </>
       );
     case 'tunnel':
-      return <WarpTunnel progress={progress} />;
+      return (
+        <>
+          <IrisRing progress={progress} />
+          <WarpTunnel progress={progress} />
+        </>
+      );
     case 'galaxy':
       return <Galaxy progress={progress} />;
     case 'radar':

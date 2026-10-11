@@ -63,27 +63,19 @@
   width: 30vmin;
   height: 30vmin;
   border-radius: 50%;
+  /* Disco con limbo definido y corona: un sol, no una mancha */
   background: radial-gradient(
     circle,
-    #fffaf0 0%,
-    #fff1c8 9%,
-    color-mix(in srgb, var(--accent, #c9a86a) 82%, #fff) 17%,
-    color-mix(in srgb, var(--accent, #c9a86a) 34%, transparent) 33%,
-    color-mix(in srgb, var(--accent, #c9a86a) 9%, transparent) 52%,
+    #fffdf7 0%,
+    #fff5da 12%,
+    color-mix(in srgb, var(--accent, #c9a86a) 45%, #fff) 20%,
+    color-mix(in srgb, var(--accent, #c9a86a) 88%, #fff) 25.5%,
+    color-mix(in srgb, var(--accent, #c9a86a) 55%, transparent) 26.5%,
+    color-mix(in srgb, var(--accent, #c9a86a) 20%, transparent) 34%,
+    color-mix(in srgb, var(--accent, #c9a86a) 7%, transparent) 50%,
     transparent 70%
   );
   will-change: opacity, transform;
-}
-
-/* Corona que respira */
-.mo-orbit-star::before {
-  content: '';
-  position: absolute;
-  inset: -35%;
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent, #c9a86a) 16%, transparent), transparent 62%);
-  animation: mo-orbit-breathe 6s ease-in-out infinite;
-  animation-play-state: paused;
 }
 
 /* Lo que queda cuando el enjambre captura la luz: calor, no brillo */
@@ -119,11 +111,23 @@
   will-change: opacity;
 }
 
+/* Hilo de luz con un destello que lo recorre al girar */
 .mo-orbit-ring-spin {
   position: absolute;
   inset: 0;
-  border: 1.5px dotted color-mix(in srgb, var(--accent, #c9a86a) 78%, #fff);
   border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    #fff8e6 0deg,
+    color-mix(in srgb, var(--accent, #c9a86a) 80%, #fff) 8deg,
+    color-mix(in srgb, var(--accent, #c9a86a) 38%, transparent) 60deg,
+    color-mix(in srgb, var(--accent, #c9a86a) 16%, transparent) 180deg,
+    color-mix(in srgb, var(--accent, #c9a86a) 12%, transparent) 300deg,
+    color-mix(in srgb, var(--accent, #c9a86a) 30%, transparent) 352deg,
+    #fff8e6 360deg
+  );
+  -webkit-mask-image: radial-gradient(closest-side, transparent calc(100% - 2.5px), #000 calc(100% - 1.5px), #000 calc(100% - 0.5px), transparent 100%);
+  mask-image: radial-gradient(closest-side, transparent calc(100% - 2.5px), #000 calc(100% - 1.5px), #000 calc(100% - 0.5px), transparent 100%);
   animation: mo-orbit-spin var(--ring-speed) linear infinite;
   animation-play-state: paused;
 }

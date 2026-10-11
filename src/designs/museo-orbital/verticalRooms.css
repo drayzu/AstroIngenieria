@@ -102,8 +102,12 @@
 }
 
 .mo-wheel {
+  --band: 52px;
   position: absolute;
   inset: 0;
+  /* Entra y sale de la pantalla en vez de cortarse */
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
 }
 
 /* El borde de la rueda pasa por el centro de la pantalla; el eje queda
@@ -118,22 +122,32 @@
   border-radius: 50%;
 }
 
+/* Casco del anillo: el borde exterior recibe la luz y el interior queda en
+   sombra; un riel fino recorre la cara interna */
 .mo-wheel-rim {
-  border: 1px solid color-mix(in srgb, var(--accent, #c9a86a) 32%, transparent);
-  box-shadow:
-    inset 0 0 0 52px color-mix(in srgb, var(--accent, #c9a86a) 3%, transparent),
-    inset 0 0 0 53px color-mix(in srgb, var(--accent, #c9a86a) 14%, transparent);
+  background: radial-gradient(
+    circle closest-side,
+    transparent calc(100% - var(--band) - 1px),
+    color-mix(in srgb, var(--accent, #c9a86a) 30%, transparent) calc(100% - var(--band)),
+    color-mix(in srgb, var(--accent, #c9a86a) 4%, transparent) calc(100% - var(--band) + 1px),
+    color-mix(in srgb, var(--accent, #c9a86a) 3%, transparent) calc(100% - var(--band) * 0.72),
+    color-mix(in srgb, var(--accent, #c9a86a) 18%, transparent) calc(100% - var(--band) * 0.72 + 1px),
+    color-mix(in srgb, var(--accent, #c9a86a) 6%, transparent) calc(100% - var(--band) * 0.72 + 2px),
+    color-mix(in srgb, var(--accent, #c9a86a) 13%, transparent) calc(100% - 3px),
+    color-mix(in srgb, var(--accent, #c9a86a) 55%, #fff 10%) calc(100% - 1px),
+    transparent 100%
+  );
 }
 
-/* Costillas del anillo: giran con el scroll al mismo paso que las obras */
+/* Juntas de los módulos: giran con el scroll al mismo paso que las obras */
 .mo-wheel-spokes {
   background: repeating-conic-gradient(
     from 0deg,
-    color-mix(in srgb, var(--accent, #c9a86a) 30%, transparent) 0deg 0.08deg,
-    transparent 0.08deg 5deg
+    color-mix(in srgb, var(--accent, #c9a86a) 34%, transparent) 0deg 0.07deg,
+    transparent 0.07deg 5deg
   );
-  -webkit-mask-image: radial-gradient(circle closest-side, transparent calc(100% - 53px), #000 calc(100% - 52px), #000 calc(100% - 1px), transparent 100%);
-  mask-image: radial-gradient(circle closest-side, transparent calc(100% - 53px), #000 calc(100% - 52px), #000 calc(100% - 1px), transparent 100%);
+  -webkit-mask-image: radial-gradient(circle closest-side, transparent calc(100% - var(--band)), #000 calc(100% - var(--band) + 1px), #000 calc(100% - 1px), transparent 100%);
+  mask-image: radial-gradient(circle closest-side, transparent calc(100% - var(--band)), #000 calc(100% - var(--band) + 1px), #000 calc(100% - 1px), transparent 100%);
   will-change: transform;
 }
 
@@ -577,14 +591,7 @@
 
 @media (max-width: 720px) {
   /* En vertical la rueda es más grande y su banda más fina */
-  .mo-wheel-rim {
-    box-shadow:
-      inset 0 0 0 22px color-mix(in srgb, var(--accent, #c9a86a) 3%, transparent),
-      inset 0 0 0 23px color-mix(in srgb, var(--accent, #c9a86a) 12%, transparent);
-  }
-
-  .mo-wheel-spokes {
-    -webkit-mask-image: radial-gradient(circle closest-side, transparent calc(100% - 23px), #000 calc(100% - 22px), #000 calc(100% - 1px), transparent 100%);
-    mask-image: radial-gradient(circle closest-side, transparent calc(100% - 23px), #000 calc(100% - 22px), #000 calc(100% - 1px), transparent 100%);
+  .mo-wheel {
+    --band: 24px;
   }
 }
