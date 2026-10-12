@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useMotionValueEvent, useTransform, type MotionValue } from 'framer-motion';
 import { HOLE, drawHole, holeCenter, holeGlow, holeRadius, holeRoll } from './blackHoleFall';
+import { drawHabitat, habitatRoll, habitatSkyHidden, habitatWindow } from './habitatFlyby';
 import { CHASE, chaseBank, drawChase } from './propulsionChase';
 import { KARDASHEV, drawKardashev, kardashevGround, kardashevSkyDim, kardashevTurn } from './kardashevZoom';
 import { skyDrift } from './roomShared';
@@ -47,12 +48,11 @@ interface JourneyHold { range: [number, number]; extra: number }
 const JOURNEY_HOLDS: Partial<Record<JourneyKind, JourneyHold[]>> = {
   // El astillero: la imagen se arma al fondo del dique
   blueprint: [{ range: [0.12, 0.28], extra: 70 }],
-  // El atraque: acercarse, igualar el giro y entrar por el eje
-  // y una pausa ya alineados, con el hábitat quieto y el cielo rodando
+  // El atraque: rozar el anillo, rodearlo hasta su eje, igualar el giro y
+  // entrar por el túnel del cubo
   torus: [
-    { range: [0.03, 0.2], extra: 70 },
-    { range: [0.2, 0.235], extra: 80 },
-    { range: [0.235, 0.29], extra: 35 },
+    { range: [0.03, 0.2], extra: 90 },
+    { range: [0.2, 0.29], extra: 60 },
   ],
   // La caída: acercarse al agujero negro, rodearlo y zambullirse
   starburst: [{ range: [0.03, 0.27], extra: 80 }],
@@ -99,10 +99,6 @@ export const journeyTime = (kind: JourneyKind, value: number) => {
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 const seg = (p: number, [from, to]: [number, number]) => clamp01((p - from) / (to - from));
 const easeOut = (t: number) => 1 - (1 - t) ** 3;
-const smoothstep01 = (t: number) => {
-  const x = clamp01(t);
-  return x * x * (3 - 2 * x);
-};
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
 
 // Pseudoaleatorio estable: rayos, estelas y estrellas no cambian entre renders
@@ -239,74 +235,6 @@ export const journeyImageCamera = (kind: JourneyKind, p: number) => {
   return { x, y, rotate: (camera.roll * 180) / Math.PI };
 };
 
-/* Atraque: el hábitat llega de lado, descentrado y girando; igualamos su
-   giro (el cielo rueda al revés), nos alineamos con su eje y entramos por
-   la escotilla del cubo, que es la ventana. En píxeles, compartido por el
-   recorte y el dibujo */
-const DOCK = {
-  approach: [0.02, 0.2],
-  align: [0.04, 0.2],
-  match: [0.07, 0.19],
-  // Ya igualados: el hábitat queda quieto frente a nosotros y el cielo rueda
-  hold: [0.2, 0.235],
-  dive: [0.235, JOURNEY_OPEN[1]],
-} satisfies Record<string, [number, number]>;
-// Vueltas del hábitat por unidad de progreso
-const DOCK_TURNS = 2.5;
-// Lo que rueda el cielo durante la pausa (vueltas)
-const DOCK_HOLD_TURNS = 0.3;
-// Proporciones respecto al radio del anillo: el tubo, el eje (desde atrás
-// del anillo hasta la escotilla, hacia nosotros) y la escotilla
-const DOCK_TUBE = 0.1;
-const DOCK_AXIS: [number, number] = [-0.1, 0.22];
-const DOCK_PORT = 0.1;
-// Qué tan lejos empieza: a esa distancia mide 1/(1 + DOCK_DISTANCE) de su
-// tamaño al llegar
-const DOCK_DISTANCE = 16;
-// Inclinación inicial del eje (rad)
-const DOCK_TILT = 1.2;
-
-// Vueltas que ya rodamos para acompañar su giro: la igualación sube en rampa
-// y, una vez igualados, seguimos rodando con él mientras cruzamos la
-// escotilla y la sala nos cubre
-const dockRoll = (p: number) => {
-  const [from, to] = DOCK.match;
-  const at = Math.min(p, JOURNEY_COVER[1]);
-  if (at <= from) return 0;
-  const ramp = at <= to ? (at - from) ** 2 / (2 * (to - from)) : (to - from) / 2 + (at - to);
-  return ramp * DOCK_TURNS;
-};
-
-const dockParts = (p: number, width: number, height: number) => {
-  const vmin = Math.min(width, height) / 100;
-  const align = easeInOut(seg(p, DOCK.align));
-  const tilt = (1 - align) * DOCK_TILT;
-  const dive = seg(p, DOCK.dive);
-  // Llega desde lejos: el tamaño va como la inversa de la distancia, así
-  // primero es un brillo y luego se acerca cada vez más rápido. Al
-  // zambullirnos crece en escala geométrica: se siente como caer
-  const far = 1 - easeOut(seg(p, DOCK.approach));
-  const near = (24 / (1 + DOCK_DISTANCE * far)) * vmin * 12 ** (dive * dive);
-  const cover = toPx({ min: 0, max: 76 * easeInOut(seg(p, JOURNEY_COVER)) });
-  const radius = near + cover / DOCK_PORT;
-  const cos = Math.cos(tilt);
-  const sin = Math.sin(tilt);
-  const y = -(1 - align) * height * 0.07;
-  return {
-    radius,
-    cos,
-    sin,
-    x: (1 - align) * width * 0.16,
-    y,
-    port: radius * DOCK_PORT * easeOut(seg(p, [JOURNEY_OPEN[0], 0.06])),
-    // La escotilla está en la punta del eje, del lado nuestro: con el
-    // anillo inclinado (lo lejano arriba) la punta asoma hacia arriba
-    portY: y - radius * DOCK_AXIS[1] * sin,
-    // El giro que se ve: el suyo menos lo que ya rodamos con él
-    spin: (p * DOCK_TURNS - dockRoll(p)) * Math.PI * 2,
-  };
-};
-
 /* Obra en el espacio: un túnel de andamios se traza solo frente a nosotros
    y gira hasta quedar de frente; al fondo, la flota trae las teselas de la
    imagen y las grúas pórtico las bajan a su lugar. Con la obra terminada
@@ -437,8 +365,10 @@ const yardClip = (p: number) => {
 export const journeyClip = (kind: JourneyKind, p: number): string => {
   switch (kind) {
     case 'torus': {
-      const { port, cos, x, portY } = dockParts(p, window.innerWidth, window.innerHeight);
-      return `ellipse(${port.toFixed(1)}px ${(port * cos).toFixed(1)}px at calc(50% + ${x.toFixed(1)}px) calc(50% + ${portY.toFixed(1)}px))`;
+      // La ventana es el fondo del túnel del cubo, al centro
+      const opening = habitatWindow(p, window.innerWidth, window.innerHeight);
+      const cover = toPx({ min: 0, max: 76 * easeInOut(seg(p, JOURNEY_COVER)) });
+      return `circle(${(opening > 0 ? opening + cover : 0).toFixed(1)}px at 50% 50%)`;
     }
     case 'blueprint':
       return yardClip(p);
@@ -532,30 +462,7 @@ const StarCollapse = ({ progress }: { progress: MotionValue<number> }) => {
   );
 };
 
-/* ---------------- Atraque: igualar el giro del hábitat y entrar por su eje ---------------- */
-
-/* El hábitat como un dibujo de líneas finas en 3D: el contorno del toro,
-   costillas que envuelven el tubo y giran con él, radios y el eje con la
-   escotilla. Cada trazo se ilumina según cuánto mira al sol y lo que queda
-   de espaldas no se dibuja. Va en un lienzo: cientos de tramos con su propia
-   luz, agrupados en pocos niveles para trazarlos de una vez */
-
-const DOCK_RIBS = 18;
-const DOCK_RIB_STEPS = 28;
-// Líneas a lo largo del tubo: de frente se ven como anillos concéntricos
-// que le dan volumen
-const DOCK_LANES = 8;
-const DOCK_LANE_STEPS = 120;
-const DOCK_OUTLINE_STEPS = 120;
-const DOCK_SPOKES = 6;
-// Niveles de luz de los trazos (de la sombra al sol)
-const DOCK_LEVELS = [0.07, 0.16, 0.3, 0.52];
-// El sol: arriba, a la derecha y de frente (x derecha, y abajo, z hacia nosotros)
-const DOCK_SUN = (() => {
-  const [x, y, z] = [0.55, -0.6, 0.58];
-  const length = Math.hypot(x, y, z);
-  return [x / length, y / length, z / length] as const;
-})();
+/* ---------------- Atraque: sobrevuelo, igualar el giro y el túnel del cubo ---------------- */
 
 const accentRgb = (element: Element | null) => {
   const value = element ? getComputedStyle(element).getPropertyValue('--accent').trim() : '';
@@ -569,219 +476,44 @@ const HabitatDock = ({ progress }: { progress: MotionValue<number> }) => {
   const size = useRef({ width: 1, height: 1, ratio: 1 });
   const tint = useRef<number[]>([32, 214, 199]);
   const lastRoll = useRef(Number.NaN);
-  const opacity = useOverlayOpacity(progress, 0.14);
+  const opacity = useTransform(
+    progress,
+    [JOURNEY_OPEN[0], JOURNEY_OPEN[0] + 0.03, JOURNEY_COVER[0] + 0.08, JOURNEY_COVER[0] + 0.18],
+    [0, 1, 1, 0],
+  );
 
   const draw = useCallback((p: number) => {
     const canvas = canvasRef.current;
     const context = canvas?.getContext('2d');
     if (!canvas || !context) return;
     const { width, height, ratio } = size.current;
-    const { radius, cos, sin, x: shiftX, y: shiftY, port, portY, spin } = dockParts(p, width, height);
 
-    // Lo que rodamos para igualar el giro lo rueda el cielo al revés; en la
-    // pausa sigue rodando aunque el guion avance despacio
-    const roll = (dockRoll(p) + DOCK_HOLD_TURNS * seg(p, DOCK.hold)) * Math.PI * 2;
+    // Lo que rodamos para igualar el giro lo rueda el cielo al revés
+    const roll = habitatRoll(p);
     const delta = roll - lastRoll.current;
     if (Math.abs(delta) < 1) {
-      skyDrift.spin.x = width / 2 + shiftX;
-      skyDrift.spin.y = height / 2 + shiftY;
+      skyDrift.spin.x = width / 2;
+      skyDrift.spin.y = height / 2;
       skyDrift.spin.depth = 0;
       skyDrift.spin.angle -= delta;
     }
     lastRoll.current = roll;
 
+    // Dentro del túnel no hay cielo: se apagan los meteoros y las
+    // constelaciones de la capa de efectos, que va por encima de los portales
+    const fx = document.querySelector<HTMLElement>('.mo-starfx');
+    if (fx) {
+      const hidden = p > JOURNEY_OPEN[0] && p < JOURNEY_COVER[1] ? habitatSkyHidden(p) : 0;
+      fx.style.opacity = hidden > 0 ? (1 - hidden).toFixed(3) : '';
+    }
+
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
-    // Ya cruzamos la escotilla: no queda nada que dibujar
-    if (p > JOURNEY_COVER[0] + 0.16 || p < JOURNEY_OPEN[0]) return;
-    const cx = width / 2 + shiftX;
-    const cy = height / 2 + shiftY;
-    context.setTransform(ratio, 0, 0, ratio, cx * ratio, cy * ratio);
-
-    const tube = radius * DOCK_TUBE;
-    const [sunX, sunY, sunZ] = DOCK_SUN;
-    // Un punto del toro y su normal: theta recorre el anillo, phi el tubo.
-    // El anillo se inclina sobre el eje horizontal (lo lejano queda arriba)
-    const point = (theta: number, phi: number, out: number[]) => {
-      const ring = radius + tube * Math.cos(phi);
-      const ny = Math.cos(phi) * Math.sin(theta);
-      const nz = Math.sin(phi);
-      out[0] = ring * Math.cos(theta);
-      out[1] = ring * Math.sin(theta) * cos - tube * nz * sin;
-      // Normal en pantalla: cuánto nos mira y cuánto mira al sol
-      const facing = ny * sin + nz * cos;
-      const normalY = ny * cos - nz * sin;
-      out[2] = facing;
-      out[3] = Math.max(0, Math.cos(phi) * Math.cos(theta) * sunX + normalY * sunY + facing * sunZ);
-    };
-
-    // El cuerpo: una sombra que tapa las estrellas detrás del anillo
-    const outerY = radius * cos + tube * sin;
-    const innerY = radius * cos - tube * sin;
-    context.beginPath();
-    context.ellipse(0, 0, radius + tube, outerY, 0, 0, Math.PI * 2);
-    context.moveTo(radius - tube, 0);
-    if (innerY > 1) context.ellipse(0, 0, radius - tube, innerY, 0, 0, Math.PI * 2, true);
-    context.fillStyle = 'rgba(2, 5, 7, 0.82)';
-    context.fill();
-
-    const [r, g, b] = tint.current;
-    const color = (alpha: number, white: number) =>
-      `rgba(${Math.round(r + (255 - r) * white)}, ${Math.round(g + (255 - g) * white)}, ${Math.round(b + (255 - b) * white)}, ${alpha.toFixed(3)})`;
-    context.globalCompositeOperation = 'lighter';
-    context.lineCap = 'round';
-
-    // Cada tramo cae en el nivel de luz que le toca; lo de espaldas se omite
-    const from = [0, 0, 0, 0];
-    const to = [0, 0, 0, 0];
-    const trace = (levels: Path2D[], curve: (t: number, out: number[]) => void, steps: number) => {
-      curve(0, from);
-      for (let step = 1; step <= steps; step++) {
-        curve(step / steps, to);
-        if (from[2] + to[2] > 0.04) {
-          const light = (from[3] + to[3]) / 2;
-          const level = levels[Math.min(DOCK_LEVELS.length - 1, Math.floor(light * DOCK_LEVELS.length))];
-          level.moveTo(from[0], from[1]);
-          level.lineTo(to[0], to[1]);
-        }
-        from[0] = to[0];
-        from[1] = to[1];
-        from[2] = to[2];
-        from[3] = to[3];
-      }
-    };
-    const stroke = (levels: Path2D[], strength: number) => {
-      levels.forEach((path, index) => {
-        context.strokeStyle = color(DOCK_LEVELS[index] * strength, (index / DOCK_LEVELS.length) * 0.5);
-        context.stroke(path);
-      });
-    };
-    context.lineWidth = 0.8;
-
-    // Líneas a lo largo del tubo
-    const lanes = DOCK_LEVELS.map(() => new Path2D());
-    for (let lane = 0; lane < DOCK_LANES; lane++) {
-      const phi = ((lane + 0.5) / DOCK_LANES) * Math.PI * 2;
-      trace(lanes, (t, out) => point(t * Math.PI * 2, phi, out), DOCK_LANE_STEPS);
-    }
-    stroke(lanes, 1.2);
-
-    // Costillas: anillos alrededor del tubo que giran con el hábitat. Cuentan
-    // el giro mientras lo vemos de lado; ya alineados (y quieto) se apagan
-    const ribs = DOCK_LEVELS.map(() => new Path2D());
-    for (let rib = 0; rib < DOCK_RIBS; rib++) {
-      const theta = spin + (rib / DOCK_RIBS) * Math.PI * 2;
-      trace(ribs, (t, out) => point(theta, t * Math.PI * 2, out), DOCK_RIB_STEPS);
-    }
-    stroke(ribs, 0.15 + 0.85 * sin);
-
-    // Radios: tubos finos del eje al borde interior del anillo. Un cuerpo
-    // oscuro entre dos bordes; el que mira al sol brilla más. Al zambullirnos
-    // los bordes se juntan en una sola línea fina: de cerca, un tubo grueso
-    // tapaba la vista
-    const hub = radius * DOCK_PORT * 1.3;
-    const beam = Math.max(1.6, radius * 0.013) * (1 - easeInOut(seg(p, [DOCK.dive[0], DOCK.dive[0] + 0.03])));
-    for (let spoke = 0; spoke < DOCK_SPOKES; spoke++) {
-      const theta = spin + (spoke / DOCK_SPOKES) * Math.PI * 2 + Math.PI / DOCK_SPOKES;
-      const dx = Math.cos(theta);
-      const dy = Math.sin(theta) * cos;
-      const length = Math.hypot(dx, dy) || 1;
-      const nx = (-dy / length) * beam;
-      const ny = (dx / length) * beam;
-      const near = 0.55 + 0.45 * Math.max(0, Math.sin(theta));
-      const ax = dx * hub;
-      const ay = dy * hub;
-      const bx = dx * (radius - tube);
-      const by = dy * (radius - tube);
-      context.globalCompositeOperation = 'source-over';
-      context.fillStyle = 'rgba(2, 5, 7, 0.85)';
-      context.beginPath();
-      context.moveTo(ax + nx, ay + ny);
-      context.lineTo(bx + nx, by + ny);
-      context.lineTo(bx - nx, by - ny);
-      context.lineTo(ax - nx, ay - ny);
-      context.closePath();
-      context.fill();
-      context.globalCompositeOperation = 'lighter';
-      context.lineWidth = 1;
-      // El borde del lado del sol (arriba a la derecha) y el de la sombra
-      const lit = nx * DOCK_SUN[0] + ny * DOCK_SUN[1] > 0 ? 1 : -1;
-      for (const side of [lit, -lit]) {
-        context.strokeStyle = color((side === lit ? 0.5 : 0.16) * near, side === lit ? 0.45 : 0.15);
-        context.beginPath();
-        context.moveTo(ax + nx * side, ay + ny * side);
-        context.lineTo(bx + nx * side, by + ny * side);
-        context.stroke();
-      }
-    }
-
-    // El contorno, donde el tubo deja de mirarnos: un borde nítido que
-    // brilla del lado del sol, con un halo suave
-    const outline = [new Path2D(), new Path2D(), new Path2D()];
-    for (const side of [0, Math.PI]) {
-      for (let step = 0; step < DOCK_OUTLINE_STEPS; step++) {
-        const a = (step / DOCK_OUTLINE_STEPS) * Math.PI * 2;
-        const b2 = ((step + 1) / DOCK_OUTLINE_STEPS) * Math.PI * 2;
-        point(a, Math.atan2(-Math.sin(a) * sin, cos) + side, from);
-        point(b2, Math.atan2(-Math.sin(b2) * sin, cos) + side, to);
-        const light = (from[3] + to[3]) / 2;
-        const path = outline[light > 0.55 ? 2 : light > 0.2 ? 1 : 0];
-        path.moveTo(from[0], from[1]);
-        path.lineTo(to[0], to[1]);
-      }
-    }
-    outline.forEach((path, index) => {
-      context.strokeStyle = color([0.04, 0.07, 0.12][index], 0.2);
-      context.lineWidth = 7;
-      context.stroke(path);
-      context.strokeStyle = color([0.32, 0.6, 0.95][index], [0.15, 0.35, 0.75][index]);
-      context.lineWidth = 1.2;
-      context.stroke(path);
-    });
-
-    // El eje: un cilindro que nace detrás del anillo y llega hasta nosotros;
-    // en su punta, la escotilla (el recorte deja ver la sala por ella)
-    const back = -radius * DOCK_AXIS[0] * sin;
-    const tip = portY - shiftY;
-    context.strokeStyle = color(0.3, 0.3);
-    context.lineWidth = 1;
-    context.beginPath();
-    context.moveTo(-hub, back);
-    context.lineTo(-hub, tip);
-    context.moveTo(hub, back);
-    context.lineTo(hub, tip);
-    context.stroke();
-    context.beginPath();
-    context.ellipse(0, back, hub, hub * cos, 0, 0, Math.PI);
-    context.strokeStyle = color(0.16, 0.2);
-    context.stroke();
-    context.beginPath();
-    context.ellipse(0, tip, hub, hub * cos, 0, 0, Math.PI * 2);
-    context.strokeStyle = color(0.5, 0.45);
-    context.stroke();
-    if (port > 0.5) {
-      context.beginPath();
-      context.ellipse(0, tip, port, port * cos, 0, 0, Math.PI * 2);
-      context.strokeStyle = color(0.14, 0.2);
-      context.lineWidth = 10;
-      context.stroke();
-      context.strokeStyle = color(0.9, 0.7);
-      context.lineWidth = 1.3;
-      context.stroke();
-    }
-    // A lo lejos se lo ve primero como el reflejo del sol en su borde: un
-    // brillo que se apaga cuando ya se distingue la forma
-    const glint = 1 - smoothstep01((radius / Math.min(width, height) - 0.02) / 0.07);
-    if (glint > 0.01) {
-      point(-0.55, 0, from);
-      const halo = context.createRadialGradient(from[0], from[1], 0, from[0], from[1], 14);
-      halo.addColorStop(0, color(0.95 * glint, 0.9));
-      halo.addColorStop(0.25, color(0.35 * glint, 0.6));
-      halo.addColorStop(1, color(0, 0.3));
-      context.fillStyle = halo;
-      context.fillRect(from[0] - 14, from[1] - 14, 28, 28);
-    }
-    context.globalCompositeOperation = 'source-over';
+    if (p > JOURNEY_COVER[0] + 0.18 || p < JOURNEY_OPEN[0]) return;
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    const opening = habitatWindow(p, width, height);
+    const cover = toPx({ min: 0, max: 76 * easeInOut(seg(p, JOURNEY_COVER)) });
+    drawHabitat(context, p, width, height, tint.current, opening > 0 ? opening + cover : 0);
   }, []);
 
   useMotionValueEvent(progress, 'change', draw);
@@ -800,7 +532,11 @@ const HabitatDock = ({ progress }: { progress: MotionValue<number> }) => {
     };
     measure();
     window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('resize', measure);
+      const fx = document.querySelector<HTMLElement>('.mo-starfx');
+      if (fx) fx.style.opacity = '';
+    };
   }, [progress, draw]);
 
   return <motion.canvas ref={canvasRef} className="mo-journey-stage is-dock" style={{ opacity }} aria-hidden="true" />;

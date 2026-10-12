@@ -52,8 +52,8 @@ const T = {
 const LATE_NUMBER: Partial<Record<JourneyKind, { in: [number, number]; fill: [number, number]; from?: number }>> = {
   collapse: { in: [0.22, 0.32], fill: [0.25, 0.34] },
   signal: { in: [0.29, 0.31], fill: [0.29, 0.315], from: 1 },
-  // En el atraque el número aparece en la escotilla, ya alineados con el eje
-  torus: { in: [0.25, 0.3], fill: [0.26, 0.31], from: 0.5 },
+  // En el atraque, al fondo del túnel del cubo cuando se enciende la ventana
+  torus: { in: [0.268, 0.305], fill: [0.275, 0.312], from: 0.3 },
   // En el astillero, cuando la imagen ya está armada al fondo del dique
   blueprint: { in: [0.27, 0.31], fill: [0.28, 0.32], from: 0.5 },
   // En la caída, en el centro de la sombra cuando se abre la ventana
