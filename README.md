@@ -4,18 +4,20 @@
   </a>
 </p>
 
-![Cilindro de O'Neill interior](public/illustrations/ai/concepts/habitats/interiors/oneill-cylinder.webp)
+[![Capítulo 1 — Introducción: La constelación era un andamio](docs/readme/intros/capitulo-01-intro.gif)](docs/readme/intros/capitulo-01-intro.mp4)
 
-![Portada del museo — AstroIngeniería](public/readme/1.png)
+[![Capítulo 2 — Hábitats espaciales: Sobrevuelo y atraque al hábitat](docs/readme/intros/capitulo-02-habitats.gif)](docs/readme/intros/capitulo-02-habitats.mp4)
 
-![Cilindro de O'Neill conceptual](public/illustrations/ai/concepts/habitats/conceptual/oneill-cylinder.webp)
+[![Capítulo 3 — Industria espacial: Astillero en órbita](docs/readme/intros/capitulo-03-infrastructure.gif)](docs/readme/intros/capitulo-03-infrastructure.mp4)
 
-![Sala 0 — Introducción](public/readme/3.png)
+[![Capítulo 4 — Ingeniería planetaria: Escudo magnético de Marte](docs/readme/intros/capitulo-04-planetary.gif)](docs/readme/intros/capitulo-04-planetary.mp4)
 
-![Dyson Shell](public/illustrations/ai/concepts/energy/immersive/dyson-shell.webp)
+[![Capítulo 5 — Energía estelar: Vuelo dentro de Dyson](docs/readme/intros/capitulo-05-energy.gif)](docs/readme/intros/capitulo-05-energy.mp4)
 
-![Dossier técnico de un concepto](public/readme/5.png)
+[![Capítulo 6 — Viaje interestelar: Honda gravitatoria y slalom](docs/readme/intros/capitulo-06-propulsion.gif)](docs/readme/intros/capitulo-06-propulsion.mp4)
 
-![Cilindro de McKendree](public/illustrations/ai/concepts/habitats/immersive/mckendree-cylinder.webp)
+[![Capítulo 7 — Ingeniería estelar: Agujero negro y estrella compañera](docs/readme/intros/capitulo-07-stellar.gif)](docs/readme/intros/capitulo-07-stellar.mp4)
 
-![Archivo de fuentes y cierre del recorrido](public/readme/7.png)
+[![Capítulo 8 — Civilizaciones cósmicas: Escala de Kardashev](docs/readme/intros/capitulo-08-civilizations.gif)](docs/readme/intros/capitulo-08-civilizations.mp4)
+
+[![Capítulo 9 — Inteligencia extraterrestre: Recorrido del observatorio y señal](docs/readme/intros/capitulo-09-search.gif)](docs/readme/intros/capitulo-09-search.mp4)
