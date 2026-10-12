@@ -42,6 +42,8 @@ export const YARD = {
   // recorre el dique de izquierda a derecha
   rise: [0.15, 0.2],
   sweep: [0.165, 0.22],
+  // Luego sigue subiendo, parejo, hasta que entramos
+  climb: [0.18, 0.34],
   // Hasta el final de COVER en portalJourneys
   dive: [0.27, 0.56],
 } satisfies Record<string, Range>;
@@ -342,11 +344,15 @@ export const drawShipyard = (context: CanvasRenderingContext2D, p: number, frame
 
   /* ---- La Tierra y el sol ---- */
   const rise = easeInOut(seg(p, YARD.rise));
-  const sunElevation = -EARTH_DIP - 0.07 + 0.2 * rise;
+  // Ya fuera, el sol sigue subiendo (y corriéndose un poco) mientras dura
+  // la obra: el tiempo avanza con la construcción
+  const climb = seg(p, YARD.climb);
+  const sunElevation = -EARTH_DIP - 0.07 + 0.2 * rise + 0.2 * climb;
+  const sunAzimuth = SUN_AZIMUTH + 0.12 * climb;
   const sunDir: Vec = [
-    Math.sin(SUN_AZIMUTH) * Math.cos(sunElevation),
+    Math.sin(sunAzimuth) * Math.cos(sunElevation),
     -Math.sin(sunElevation),
-    -Math.cos(SUN_AZIMUTH) * Math.cos(sunElevation),
+    -Math.cos(sunAzimuth) * Math.cos(sunElevation),
   ];
   const sun = sky(sunDir) ?? ([-width, cy] as const);
   // Hacia dónde queda la Tierra en pantalla (para cerrar su silueta)
