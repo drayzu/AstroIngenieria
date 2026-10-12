@@ -419,6 +419,8 @@ const Hero = memo(({
     const enabled = isLivingHero();
     // Sin intro (enlace directo a una sala u obra) la estrella ya arde en su lugar
     if (enabled && !playIntro) livingSignal.ignitedAt = performance.now() - 30_000;
+    // Con intro, la estrella nace al final de un vuelo por la nebulosa
+    livingSignal.flight.planned = enabled && playIntro;
     return enabled;
   });
   const livingReady = useCallback(() => livingSignal.ready, []);

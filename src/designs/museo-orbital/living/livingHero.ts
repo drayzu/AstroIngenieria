@@ -54,6 +54,10 @@ export const livingSignal = {
   /* Dónde nace la estrella (fracciones del hero): el centro de la pantalla.
      Después la escena la lleva a su lugar definido por starFrame. */
   intro: { fx: 0.5, fy: 0.5, fr: 0.33 },
+  /* Vuelo por la nebulosa de la primera visita: la escena lo prepara si está
+     previsto, HeroIgnition avanza su reloj (t, en segundos) y, mientras está
+     activo, la cámara de la escena sigue el vuelo */
+  flight: { planned: false, active: false, t: 0 },
   /* Llamarada pedida con un clic: ángulo en el disco y momento */
   flareAngle: 0,
   flareAt: -100,

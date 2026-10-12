@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, type CSSProperties, type RefObject } from 'rea
 import { animate, type AnimationPlaybackControls } from 'framer-motion';
 import { lockSmoothScroll } from '../shared/smoothScroll';
 import { livingSignal, starFrame } from './living/livingHero';
+import { FLIGHT } from './living/nebulaFlight';
 import './heroIgnition.css';
 
 /* Fases de la intro, compartidas con el hero:
@@ -113,6 +114,10 @@ const GENTLE_WIND = 1.3;
 const WHEEL_CALM_MS = 450;
 // Todo cae hacia el punto acelerando, como absorbido
 const EASE_SWALLOW = [0.6, 0, 0.98, 0.55] as const;
+// Vuelo por la nebulosa: cuánto se espera a la escena antes de renunciar a
+// él, y cuánto lo apura girar la rueda
+const FLIGHT_WAIT = 6;
+const FLIGHT_RUSH = 3.2;
 
 export const HeroIgnition = ({
   heroRef,
@@ -142,6 +147,7 @@ export const HeroIgnition = ({
   const diskRef = useRef<HTMLSpanElement>(null);
   const jetsRef = useRef<HTMLSpanElement>(null);
   const windRef = useRef<HTMLSpanElement>(null);
+  const hitRef = useRef<HTMLSpanElement>(null);
 
   // Layout effect: el punto de React se pinta en el mismo cuadro en que se
   // retira el de index.html, sin parpadeo entre ambos.
@@ -167,7 +173,8 @@ export const HeroIgnition = ({
     const disk = diskRef.current;
     const jets = jetsRef.current;
     const wind = windRef.current;
-    if (!sparks || !cloud || !disk || !jets || !wind || !hero || !bg || !layer || !dot || !flare || !ring || !echo || !flash || !implode || !implodeEcho || !swirl || !rays || !red || !blue) {
+    const hit = hitRef.current;
+    if (!hit || !sparks || !cloud || !disk || !jets || !wind || !hero || !bg || !layer || !dot || !flare || !ring || !echo || !flash || !implode || !implodeEcho || !swirl || !rays || !red || !blue) {
       releaseBootScreen();
       onPhase('off');
       return;
@@ -214,6 +221,9 @@ export const HeroIgnition = ({
     layer.style.setProperty('--sy', `${sy.toFixed(1)}px`);
     layer.style.setProperty('--star-d', `${(starR * 2).toFixed(1)}px`);
     const fromFinale = introSeam.fromFinale && living;
+    // Primera visita con la estrella viva: la estrella nace al final de un
+    // vuelo por la nebulosa dentro de la escena 3D
+    const flying = living && !fromFinale && livingSignal.flight.planned;
 
     /* Desde el cierre la mitad lejana del disco va detrás de la escena 3D (su
        lienzo es transparente), así la estrella la tapa por sí sola. Se monta
@@ -247,6 +257,8 @@ export const HeroIgnition = ({
       timers.push(window.setTimeout(fn, seconds * 1000));
     };
     let ignited = false;
+    let revealed = false;
+    let skipped = false;
     let finished = false;
     let cancelled = false;
     // Hasta la ignición el scroll con inercia queda detenido (desde el cierre,
@@ -279,16 +291,22 @@ export const HeroIgnition = ({
     };
 
     let held: AnimationPlaybackControls | null = null;
-    if (fromFinale) {
-      // Desde el cierre todo ya cayó al punto: queda contenido un instante
-      run(animate(dot, { x: sx, y: sy, scale: 0.75 }, { duration: 0 }));
-    } else {
-      // Llegada desde el hiperespacio: el cielo entra estirado y frena
+    // Llegada desde el hiperespacio: el cielo entra estirado y frena
+    const arrive = () => {
       dispatchWarp(40);
       later(() => dispatchWarp(30), 0.16);
       later(() => dispatchWarp(22), 0.32);
       later(() => dispatchWarp(12), 0.5);
       run(animate(dot, { x: [bootX, sx], y: [bootY, sy] }, { duration: T.glide, ease: EASE_OUT }));
+    };
+    if (fromFinale) {
+      // Desde el cierre todo ya cayó al punto: queda contenido un instante
+      run(animate(dot, { x: sx, y: sy, scale: 0.75 }, { duration: 0 }));
+    } else if (flying) {
+      // El punto espera donde estaba el de arranque: el vuelo trae su propio cielo
+      run(animate(dot, { x: sx, y: sy }, { duration: 0 }));
+    } else {
+      arrive();
     }
     // El estallido espera a que el colapso termine de verdad: si la escena
     // tarda en compilar, las animaciones arrancan tarde y un reloj fijo
@@ -304,7 +322,8 @@ export const HeroIgnition = ({
       const warm = animate(dot, { scale: [0.75, 1.8] }, { duration: GENTLE_WARM, ease: 'easeIn' });
       run(warm);
       gathered = warm.then(() => undefined);
-    } else if (living) {
+    }
+    const collapseLiving = () => {
       // Colapso: el disco de acreción y los anillos se cierran hasta
       // desaparecer dentro del punto, cada vez más rápido; el latido se
       // acelera con ellos y al final el punto se contrae: contiene el aliento
@@ -320,7 +339,10 @@ export const HeroIgnition = ({
       void gathered.then(() => {
         if (!ignited && !cancelled) held = animate(dot, { scale: [0.75, 1.05, 0.75] }, { duration: 0.9, repeat: Infinity, ease: 'easeInOut' });
       });
-    } else {
+    };
+    if (living && !fromFinale && !flying) {
+      collapseLiving();
+    } else if (!living) {
       run(animate(dot, { scale: [1, 2.2, 1.5] }, { duration: 0.9, delay: T.chargeAt, ease: 'easeInOut' }));
       run(animate(flare, { scaleX: [0, 1], opacity: [0, 0.9] }, { duration: 0.9, delay: T.chargeAt + 0.1, ease: EASE_OUT }));
     }
@@ -329,6 +351,7 @@ export const HeroIgnition = ({
       if (ignited || finished) return;
       ignited = true;
       if (!fromFinale) releaseScroll();
+      revealed = true;
       onPhase('reveal');
       livingSignal.gentle = fromFinale;
       if (fromFinale) {
@@ -411,25 +434,112 @@ export const HeroIgnition = ({
           document.fonts.load('1em "Space Grotesk Variable"'),
         ]).catch(() => undefined)
       : Promise.resolve();
-    const minWait = new Promise<void>((resolve) => later(resolve, fromFinale ? GENTLE_WARM : living ? LIVING_IGNITE_MIN : T.igniteMin));
-    const maxWait = new Promise<void>((resolve) => later(resolve, T.igniteMax));
-    // Desde el cierre la escena y las fuentes ya están cargadas: no se esperan
-    const ready = fromFinale ? Promise.all([minWait, gathered]) : Promise.all([preload(), fontsReady, minWait, gathered]);
-    void Promise.race([ready, maxWait]).then(() => {
-      if (!cancelled) ignite();
-    });
+    /* Vuelo por la nebulosa: la escena mueve la cámara con este reloj y aquí
+       se disparan, a su hora, el destello, el golpe y la vuelta de la portada */
+    const flight = livingSignal.flight;
+    let flightFrame = 0;
+    let rushUntil = 0;
+    const startFlight = () => {
+      flight.t = 0;
+      flight.active = true;
+      held?.stop();
+      // El núcleo de la escena toma el lugar del punto de arranque
+      run(animate(dot, { opacity: 0 }, { duration: 0.35, ease: 'easeOut' }));
+      const events: [number, () => void][] = [
+        // El texto empieza a entrar (con sus propias demoras, después del
+        // golpe) mientras el núcleo contiene el aliento: lo que cuesta
+        // dibujarlo por primera vez cae en el único instante quieto del vuelo
+        [FLIGHT.reveal, () => {
+          if (revealed) return;
+          revealed = true;
+          onPhase('reveal');
+        }],
+        [FLIGHT.ignite, () => {
+          ignited = true;
+          livingSignal.gentle = false;
+          livingSignal.ignitedAt = performance.now() - (flight.t - FLIGHT.ignite) * 1000;
+          run(animate(flash, { opacity: [0, 0.6, 0] }, { duration: 1.3, times: [0, 0.07, 1] }));
+        }],
+        // La onda de choque atraviesa la cámara
+        [FLIGHT.hit, () => run(animate(hit, { opacity: [0, 0.6, 0] }, { duration: 0.55, times: [0, 0.1, 1] }))],
+        [FLIGHT.landing, () => hero.setAttribute('data-flight', 'landing')],
+        // Con la cámara ya quieta vuelven la barra, la marquesina y el scroll
+        [FLIGHT.end, () => {
+          flight.active = false;
+          hero.removeAttribute('data-flight');
+          releaseScroll();
+          onPhase('chrome');
+          later(finish, 1.1);
+        }],
+      ];
+      let next = 0;
+      let last = performance.now();
+      let speed = 1;
+      const tick = (now: number) => {
+        if (cancelled || finished) return;
+        const step = Math.min(0.05, Math.max(0, now - last) / 1000);
+        last = now;
+        // Girar la rueda durante el vuelo lo apura
+        speed += ((now < rushUntil ? FLIGHT_RUSH : 1) - speed) * Math.min(1, step * 6);
+        flight.t += step * speed;
+        while (next < events.length && flight.t >= events[next][0]) events[next++][1]();
+        if (flight.active) flightFrame = requestAnimationFrame(tick);
+      };
+      flightFrame = requestAnimationFrame(tick);
+    };
+
+    if (flying) {
+      // El fondo tapa el cielo 2D: el vuelo trae el suyo
+      hero.setAttribute('data-flight', '');
+      // Mientras la escena compila, el punto late como en la pantalla de arranque
+      held = animate(dot, { scale: [1, 1.35, 1], opacity: [1, 0.75, 1] }, { duration: 1.8, repeat: Infinity, ease: 'easeInOut' });
+      const sceneReady = livingSignal.ready.then(() => 'ready' as const);
+      const late = new Promise<'late'>((resolve) => later(() => resolve('late'), FLIGHT_WAIT));
+      void Promise.race([sceneReady, late]).then((result) => {
+        if (cancelled || finished || skipped) return;
+        if (result === 'ready') {
+          startFlight();
+          return;
+        }
+        // La escena no llegó a tiempo: la estrella nace como antes, sin vuelo
+        hero.removeAttribute('data-flight');
+        held?.stop();
+        arrive();
+        collapseLiving();
+        void Promise.all([fontsReady, gathered]).then(() => {
+          if (!cancelled) ignite();
+        });
+      });
+    } else {
+      const minWait = new Promise<void>((resolve) => later(resolve, fromFinale ? GENTLE_WARM : living ? LIVING_IGNITE_MIN : T.igniteMin));
+      const maxWait = new Promise<void>((resolve) => later(resolve, T.igniteMax));
+      // Desde el cierre la escena y las fuentes ya están cargadas: no se esperan
+      const ready = fromFinale ? Promise.all([minWait, gathered]) : Promise.all([preload(), fontsReady, minWait, gathered]);
+      void Promise.race([ready, maxWait]).then(() => {
+        if (!cancelled) ignite();
+      });
+    }
 
     // Esc salta la intro: la estrella se abre de golpe
     const skip = () => {
-      if (finished || cancelled) return;
+      if (finished || cancelled || skipped) return;
+      skipped = true;
       controls.forEach((control) => control.stop());
       held?.stop();
       timers.forEach((timer) => window.clearTimeout(timer));
       timers.length = 0;
       releaseScroll();
+      if (flying) {
+        window.cancelAnimationFrame(flightFrame);
+        flight.active = false;
+        hero.removeAttribute('data-flight');
+      }
+      if (!revealed) {
+        revealed = true;
+        onPhase('reveal');
+      }
       if (!ignited) {
         ignited = true;
-        onPhase('reveal');
         // Saltada: la estrella aparece ya en su lugar
         if (living) {
           livingSignal.gentle = false;
@@ -446,6 +556,7 @@ export const HeroIgnition = ({
     const scrollKeys = new Set([' ', 'PageDown', 'PageUp', 'ArrowDown', 'ArrowUp', 'Home', 'End']);
     const blockScroll = (event: Event) => {
       lastWheel = performance.now();
+      if (flight.active) rushUntil = lastWheel + 450;
       if (!scrollFree) event.preventDefault();
     };
     const onKeyDown = (event: KeyboardEvent) => {
@@ -454,7 +565,10 @@ export const HeroIgnition = ({
         return;
       }
       if (event.target instanceof HTMLElement && event.target.closest('button, input, textarea, select')) return;
-      if (!scrollFree && scrollKeys.has(event.key)) event.preventDefault();
+      if (!scrollFree && scrollKeys.has(event.key)) {
+        event.preventDefault();
+        if (flight.active) rushUntil = performance.now() + 450;
+      }
     };
     window.addEventListener('wheel', blockScroll, { passive: false });
     window.addEventListener('touchmove', blockScroll, { passive: false });
@@ -462,6 +576,11 @@ export const HeroIgnition = ({
 
     return () => {
       cancelled = true;
+      window.cancelAnimationFrame(flightFrame);
+      if (flying) {
+        flight.active = false;
+        hero.removeAttribute('data-flight');
+      }
       under?.remove();
       hero.removeAttribute('data-birth');
       hero.removeAttribute('data-born');
@@ -479,6 +598,7 @@ export const HeroIgnition = ({
   return (
     <div ref={layerRef} className="mo-ignite" aria-hidden="true">
       <span ref={flashRef} className="mo-ignite-flash" />
+      <span ref={hitRef} className="mo-ignite-hit" />
       <span className="mo-ignite-anchor">
         <span ref={flareRef} className="mo-ignite-flare" />
         <span ref={ringRef} className="mo-ignite-ring" />

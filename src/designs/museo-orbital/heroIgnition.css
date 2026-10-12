@@ -17,8 +17,35 @@
 /* La escena WebGL no dibuja nada antes de la ignición, pero mientras estuvo
    pausada conserva su último cuadro: al volver desde el cierre se vería la
    estrella vieja hasta que el lienzo despierte */
-.mo-hero.is-intro-pre .mo-living-canvas {
+.mo-hero.is-intro-pre:not([data-flight]) .mo-living-canvas {
   visibility: hidden;
+}
+
+/* Vuelo por la nebulosa: mientras dura, un fondo fijo tapa el cielo 2D (sus
+   estrellas no seguirían a la cámara) y el lienzo se asoma bajo la
+   marquesina, aún oculta. Al aterrizar el fondo se desvanece y el cielo de
+   siempre vuelve detrás de la estrella */
+.mo-hero[data-flight] {
+  overflow: visible;
+}
+
+.mo-hero[data-flight]::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: #070707;
+  pointer-events: none;
+}
+
+.mo-hero[data-flight='landing']::before {
+  opacity: 0;
+  transition: opacity 1.5s ease;
+}
+
+/* El velo del título termina en el borde del hero: durante el vuelo marcaría
+   una franja sobre el lienzo que se asoma debajo. Vuelve al aterrizar */
+.mo-hero[data-flight] .mo-hero-scrim {
+  opacity: 0;
 }
 
 /* Costura con el cierre: en los primeros cuadros tras el salto solo existe
@@ -159,6 +186,22 @@
     rgba(255, 140, 80, 0.42) 16%,
     rgba(255, 80, 40, 0.12) 38%,
     transparent 64%
+  );
+  mix-blend-mode: screen;
+  opacity: 0;
+  will-change: opacity;
+}
+
+/* La onda de choque atraviesa la cámara: la pantalla entera se enciende un
+   instante, más en los bordes, por donde la cáscara sale de cuadro */
+.mo-ignite-hit {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    rgba(255, 228, 200, 0.35) 0%,
+    rgba(255, 170, 110, 0.4) 55%,
+    rgba(255, 120, 70, 0.75) 100%
   );
   mix-blend-mode: screen;
   opacity: 0;

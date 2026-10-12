@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { PerformanceMonitor } from '@react-three/drei';
 import * as THREE from 'three';
 import { livingSignal, SHELL_SCALE, starFrame } from './livingHero';
+import { createNebulaFlight, createPose, EXPOSURE, flightPose, type FlightFrame, type FlightUpdate } from './nebulaFlight';
 
 /* Estrella viva: granulación que hierve, corona con protuberancias y una
    esfera de Dyson en construcción. Un domo geodésico fantasma dibuja la
@@ -115,8 +116,9 @@ void main() {
   float limb = 0.3 + 0.7 * pow(mu, 0.55);
   vec3 color = palette(heat) * limb * 1.12;
   color += vec3(1.0, 0.24, 0.05) * pow(1.0 - mu, 2.4) * 0.38;
-  // Al nacer es un disco plano y encandilado que se funde con su superficie
-  color = mix(color, uFlashTint, uFlash);
+  // Al nacer está encandilada y la luz se funde con su superficie; conserva un
+  // poco del oscurecimiento del borde para no verse como un disco plano
+  color = mix(color, uFlashTint * (0.45 + 0.55 * pow(mu, 0.5)), uFlash);
   gl_FragColor = vec4(color * uIgnite * (1.0 - uDim), 1.0);
 }
 `;
@@ -485,14 +487,52 @@ interface Pointer {
   on: number;
 }
 
-const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; count: number }) => {
+const FOV = 30;
+
+const Scene = ({ heroRef, count, narrow }: { heroRef: RefObject<HTMLElement | null>; count: number; narrow: boolean }) => {
   const star = useRef<THREE.Mesh>(null);
   const corona = useRef<THREE.Mesh>(null);
   const pointer = useRef<Pointer>({ x: 0, y: 0, on: 0 });
   const smooth = useRef<Pointer>({ x: 0, y: 0, on: 0 });
   const readyMarked = useRef(false);
+  const compiled = useRef(false);
 
   const swarm = useMemo(() => buildSwarm(count), [count]);
+
+  // Vuelo por la nebulosa: solo se arma si la intro de primera visita lo usará
+  const nebula = useMemo(() => (livingSignal.flight.planned ? createNebulaFlight(narrow) : null), [narrow]);
+  useEffect(() => () => nebula?.dispose(), [nebula]);
+  const flightState = useMemo(() => ({
+    frame: { D: 1, home: createPose(), start: { x: 0, y: 0 } } as FlightFrame,
+    pose: createPose(),
+    prev: createPose(),
+    prevView: new THREE.Matrix4(),
+    prevViewProj: new THREE.Matrix4(),
+    buffer: new THREE.Vector2(),
+    one: new THREE.Vector3(1, 1, 1),
+  }), []);
+
+  /* Todo se compila antes de avisar que la escena está lista, incluso lo que
+     aún no se ve (la estrella, la corona, el vuelo): si no, el primer cuadro
+     en que aparece cada cosa se traba compilando su shader */
+  const gl = useThree((state) => state.gl);
+  const scene = useThree((state) => state.scene);
+  const sceneCamera = useThree((state) => state.camera);
+  useEffect(() => {
+    let alive = true;
+    const hidden = [star.current, corona.current].filter((mesh): mesh is THREE.Mesh => Boolean(mesh));
+    hidden.forEach((mesh) => { mesh.visible = true; });
+    nebula?.setVisible(true);
+    const done = () => {
+      if (alive) compiled.current = true;
+    };
+    gl.compileAsync(scene, sceneCamera).then(done, done);
+    hidden.forEach((mesh) => { mesh.visible = false; });
+    nebula?.setVisible(false);
+    return () => {
+      alive = false;
+    };
+  }, [gl, scene, sceneCamera, nebula]);
 
   // Materiales propios: así los uniforms que se actualizan son los que usa la GPU
   const starUniforms = useMemo(() => ({
@@ -683,17 +723,23 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
     }
 
     // Cámara: el disco nace donde lo encendió la intro y luego se aparta hacia
-    // su lugar junto al título (starFrame)
-    const home = starFrame(size.width, size.height);
+    // su lugar junto al título (starFrame). El encuadre se mide en el marco del
+    // hero: el lienzo es algo más alto, para asomarse bajo la marquesina
+    // mientras dura el vuelo de la intro
+    const box = layout.current;
+    const view = box.width > 1 ? box : size;
+    const flying = Boolean(nebula) && livingSignal.flight.active;
+    const home = starFrame(view.width, view.height);
     const born = livingSignal.intro;
-    // Desde el cierre espera en el centro hasta que el viento despeja la nube
-    const glide = age < 0 ? 0 : easeInOut(clamp01(gentle ? (since - 2.7) / 2 : (age - 0.55) / 1.45));
+    // Desde el cierre espera en el centro hasta que el viento despeja la nube.
+    // En el vuelo la portada es el destino: el vuelo hace el resto
+    const glide = flying ? 1 : age < 0 ? 0 : easeInOut(clamp01(gentle ? (since - 2.7) / 2 : (age - 0.55) / 1.45));
     const frame = {
-      x: born.fx * size.width + (home.x - born.fx * size.width) * glide,
-      y: born.fy * size.height + (home.y - born.fy * size.height) * glide,
-      r: born.fr * size.height + (home.r - born.fr * size.height) * glide,
+      x: born.fx * view.width + (home.x - born.fx * view.width) * glide,
+      y: born.fy * view.height + (home.y - born.fy * view.height) * glide,
+      r: born.fr * view.height + (home.r - born.fr * view.height) * glide,
     };
-    const tangent = (frame.r / (size.height / 2)) * Math.tan((camera.fov * DEG) / 2);
+    const tangent = (frame.r / (view.height / 2)) * Math.tan((FOV * DEG) / 2);
     const distance = (Math.sqrt(1 + tangent * tangent) / tangent) * (1 + scroll * 0.85);
     const target = pointer.current;
     const current = smooth.current;
@@ -727,9 +773,52 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
       Math.cos(azimuth) * Math.cos(elevation) * distance,
     );
     camera.lookAt(0, 0, 0);
-    const centerY = frame.y - scroll * size.height * 0.14;
-    camera.setViewOffset(size.width, size.height, size.width / 2 - frame.x, size.height / 2 - centerY, size.width, size.height);
+    let centerX = frame.x;
+    let centerY = frame.y - scroll * view.height * 0.14;
+    camera.fov = FOV;
+    camera.far = 100;
+    const flight = flightState;
+    if (flying) {
+      // La portada es el destino del vuelo: la cámara la sigue hasta llegar a ella
+      flight.frame.D = distance;
+      flight.frame.home.position.copy(camera.position);
+      flight.frame.home.quaternion.copy(camera.quaternion);
+      flight.frame.home.cx = centerX;
+      flight.frame.home.cy = centerY;
+      flight.frame.start.x = born.fx * view.width;
+      flight.frame.start.y = born.fy * view.height;
+      const pose = flightPose(livingSignal.flight.t, flight.frame, flight.pose);
+      camera.position.copy(pose.position);
+      camera.quaternion.copy(pose.quaternion);
+      camera.fov = pose.fov;
+      camera.far = 2500;
+      centerX = pose.cx;
+      centerY = pose.cy;
+    }
+    camera.aspect = view.width / view.height;
+    camera.setViewOffset(view.width, view.height, view.width / 2 - centerX, view.height / 2 - centerY, size.width, size.height);
     camera.updateProjectionMatrix();
+    nebula?.setVisible(flying);
+    if (nebula && flying) {
+      camera.updateMatrixWorld();
+      const t = livingSignal.flight.t;
+      // Cámara de un instante antes: las estelas van de ella a la de ahora
+      const prev = flightPose(t - EXPOSURE, flight.frame, flight.prev);
+      flight.prevView.compose(prev.position, prev.quaternion, flight.one).invert();
+      flight.prevViewProj.multiplyMatrices(camera.projectionMatrix, flight.prevView);
+      const update: FlightUpdate = {
+        t,
+        camera,
+        prevViewProj: flight.prevViewProj,
+        D: distance,
+        buffer: state.gl.getDrawingBufferSize(flight.buffer),
+        dpr: viewport.dpr,
+        pxPerUnit: view.height / 2 / Math.tan((camera.fov * DEG) / 2),
+        frameHeight: view.height,
+        frameWidth: view.width,
+      };
+      nebula.update(update);
+    }
 
     starUniforms.uTime.value = time;
     starUniforms.uIgnite.value = lit;
@@ -746,10 +835,12 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
     swarmUniforms.uBuild.value = shellSince - 1.8;
     swarmUniforms.uIgnite.value = shellSince < 0 ? 0 : clamp01((shellSince - 1.6) / 1.2);
     swarmUniforms.uPixelRatio.value = viewport.dpr;
-    swarmUniforms.uViewHeight.value = size.height;
+    swarmUniforms.uViewHeight.value = view.height;
     swarmUniforms.uAspect.value = size.width / size.height;
     swarmUniforms.uScroll.value = scroll;
-    swarmUniforms.uPointer.value.set(current.x, current.y);
+    // El puntero se mide en el hero y los espejos en el lienzo, que puede ser
+    // más alto: misma x, la y se pasa a la escala del lienzo
+    swarmUniforms.uPointer.value.set(current.x, 1 - (1 - current.y) * (view.height / size.height));
     swarmUniforms.uPointerOn.value = current.on;
     // La obra: el fantasma aparece primero y los paneles lo van llenando.
     // Avanza solo mientras la escena se dibuja, es decir, con el hero a la vista
@@ -807,7 +898,7 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
       livingSignal.onProgress?.(percent, rushing);
     }
 
-    if (!readyMarked.current) {
+    if (!readyMarked.current && compiled.current) {
       readyMarked.current = true;
       livingSignal.markReady();
     }
@@ -833,6 +924,7 @@ const Scene = ({ heroRef, count }: { heroRef: RefObject<HTMLElement | null>; cou
         </bufferGeometry>
         <primitive object={swarmMaterial} attach="material" />
       </points>
+      {nebula && <primitive object={nebula.root} />}
     </>
   );
 };
@@ -845,7 +937,9 @@ export default function LivingStar({ heroRef, paused }: { heroRef: RefObject<HTM
   return (
     <Canvas
       className="mo-living-canvas"
-      style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+      // Más alto que el hero si hace falta: durante el vuelo de la intro el
+      // lienzo se asoma bajo la marquesina, aún oculta
+      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: 'max(100%, 100vh)', pointerEvents: 'none' }}
       dpr={dpr}
       flat
       frameloop={paused ? 'never' : 'always'}
@@ -853,7 +947,7 @@ export default function LivingStar({ heroRef, paused }: { heroRef: RefObject<HTM
       camera={{ fov: 30, near: 0.1, far: 100, position: [0, 0, 8] }}
     >
       <PerformanceMonitor onDecline={() => setDpr(1)} />
-      <Scene heroRef={heroRef} count={narrow ? 1300 : 2600} />
+      <Scene heroRef={heroRef} count={narrow ? 1300 : 2600} narrow={narrow} />
     </Canvas>
   );
 }
