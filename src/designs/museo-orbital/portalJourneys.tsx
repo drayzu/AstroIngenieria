@@ -57,6 +57,12 @@ const JOURNEY_HOLDS: Partial<Record<JourneyKind, JourneyHold[]>> = {
   starburst: [{ range: [0.03, 0.27], extra: 80 }],
   // La persecución: rodear la nave, acelerar y el salto
   tunnel: [{ range: [0.03, 0.27], extra: 80 }],
+  // La reentrada: girar hacia el planeta, arder, nivelarse y cruzar las nubes
+  // con un tramo propio y más lento para las nubes
+  horizon: [
+    { range: [0.03, 0.235], extra: 55 },
+    { range: [0.235, 0.3], extra: 90 },
+  ],
   signal: [
     { range: [0.03, 0.17], extra: 170 },
     { range: [0.18, 0.32], extra: 70 },
@@ -174,6 +180,54 @@ const planetCircle = (p: number, width: number, height: number) => {
   const r = small * (big / small) ** approach;
   const top = height / 2 - small + (height * 0.56 - (height / 2 - small)) * approach;
   return { r, cy: top + r };
+};
+
+/* Reentrada: la cámara llega ladeada y gira hacia el planeta, que entra
+   desde abajo a la izquierda. Al entrar en la atmósfera tiembla, el fuego
+   la envuelve y se nivela con un vaivén de cápsula; al final cruzamos las
+   nubes. Todo termina quieto y nivelado antes de que la ventana cubra */
+const REENTRY = {
+  turn: [0.02, 0.19],
+  bank: [0.02, 0.15],
+  level: [0.17, 0.262],
+  settle: [0.24, JOURNEY_OPEN[1]],
+  clouds: [0.235, 0.3],
+} satisfies Record<string, [number, number]>;
+// El fuego de la entrada: crece, llega al máximo y se apaga al nivelarnos
+const reentryHeat = (p: number) => Math.sin(Math.PI * seg(p, [0.15, 0.285])) ** 1.4;
+const reentryCamera = (p: number, width: number, height: number) => {
+  const turn = easeInOut(seg(p, REENTRY.turn));
+  const shake = reentryHeat(p) ** 2;
+  // Grados: de un leve ladeo a la derecha a uno marcado a la izquierda, que
+  // se endereza al entrar y se pasa un poco antes de quedar quieto
+  const degrees =
+    (8 - 30 * easeInOut(seg(p, REENTRY.bank))) * (1 - easeInOut(seg(p, REENTRY.level))) +
+    3 * Math.sin(Math.PI * seg(p, REENTRY.settle)) +
+    0.6 * shake * Math.sin(p * 900);
+  return {
+    roll: (degrees * Math.PI) / 180,
+    panX: -0.3 * width * (1 - turn),
+    panY: 0.22 * height * (1 - turn),
+    shakeX: (6 * shake * (Math.sin(p * 700) + 0.6 * Math.sin(p * 1650 + 1.7))) / 1.6,
+    shakeY: (6 * shake * (Math.sin(p * 820 + 0.6) + 0.6 * Math.sin(p * 1430 + 2.9))) / 1.6,
+  };
+};
+type ReentryCamera = ReturnType<typeof reentryCamera>;
+// Un punto del mundo (desde el centro de la pantalla) tal como lo ve la cámara
+const reentryPlace = ({ roll, panX, panY, shakeX, shakeY }: ReentryCamera, x: number, y: number) => {
+  const cos = Math.cos(roll);
+  const sin = Math.sin(roll);
+  return [shakeX + cos * (x + panX) - sin * (y + panY), shakeY + sin * (x + panX) + cos * (y + panY)];
+};
+
+/* La imagen del capítulo se mueve con el mundo: en la reentrada rueda y
+   tiembla junto al planeta. Los demás viajes la dejan quieta */
+const STILL_IMAGE = { x: 0, y: 0, rotate: 0 };
+export const journeyImageCamera = (kind: JourneyKind, p: number) => {
+  if (kind !== 'horizon' || p >= JOURNEY_OPEN[1]) return STILL_IMAGE;
+  const camera = reentryCamera(p, window.innerWidth, window.innerHeight);
+  const [x, y] = reentryPlace(camera, 0, 0);
+  return { x, y, rotate: (camera.roll * 180) / Math.PI };
 };
 
 /* Atraque: el hábitat llega de lado, descentrado y girando; igualamos su
@@ -380,8 +434,12 @@ export const journeyClip = (kind: JourneyKind, p: number): string => {
     case 'blueprint':
       return yardClip(p);
     case 'horizon': {
-      const { r, cy } = planetCircle(p, window.innerWidth, window.innerHeight);
-      return `circle(${r.toFixed(1)}px at 50% ${cy.toFixed(1)}px)`;
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const { r, cy } = planetCircle(p, width, height);
+      if (p >= JOURNEY_OPEN[1]) return `circle(${r.toFixed(1)}px at 50% ${cy.toFixed(1)}px)`;
+      const [x, y] = reentryPlace(reentryCamera(p, width, height), 0, cy - height / 2);
+      return `circle(${r.toFixed(1)}px at calc(50% + ${x.toFixed(1)}px) calc(50% + ${y.toFixed(1)}px))`;
     }
     case 'galaxy': {
       // La ventana espera a que la galaxia quede de frente: se abre en su núcleo
@@ -1267,8 +1325,28 @@ const PLASMA_STREAKS = Array.from({ length: 70 }, (_, index) => ({
   phase: seeded(index + 3407),
   width: 0.8 + seeded(index + 3511) * 1.4,
 }));
+// El plasma que pasa junto a la cápsula, por los bordes de la pantalla
+const EDGE_STREAKS = Array.from({ length: 56 }, (_, index) => ({
+  angle: seeded(index + 3613) * Math.PI * 2,
+  phase: seeded(index + 3719),
+  width: 0.8 + seeded(index + 3821) * 1.8,
+}));
+// Las nubes del final: nacen cerca del horizonte y pasan a nuestro lado,
+// más por abajo que por arriba, unas tras otras
+// (a un lado y al otro, para que no se amontonen en el centro)
+const CLOUDS = Array.from({ length: 16 }, (_, index) => ({
+  dx: (index % 2 ? 1 : -1) * (0.45 + seeded(index + 3923) * 1.3),
+  dy: -0.25 + seeded(index + 4231) * 0.85,
+  start: (index / 16) * 0.5 + seeded(index + 4027) * 0.06,
+  size: 0.8 + seeded(index + 4129) * 0.6,
+}));
 
 const HorizonRim = ({ progress }: { progress: MotionValue<number> }) => {
+  const worldRef = useRef<SVGGElement>(null);
+  const edgeRefs = useRef<(SVGLineElement | null)[]>([]);
+  const fireRef = useRef<HTMLDivElement>(null);
+  const cloudRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const lastRoll = useRef(Number.NaN);
   const glowRef = useRef<SVGCircleElement>(null);
   const lineRef = useRef<SVGCircleElement>(null);
   const gleamRef = useRef<SVGCircleElement>(null);
@@ -1297,6 +1375,67 @@ const HorizonRim = ({ progress }: { progress: MotionValue<number> }) => {
     const cy = planet.cy - height / 2;
     const base = Math.min(width, height);
     const approach = easeInOut(seg(p, HORIZON_APPROACH));
+
+    // La cámara: el mundo rueda, gira hacia el planeta y tiembla; el cielo
+    // de fondo rueda con él
+    const camera = reentryCamera(p, width, height);
+    const degrees = (camera.roll * 180) / Math.PI;
+    worldRef.current?.setAttribute(
+      'transform',
+      `translate(${camera.shakeX.toFixed(2)} ${camera.shakeY.toFixed(2)}) rotate(${degrees.toFixed(3)}) translate(${camera.panX.toFixed(1)} ${camera.panY.toFixed(1)})`,
+    );
+    const delta = camera.roll - lastRoll.current;
+    if (Math.abs(delta) < 1) {
+      skyDrift.spin.x = width / 2;
+      skyDrift.spin.y = height / 2;
+      skyDrift.spin.depth = 0;
+      skyDrift.spin.angle += delta;
+    }
+    lastRoll.current = camera.roll;
+
+    // Dentro del fuego: el borde de la pantalla arde y el plasma corre hacia
+    // afuera por los costados. Va pegado a la cámara, no al mundo
+    const heat = reentryHeat(p);
+    const fire = fireRef.current;
+    if (fire) {
+      fire.style.opacity = (heat * (0.88 + 0.12 * Math.sin(p * 520))).toFixed(3);
+      fire.style.visibility = heat > 0.005 ? 'visible' : 'hidden';
+    }
+    const corner = Math.hypot(width, height) / 2;
+    EDGE_STREAKS.forEach((streak, index) => {
+      const line = edgeRefs.current[index];
+      if (!line) return;
+      const travel = (streak.phase + p * 16) % 1;
+      const near = corner * (0.5 + 0.55 * travel);
+      const far = near + corner * (0.05 + 0.18 * heat) * (0.4 + travel);
+      const cos = Math.cos(streak.angle);
+      const sin = Math.sin(streak.angle);
+      line.setAttribute('x1', (cos * near).toFixed(1));
+      line.setAttribute('y1', (sin * near).toFixed(1));
+      line.setAttribute('x2', (cos * far).toFixed(1));
+      line.setAttribute('y2', (sin * far).toFixed(1));
+      line.setAttribute('stroke-width', streak.width.toFixed(2));
+      line.setAttribute('opacity', (0.8 * heat * travel ** 1.2).toFixed(3));
+    });
+
+    // Las nubes: cada una se acerca desde el horizonte (su distancia al punto
+    // de fuga y su tamaño crecen como 1/z) y se desvanece al pasarnos
+    const crossing = seg(p, REENTRY.clouds);
+    CLOUDS.forEach((cloud, index) => {
+      const puff = cloudRefs.current[index];
+      if (!puff) return;
+      const t = seg(crossing, [cloud.start, cloud.start + 0.5]);
+      if (t <= 0 || t >= 1) {
+        puff.style.visibility = 'hidden';
+        return;
+      }
+      const z = 0.7 - 0.6 * t;
+      const spread = (base * 0.14) / z;
+      const [x, y] = reentryPlace(camera, cloud.dx * spread, height * 0.06 + cloud.dy * spread);
+      puff.style.visibility = 'visible';
+      puff.style.opacity = (0.45 * Math.sin(Math.PI * t) ** 1.1).toFixed(3);
+      puff.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${degrees.toFixed(2)}deg) scale(${((base * 0.0014 * cloud.size) / z).toFixed(3)})`;
+    });
     for (const circle of [glowRef.current, lineRef.current, gleamRef.current, shadeRef.current, ...heatRefs.current]) {
       circle?.setAttribute('cy', cy.toFixed(1));
       circle?.setAttribute('r', r.toFixed(1));
@@ -1324,7 +1463,7 @@ const HorizonRim = ({ progress }: { progress: MotionValue<number> }) => {
 
     // Entrada atmosférica: mientras caemos, el borde arde y el plasma pasa a
     // nuestro lado hacia afuera
-    const entry = Math.sin(Math.PI * seg(p, [0.15, 0.285])) ** 1.4;
+    const entry = heat;
     heatRefs.current.forEach((heat, index) => {
       heat?.setAttribute('stroke-width', (base * (index === 0 ? 0.05 : 0.008)).toFixed(1));
       heat?.setAttribute('opacity', (entry * (index === 0 ? 0.32 : 0.9)).toFixed(3));
@@ -1381,66 +1520,77 @@ const HorizonRim = ({ progress }: { progress: MotionValue<number> }) => {
   const svgRef = useStageSvg(progress, draw);
 
   return (
-    <motion.svg ref={svgRef} className="mo-journey-stage is-horizon" style={{ opacity }} aria-hidden="true">
-      <defs>
-        {/* Solo el cielo: lo que queda tras el planeta no se ve */}
-        <mask id="mo-horizon-sky" maskUnits="userSpaceOnUse" x="-8000" y="-8000" width="16000" height="16000">
-          <rect x="-8000" y="-8000" width="16000" height="16000" fill="#fff" />
-          <circle ref={planetMaskRef} cx="0" fill="#000" />
-        </mask>
-        <radialGradient id="mo-horizon-shade" cx="0.5" cy="0.5" r="0.5" fx="0.32" fy="0.28">
-          <stop offset="0" stopColor="#000" stopOpacity="0" />
-          <stop offset="0.55" stopColor="#000" stopOpacity="0.12" />
-          <stop offset="0.86" stopColor="#020403" stopOpacity="0.62" />
-          <stop offset="1" stopColor="#020403" stopOpacity="0.9" />
-        </radialGradient>
-        <radialGradient id="mo-horizon-dust" ref={dustGradientRef} gradientUnits="userSpaceOnUse" cx="0">
-          <stop ref={dustStopRef} stopColor="#ff9466" stopOpacity="0.5" />
-          <stop offset="1" stopColor="#ff9466" stopOpacity="0" />
-        </radialGradient>
-        <radialGradient id="mo-horizon-lush" ref={lushGradientRef} gradientUnits="userSpaceOnUse" cx="0">
-          <stop ref={lushStopRef} style={{ stopColor: 'var(--accent)' }} stopOpacity="0.55" />
-          <stop offset="1" stopColor="#7fb8ff" stopOpacity="0" />
-        </radialGradient>
-        <radialGradient id="mo-horizon-sun">
-          <stop offset="0" stopColor="#ffffff" />
-          <stop offset="0.12" stopColor="#fff6dc" />
-          <stop offset="0.3" stopColor="#ffe2a8" stopOpacity="0.5" />
-          <stop offset="1" stopColor="#ffd28a" stopOpacity="0" />
-        </radialGradient>
-        <radialGradient id="mo-horizon-gleam" ref={gleamGradientRef} gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#ffffff" stopOpacity="1" />
-          <stop offset="0.35" stopColor="#fff2d6" stopOpacity="0.5" />
-          <stop offset="1" stopColor="#fff2d6" stopOpacity="0" />
-        </radialGradient>
-        <linearGradient id="mo-horizon-flare" ref={flareGradientRef} gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#fff6e6" stopOpacity="0" />
-          <stop offset="0.42" stopColor="#fff6e6" stopOpacity="0.55" />
-          <stop offset="0.5" stopColor="#ffffff" stopOpacity="1" />
-          <stop offset="0.58" stopColor="#fff6e6" stopOpacity="0.55" />
-          <stop offset="1" stopColor="#fff6e6" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <circle ref={shadeRef} cx="0" className="is-shade" />
-      <g mask="url(#mo-horizon-sky)">
-        <circle ref={dustRef} cx="0" fill="url(#mo-horizon-dust)" />
-        <circle ref={lushRef} cx="0" fill="url(#mo-horizon-lush)" />
-        <g ref={sunRef}>
-          <circle ref={sunCoreRef} className="is-sun" fill="url(#mo-horizon-sun)" />
+    <>
+      <motion.svg ref={svgRef} className="mo-journey-stage is-horizon" style={{ opacity }} aria-hidden="true">
+        <defs>
+          {/* Solo el cielo: lo que queda tras el planeta no se ve */}
+          <mask id="mo-horizon-sky" maskUnits="userSpaceOnUse" x="-8000" y="-8000" width="16000" height="16000">
+            <rect x="-8000" y="-8000" width="16000" height="16000" fill="#fff" />
+            <circle ref={planetMaskRef} cx="0" fill="#000" />
+          </mask>
+          <radialGradient id="mo-horizon-shade" cx="0.5" cy="0.5" r="0.5" fx="0.32" fy="0.28">
+            <stop offset="0" stopColor="#000" stopOpacity="0" />
+            <stop offset="0.55" stopColor="#000" stopOpacity="0.12" />
+            <stop offset="0.86" stopColor="#020403" stopOpacity="0.62" />
+            <stop offset="1" stopColor="#020403" stopOpacity="0.9" />
+          </radialGradient>
+          <radialGradient id="mo-horizon-dust" ref={dustGradientRef} gradientUnits="userSpaceOnUse" cx="0">
+            <stop ref={dustStopRef} stopColor="#ff9466" stopOpacity="0.5" />
+            <stop offset="1" stopColor="#ff9466" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="mo-horizon-lush" ref={lushGradientRef} gradientUnits="userSpaceOnUse" cx="0">
+            <stop ref={lushStopRef} style={{ stopColor: 'var(--accent)' }} stopOpacity="0.55" />
+            <stop offset="1" stopColor="#7fb8ff" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="mo-horizon-sun">
+            <stop offset="0" stopColor="#ffffff" />
+            <stop offset="0.12" stopColor="#fff6dc" />
+            <stop offset="0.3" stopColor="#ffe2a8" stopOpacity="0.5" />
+            <stop offset="1" stopColor="#ffd28a" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="mo-horizon-gleam" ref={gleamGradientRef} gradientUnits="userSpaceOnUse">
+            <stop offset="0" stopColor="#ffffff" stopOpacity="1" />
+            <stop offset="0.35" stopColor="#fff2d6" stopOpacity="0.5" />
+            <stop offset="1" stopColor="#fff2d6" stopOpacity="0" />
+          </radialGradient>
+          <linearGradient id="mo-horizon-flare" ref={flareGradientRef} gradientUnits="userSpaceOnUse">
+            <stop offset="0" stopColor="#fff6e6" stopOpacity="0" />
+            <stop offset="0.42" stopColor="#fff6e6" stopOpacity="0.55" />
+            <stop offset="0.5" stopColor="#ffffff" stopOpacity="1" />
+            <stop offset="0.58" stopColor="#fff6e6" stopOpacity="0.55" />
+            <stop offset="1" stopColor="#fff6e6" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <g ref={worldRef}>
+          <circle ref={shadeRef} cx="0" className="is-shade" />
+          <g mask="url(#mo-horizon-sky)">
+            <circle ref={dustRef} cx="0" fill="url(#mo-horizon-dust)" />
+            <circle ref={lushRef} cx="0" fill="url(#mo-horizon-lush)" />
+            <g ref={sunRef}>
+              <circle ref={sunCoreRef} className="is-sun" fill="url(#mo-horizon-sun)" />
+            </g>
+            {PLASMA_STREAKS.map((_, index) => (
+              <line key={index} className="is-plasma" ref={(element) => { plasmaRefs.current[index] = element; }} />
+            ))}
+          </g>
+          <circle ref={glowRef} cx="0" className="is-glow" />
+          {[0, 1].map((index) => (
+            <circle key={index} cx="0" className={`is-heat is-heat-${index}`} ref={(element) => { heatRefs.current[index] = element; }} />
+          ))}
+          <circle ref={lineRef} cx="0" className="is-line" />
+          <circle ref={gleamRef} cx="0" className="is-gleam" />
+          <line ref={flareGlowRef} className="is-flare is-soft" />
+          <line ref={flareRef} className="is-flare" />
         </g>
-        {PLASMA_STREAKS.map((_, index) => (
-          <line key={index} className="is-plasma" ref={(element) => { plasmaRefs.current[index] = element; }} />
+        {EDGE_STREAKS.map((_, index) => (
+          <line key={index} className="is-edge" ref={(element) => { edgeRefs.current[index] = element; }} />
         ))}
-      </g>
-      <circle ref={glowRef} cx="0" className="is-glow" />
-      {[0, 1].map((index) => (
-        <circle key={index} cx="0" className={`is-heat is-heat-${index}`} ref={(element) => { heatRefs.current[index] = element; }} />
+      </motion.svg>
+      {CLOUDS.map((_, index) => (
+        <div key={index} className="mo-reentry-cloud" ref={(element) => { cloudRefs.current[index] = element; }} aria-hidden="true" />
       ))}
-      <circle ref={lineRef} cx="0" className="is-line" />
-      <circle ref={gleamRef} cx="0" className="is-gleam" />
-      <line ref={flareGlowRef} className="is-flare is-soft" />
-      <line ref={flareRef} className="is-flare" />
-    </motion.svg>
+      <div ref={fireRef} className="mo-reentry-fire" aria-hidden="true" />
+    </>
   );
 };
 

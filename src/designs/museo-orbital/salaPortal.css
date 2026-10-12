@@ -174,6 +174,52 @@
   pointer-events: none;
 }
 
+/* Reentrada: el plasma que corre por los bordes, pegado a la cámara */
+.mo-journey-stage.is-horizon .is-edge {
+  stroke: #ffb27a;
+  stroke-linecap: round;
+}
+
+/* El fuego envuelve la pantalla: solo cambia su opacidad */
+.mo-reentry-fire {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 72% 68% at 50% 50%,
+    transparent 52%,
+    rgba(255, 140, 80, 0.16) 72%,
+    rgba(255, 96, 48, 0.42) 90%,
+    rgba(255, 70, 40, 0.6) 100%
+  );
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity;
+}
+
+/* Las nubes que cruzamos: un degradado fijo que solo se mueve y escala */
+.mo-reentry-cloud {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 200px;
+  height: 80px;
+  margin: -40px 0 0 -100px;
+  pointer-events: none;
+  /* Varios grumos superpuestos: un óvalo solo parece niebla. Son de polvo,
+     del color del planeta a medio terraformar: claros al centro y más
+     rojizos hacia el borde */
+  background:
+    radial-gradient(closest-side, rgba(255, 214, 178, 0.7), rgba(214, 128, 84, 0.24) 60%, transparent),
+    radial-gradient(closest-side, rgba(255, 226, 196, 0.75), rgba(222, 140, 92, 0.26) 60%, transparent),
+    radial-gradient(closest-side, rgba(246, 196, 158, 0.6), rgba(200, 112, 72, 0.22) 60%, transparent);
+  background-size: 52% 90%, 50% 100%, 40% 80%;
+  background-position: 6% 80%, 46% 0%, 96% 90%;
+  background-repeat: no-repeat;
+  visibility: hidden;
+  will-change: transform, opacity;
+}
+
 /* Agujero negro: el resplandor del gas caliente alrededor de la sombra. Lo
    mueve y escala el viaje; transparente adentro, donde está la sombra */
 .mo-hole-glow {
