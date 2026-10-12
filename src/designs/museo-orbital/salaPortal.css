@@ -174,6 +174,28 @@
   pointer-events: none;
 }
 
+/* Agujero negro: el resplandor del gas caliente alrededor de la sombra. Lo
+   mueve y escala el viaje; transparente adentro, donde está la sombra */
+.mo-hole-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 200px;
+  height: 200px;
+  margin: -100px 0 0 -100px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle closest-side,
+    transparent 28%,
+    rgba(255, 150, 70, 0.42) 30%,
+    rgba(230, 80, 40, 0.14) 55%,
+    transparent 100%
+  );
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
 /* Viajes dibujados en píxeles reales sobre todo el escenario */
 .mo-journey-stage {
   position: absolute;
@@ -182,44 +204,6 @@
   height: 100%;
   overflow: visible;
   pointer-events: none;
-}
-
-/* Agujero negro: halo lensado, anillo de fotones y disco de acreción en capas */
-.mo-journey-stage.is-blackhole path,
-.mo-journey-stage.is-blackhole .is-photon {
-  fill: none;
-}
-
-.mo-journey-stage.is-blackhole .is-halo {
-  fill: url(#mo-bh-halo);
-}
-
-.mo-journey-stage.is-blackhole .is-photon {
-  stroke: #fff6ea;
-  stroke-width: 1.5;
-}
-
-.mo-journey-stage.is-blackhole .is-disk {
-  stroke: url(#mo-bh-disk);
-  stroke-linecap: round;
-}
-
-.mo-journey-stage.is-blackhole .is-layer-0 {
-  opacity: 0.12;
-}
-
-.mo-journey-stage.is-blackhole .is-layer-1 {
-  opacity: 0.3;
-}
-
-.mo-journey-stage.is-blackhole .is-back {
-  opacity: 0.6;
-}
-
-.mo-journey-stage.is-blackhole .is-streaks {
-  stroke: #fff8ee;
-  stroke-linecap: round;
-  opacity: 0.32;
 }
 
 /* Enjambre de Dyson: placas que brillan de frente y eclipsan la estrella */

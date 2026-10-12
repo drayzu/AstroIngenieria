@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useMotionValueEvent, useTransform, type MotionValue } from 'framer-motion';
+import { HOLE, drawHole, holeCenter, holeGlow, holeRadius, holeRoll } from './blackHoleFall';
 import { CHASE, chaseBank, drawChase } from './propulsionChase';
 import { skyDrift } from './roomShared';
 import { drawTug } from './tileAssembly';
@@ -52,6 +53,8 @@ const JOURNEY_HOLDS: Partial<Record<JourneyKind, JourneyHold[]>> = {
     { range: [0.2, 0.235], extra: 80 },
     { range: [0.235, 0.29], extra: 35 },
   ],
+  // La caída: acercarse al agujero negro, rodearlo y zambullirse
+  starburst: [{ range: [0.03, 0.27], extra: 80 }],
   // La persecución: rodear la nave, acelerar y el salto
   tunnel: [{ range: [0.03, 0.27], extra: 80 }],
   signal: [
@@ -112,6 +115,13 @@ const toPx = ({ min, max }: RadiusParts) => {
   const width = window.innerWidth;
   const height = window.innerHeight;
   return (min * Math.min(width, height) + max * Math.max(width, height)) / 100;
+};
+
+/* Agujero negro: la ventana se abre dentro de la sombra y, al cubrir, la
+   sombra crece con ella */
+const holeParts = (p: number, width: number, height: number) => {
+  const radius = holeRadius(p, width, height) + toPx({ min: 0, max: 76 * easeInOut(seg(p, JOURNEY_COVER)) });
+  return { radius, opening: radius * easeOut(seg(p, HOLE.open)) };
 };
 
 /* Propulsión: la ventana se abre donde la nave se pierde en el punto de fuga */
@@ -383,6 +393,8 @@ export const journeyClip = (kind: JourneyKind, p: number): string => {
       return `circle(${collapseRadius(p)} at 50% 50%)`;
     case 'dyson':
       return `circle(${cssRadius(dysonParts(p))} at 50% 50%)`;
+    case 'starburst':
+      return `circle(${holeParts(p, window.innerWidth, window.innerHeight).opening.toFixed(1)}px at 50% 50%)`;
     case 'tunnel':
       return `circle(${cssRadius(chaseParts(p))} at 50% 50%)`;
     case 'signal':
@@ -1432,92 +1444,84 @@ const HorizonRim = ({ progress }: { progress: MotionValue<number> }) => {
   );
 };
 
-/* ---------------- Agujero negro: la ventana es el otro lado ---------------- */
+/* ---------------- Agujero negro: caemos al otro lado ---------------- */
 
 const BlackHole = ({ progress }: { progress: MotionValue<number> }) => {
-  const haloRef = useRef<SVGCircleElement>(null);
-  const photonRef = useRef<SVGCircleElement>(null);
-  const holeMaskRef = useRef<SVGCircleElement>(null);
-  const backRefs = useRef<(SVGPathElement | null)[]>([]);
-  const frontRefs = useRef<(SVGPathElement | null)[]>([]);
-  const streakRefs = useRef<(SVGPathElement | null)[]>([]);
-  const opacity = useOverlayOpacity(progress, 0.14);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
+  const size = useRef({ width: 1, height: 1, ratio: 1 });
+  const tint = useRef<number[]>([255, 122, 89]);
+  const lastRoll = useRef(Number.NaN);
+  const opacity = useTransform(
+    progress,
+    [JOURNEY_OPEN[0], JOURNEY_OPEN[0] + 0.03, JOURNEY_COVER[0] + 0.08, JOURNEY_COVER[0] + 0.18],
+    [0, 1, 1, 0],
+  );
 
-  // Anillo de fotones en el borde de la ventana, la luz lensada del disco
-  // abrazándolo y el disco de acreción cruzando por delante. Las capas de
-  // distinto grosor y opacidad hacen de resplandor sin filtros costosos
   const draw = useCallback((p: number) => {
-    const r = Math.max(1, toPx(irisParts(p)));
-    haloRef.current?.setAttribute('r', (r * 1.7).toFixed(1));
-    photonRef.current?.setAttribute('r', (r + 0.5).toFixed(1));
-    holeMaskRef.current?.setAttribute('r', (r * 1.08).toFixed(1));
-    const a = r * 2.6;
-    const b = r * 0.3;
-    // Mitad cercana (abajo) y mitad lejana (arriba, oculta tras el horizonte)
-    const front = `M ${-a} 0 A ${a} ${b} 0 0 0 ${a} 0`;
-    const back = `M ${-a} 0 A ${a} ${b} 0 0 1 ${a} 0`;
-    [0.34, 0.15, 0.045].forEach((width, index) => {
-      frontRefs.current[index]?.setAttribute('d', front);
-      frontRefs.current[index]?.setAttribute('stroke-width', (r * width).toFixed(1));
-      backRefs.current[index]?.setAttribute('d', back);
-      backRefs.current[index]?.setAttribute('stroke-width', (r * width * 0.7).toFixed(1));
-    });
-    // El material gira: estrías finas que corren a distinta velocidad
-    [
-      { width: 0.018, dash: 0.34, gap: 0.12, speed: 22 },
-      { width: 0.012, dash: 0.14, gap: 0.3, speed: 34 },
-    ].forEach((streak, index) => {
-      const path = streakRefs.current[index];
-      if (!path) return;
-      path.setAttribute('d', front);
-      path.setAttribute('stroke-width', (r * streak.width).toFixed(1));
-      path.setAttribute('stroke-dasharray', `${(r * streak.dash).toFixed(1)} ${(r * streak.gap).toFixed(1)}`);
-      path.setAttribute('stroke-dashoffset', (-p * r * streak.speed).toFixed(1));
-    });
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext('2d');
+    if (!canvas || !context) return;
+    const { width, height, ratio } = size.current;
+
+    // El cielo de fondo gira con la cámara, alrededor del agujero
+    const roll = holeRoll(p);
+    const delta = roll - lastRoll.current;
+    if (Math.abs(delta) < 1) {
+      const [shiftX, shiftY] = holeCenter(p, width, height);
+      skyDrift.spin.x = width / 2 + shiftX;
+      skyDrift.spin.y = height / 2 + shiftY;
+      skyDrift.spin.depth = 0;
+      skyDrift.spin.angle -= delta;
+    }
+    lastRoll.current = roll;
+
+    const { radius, opening } = holeParts(p, width, height);
+    // El resplandor del gas caliente va aparte, en CSS: solo se mueve y se
+    // escala, sin repintar un degradado enorme en cada cuadro
+    const glow = glowRef.current;
+    if (glow) {
+      const [shiftX, shiftY] = holeCenter(p, width, height);
+      glow.style.transform = `translate(${shiftX.toFixed(1)}px, ${shiftY.toFixed(1)}px) scale(${((radius * 6.8) / 200).toFixed(3)})`;
+      const shine = holeGlow(p);
+      glow.style.opacity = shine.toFixed(3);
+      // Apagado, ni siquiera se compone
+      glow.style.visibility = shine > 0.005 ? 'visible' : 'hidden';
+    }
+
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    if (p > JOURNEY_COVER[0] + 0.18 || p < JOURNEY_OPEN[0]) return;
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    drawHole(context, p, width, height, tint.current, radius, opening);
   }, []);
-  const svgRef = useStageSvg(progress, draw);
+
+  useMotionValueEvent(progress, 'change', draw);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    tint.current = accentRgb(canvas);
+    const measure = () => {
+      const width = canvas.clientWidth || 1;
+      const height = canvas.clientHeight || 1;
+      // Resolución normal, sin la doble de las pantallas densas: la caída
+      // mueve muchos trazos largos y en movimiento no se nota
+      const ratio = 1;
+      size.current = { width, height, ratio };
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+      draw(progress.get());
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [progress, draw]);
 
   return (
-    <motion.svg ref={svgRef} className="mo-journey-stage is-blackhole" style={{ opacity }} aria-hidden="true">
-      <defs>
-        {/* Efecto Doppler: el lado que se acerca brilla más */}
-        <linearGradient id="mo-bh-disk" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" style={{ stopColor: 'var(--accent)' }} stopOpacity="0" />
-          <stop offset="0.18" style={{ stopColor: 'var(--accent)' }} stopOpacity="0.6" />
-          <stop offset="0.38" stopColor="#fff6e8" stopOpacity="1" />
-          <stop offset="0.55" stopColor="#ffd9b4" stopOpacity="0.85" />
-          <stop offset="0.75" style={{ stopColor: 'var(--accent)' }} stopOpacity="0.45" />
-          <stop offset="1" style={{ stopColor: 'var(--accent)' }} stopOpacity="0" />
-        </linearGradient>
-        {/* Luz del disco curvada por la gravedad: un halo pegado al horizonte */}
-        <radialGradient id="mo-bh-halo">
-          <stop offset="0.57" style={{ stopColor: 'var(--accent)' }} stopOpacity="0" />
-          <stop offset="0.6" stopColor="#fff2de" stopOpacity="0.95" />
-          <stop offset="0.63" style={{ stopColor: 'var(--accent)' }} stopOpacity="0.6" />
-          <stop offset="0.72" style={{ stopColor: 'var(--accent)' }} stopOpacity="0.18" />
-          <stop offset="1" style={{ stopColor: 'var(--accent)' }} stopOpacity="0" />
-        </radialGradient>
-        <mask id="mo-bh-hole" maskUnits="userSpaceOnUse" x="-6000" y="-6000" width="12000" height="12000">
-          <rect x="-6000" y="-6000" width="12000" height="12000" fill="#fff" />
-          <circle ref={holeMaskRef} fill="#000" />
-        </mask>
-      </defs>
-      <circle ref={haloRef} className="is-halo" />
-      <g transform="rotate(-8)">
-        <g mask="url(#mo-bh-hole)" className="is-back">
-          {[0, 1, 2].map((index) => (
-            <path key={index} className={`is-disk is-layer-${index}`} ref={(element) => { backRefs.current[index] = element; }} />
-          ))}
-        </g>
-        <circle ref={photonRef} className="is-photon" />
-        {[0, 1, 2].map((index) => (
-          <path key={index} className={`is-disk is-layer-${index}`} ref={(element) => { frontRefs.current[index] = element; }} />
-        ))}
-        {[0, 1].map((index) => (
-          <path key={index} className="is-streaks" ref={(element) => { streakRefs.current[index] = element; }} />
-        ))}
-      </g>
-    </motion.svg>
+    <>
+      <div ref={glowRef} className="mo-hole-glow" aria-hidden="true" />
+      <motion.canvas ref={canvasRef} className="mo-journey-stage is-blackhole" style={{ opacity }} aria-hidden="true" />
+    </>
   );
 };
 
