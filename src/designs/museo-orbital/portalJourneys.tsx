@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useMotionValueEvent, useTransform, type MotionValue } from 'framer-motion';
 import { HOLE, drawHole, holeCenter, holeGlow, holeRadius, holeRoll } from './blackHoleFall';
 import { CHASE, chaseBank, drawChase } from './propulsionChase';
+import { KARDASHEV, drawKardashev, kardashevGround, kardashevSkyDim, kardashevTurn } from './kardashevZoom';
 import { skyDrift } from './roomShared';
 import { drawTug } from './tileAssembly';
 
@@ -55,6 +56,8 @@ const JOURNEY_HOLDS: Partial<Record<JourneyKind, JourneyHold[]>> = {
   ],
   // La caída: acercarse al agujero negro, rodearlo y zambullirse
   starburst: [{ range: [0.03, 0.27], extra: 80 }],
+  // Kardashev: subir de la ciudad al planeta, a la estrella y a la galaxia
+  galaxy: [{ range: [0.03, 0.27], extra: 110 }],
   // La persecución: rodear la nave, acelerar y el salto
   tunnel: [{ range: [0.03, 0.27], extra: 80 }],
   // La reentrada: girar hacia el planeta, arder, nivelarse y cruzar las nubes
@@ -129,6 +132,12 @@ const holeParts = (p: number, width: number, height: number) => {
   const radius = holeRadius(p, width, height) + toPx({ min: 0, max: 76 * easeInOut(seg(p, JOURNEY_COVER)) });
   return { radius, opening: radius * easeOut(seg(p, HOLE.open)) };
 };
+
+/* Kardashev: la ventana se abre en el núcleo de la galaxia ya habitada */
+const kardashevParts = (p: number): RadiusParts => ({
+  min: 20 * easeOut(seg(p, KARDASHEV.open)),
+  max: 76 * easeInOut(seg(p, JOURNEY_COVER)),
+});
 
 /* Propulsión: la ventana se abre donde la nave se pierde en el punto de fuga */
 const chaseParts = (p: number): RadiusParts => ({
@@ -441,12 +450,8 @@ export const journeyClip = (kind: JourneyKind, p: number): string => {
       const [x, y] = reentryPlace(reentryCamera(p, width, height), 0, cy - height / 2);
       return `circle(${r.toFixed(1)}px at calc(50% + ${x.toFixed(1)}px) calc(50% + ${y.toFixed(1)}px))`;
     }
-    case 'galaxy': {
-      // La ventana espera a que la galaxia quede de frente: se abre en su núcleo
-      const min = 22 * easeOut(seg(p, GALAXY.window));
-      const max = 76 * easeInOut(seg(p, JOURNEY_COVER));
-      return `circle(${cssRadius({ min, max })} at 50% 50%)`;
-    }
+    case 'galaxy':
+      return `circle(${cssRadius(kardashevParts(p))} at 50% 50%)`;
     case 'collapse':
       return `circle(${collapseRadius(p)} at 50% 50%)`;
     case 'dyson':
@@ -2271,251 +2276,98 @@ const SignalSearch = ({ progress, label }: { progress: MotionValue<number>; labe
   );
 };
 
-/* ---------------- Galaxia: una civilización que se extiende por la espiral ---------------- */
+/* ---------------- Civilizaciones: la escala de Kardashev en una toma ---------------- */
 
-// Punto de un brazo espiral en el plano de la galaxia (unidades -100..100)
-const spiralPoint = (arm: number, t: number, jitter: number, spread: number) => {
-  const angle = arm * Math.PI + t * Math.PI * 1.75 + jitter * 0.3;
-  const radius = 8 + t * 84 + spread * 6;
-  return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
-};
-
-/* Sistemas colonizados: la ola nace en un brazo exterior y cada sistema
-   cuelga del vecino ya colonizado más cercano, como una red que se ramifica */
-const COLONIES = (() => {
-  const systems = Array.from({ length: 150 }, (_, index) => {
-    const t = 0.14 + seeded(index + 2001) * 0.8;
-    return spiralPoint(index % 2, t, seeded(index + 2203) - 0.5, seeded(index + 2411) - 0.5);
-  });
-  const origin = spiralPoint(0, 0.78, 0, 0);
-  const distance = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
-  const ordered = systems
-    .map((point) => ({ ...point, reach: distance(point, origin) }))
-    .sort((a, b) => a.reach - b.reach);
-  return ordered.map((point, index) => {
-    let parent = origin;
-    let best = Infinity;
-    for (let k = 0; k < index; k += 1) {
-      const gap = distance(point, ordered[k]);
-      if (gap < best) {
-        best = gap;
-        parent = ordered[k];
-      }
-    }
-    return { x: point.x, y: point.y, px: parent.x, py: parent.y, length: Math.max(0.1, distance(point, parent)), reach: point.reach };
-  });
-})();
-// Donde nace la civilización, en fracciones del disco (para el frente de luz)
-const COLONY_ORIGIN = (() => {
-  const { x, y } = spiralPoint(0, 0.78, 0, 0);
-  return { x: (x + 100) / 2, y: (y + 100) / 2 };
-})();
-
-/* Guion de la galaxia: aparece de canto, gira hasta quedar de frente
-   mientras la civilización la enciende, y al final nos zambullimos en ella */
-const GALAXY = {
-  appear: [0.02, 0.07],
-  turn: [0.04, 0.24],
-  spread: [0.06, 0.31],
-  window: [0.19, 0.3],
-  dive: [0.27, 0.56],
-  flybyOut: [0.33, 0.39],
-} satisfies Record<string, [number, number]>;
-
-/* Estrellas en primer plano que pasan volando durante la zambullida, cada
-   una a su profundidad (z): las cercanas cruzan antes y más rápido */
-const FLYBY = Array.from({ length: 70 }, (_, index) => {
-  const angle = seeded(index + 3001) * Math.PI * 2;
-  const radius = 6 + seeded(index + 3101) ** 0.7 * 64;
-  return {
-    x: Math.cos(angle) * radius,
-    y: Math.sin(angle) * radius,
-    z: 0.55 + seeded(index + 3203) * 1.1,
-    warm: seeded(index + 3307) > 0.7,
-  };
-});
-
-// Pinta la galaxia una sola vez: núcleo, polvo de estrellas, gas y cúmulos
-// jóvenes. Salvaje es antes de la civilización: tenue, fría y sin el gas
-// teñido; encendida es la galaxia ya habitada
-const paintGalaxy = (canvas: HTMLCanvasElement, wild = false) => {
-  const size = 1024;
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const accent = getComputedStyle(canvas).getPropertyValue('--accent').trim() || '#c58cff';
-  const unit = size / 200;
-  ctx.translate(size / 2, size / 2);
-  ctx.globalCompositeOperation = 'lighter';
-  let seed = 1;
-  const random = () => seeded(seed++);
-  const glow = (x: number, y: number, radius: number, color: string, alpha: number) => {
-    ctx.globalAlpha = alpha;
-    const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-    gradient.addColorStop(0, color);
-    gradient.addColorStop(1, 'transparent');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
-  };
-  // Gas de los brazos: manchas amplias y tenues teñidas con el color del capítulo
-  for (let i = 0; i < 520; i += 1) {
-    const t = random();
-    const { x, y } = spiralPoint(i % 2, t, (random() - 0.5) * 1.6, (random() - 0.5) * 2);
-    glow(x * unit, y * unit, (6 + random() * 10) * unit * (0.6 + t * 0.6), wild ? '#6a7aa8' : accent, wild ? 0.012 : 0.032);
-  }
-  // Núcleo cálido
-  glow(0, 0, 34 * unit, '#ffd9a8', wild ? 0.3 : 0.55);
-  glow(0, 0, 12 * unit, '#fff4e2', wild ? 0.6 : 0.9);
-  // Estrellas: muchas, finas, más densas en los brazos
-  for (let i = 0; i < 5200; i += 1) {
-    const t = random() ** 0.85;
-    const { x, y } = spiralPoint(i % 2, t, (random() - 0.5) * 1.3, (random() - 0.5) * (1 + t * 2));
-    ctx.globalAlpha = (0.25 + random() * 0.6) * (wild ? 0.5 : 1);
-    ctx.fillStyle = wild ? '#cdd8f0' : random() < 0.7 ? '#dfe8ff' : random() < 0.5 ? '#fff1dc' : accent;
-    const radius = (0.35 + random() ** 3 * 1.4) * (size / 1024);
-    ctx.beginPath();
-    ctx.arc(x * unit, y * unit, radius, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  // Cúmulos jóvenes: nudos rosados y azules a lo largo de los brazos
-  for (let i = 0; i < 70; i += 1) {
-    const { x, y } = spiralPoint(i % 2, 0.2 + random() * 0.75, (random() - 0.5) * 0.8, (random() - 0.5) * 0.8);
-    glow(x * unit, y * unit, (1.5 + random() * 2.5) * unit, random() < 0.6 ? '#ff9ec8' : '#9cc4ff', wild ? 0.12 : 0.5);
-  }
-};
-
-const Galaxy = ({ progress }: { progress: MotionValue<number> }) => {
-  const wildRef = useRef<HTMLCanvasElement>(null);
-  const litRef = useRef<HTMLCanvasElement>(null);
-  const discRef = useRef<HTMLSpanElement>(null);
-  const colonyRefs = useRef<(SVGCircleElement | null)[]>([]);
-  const routeRefs = useRef<(SVGLineElement | null)[]>([]);
-  const flybyRefs = useRef<(SVGLineElement | null)[]>([]);
-  // Gira en 3D: de canto (una línea de luz) a casi de frente
-  const tilt = useTransform(progress, GALAXY.turn, [0.05, 0.62], { ease: easeInOut });
-  // Crece hasta llenar la vista y al final se acelera: caemos dentro de ella
-  const scale = useTransform(
-    progress,
-    [GALAXY.appear[0], GALAXY.turn[1], GALAXY.dive[0], GALAXY.dive[1]],
-    [0.5, 1, 1.08, 3.6],
-    { ease: [easeOut, (t) => t, (t) => t ** 2.2] },
-  );
-  const rotate = useTransform(progress, [0, JOURNEY_COVER[1]], [-40, 60]);
+const KardashevZoom = ({ progress }: { progress: MotionValue<number> }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const groundRef = useRef<HTMLDivElement>(null);
+  const hazeRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
+  const size = useRef({ width: 1, height: 1, ratio: 1 });
+  const tint = useRef<number[]>([240, 92, 255]);
+  const lastTurn = useRef(Number.NaN);
   const opacity = useTransform(
     progress,
-    [GALAXY.appear[0], GALAXY.appear[1], JOURNEY_COVER[0], JOURNEY_COVER[0] + 0.14],
+    [JOURNEY_OPEN[0], JOURNEY_OPEN[0] + 0.03, JOURNEY_COVER[0] + 0.08, JOURNEY_COVER[0] + 0.18],
     [0, 1, 1, 0],
   );
-  // El núcleo abultado se ve redondo de canto y se funde en el disco de frente
-  const bulge = useTransform(progress, [GALAXY.appear[0], GALAXY.appear[1], GALAXY.turn[1]], [0, 1, 0.25]);
 
-  useEffect(() => {
-    if (wildRef.current) paintGalaxy(wildRef.current, true);
-    if (litRef.current) paintGalaxy(litRef.current);
-    discRef.current?.style.setProperty('--ox', `${COLONY_ORIGIN.x}%`);
-    discRef.current?.style.setProperty('--oy', `${COLONY_ORIGIN.y}%`);
+  const draw = useCallback((p: number) => {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext('2d');
+    if (!canvas || !context) return;
+    const { width, height, ratio } = size.current;
+
+    // El cielo de fondo gira con la cámara
+    const turn = kardashevTurn(p);
+    const delta = turn - lastTurn.current;
+    if (Math.abs(delta) < 1) {
+      skyDrift.spin.x = width / 2;
+      skyDrift.spin.y = height / 2;
+      skyDrift.spin.depth = 0;
+      skyDrift.spin.angle -= delta;
+    }
+    lastTurn.current = turn;
+
+    // Sobre la ciudad no hay cielo: se apagan las constelaciones y los
+    // meteoros de la capa de efectos, que va por encima de los portales
+    const fx = document.querySelector<HTMLElement>('.mo-starfx');
+    if (fx) {
+      const dim = p > JOURNEY_OPEN[0] && p < JOURNEY_COVER[0] ? kardashevSkyDim(p) : 0;
+      fx.style.opacity = dim > 0 ? (1 - dim).toFixed(3) : '';
+    }
+
+    // El suelo y el resplandor de la ciudad: capas que solo se mueven
+    const ground = kardashevGround(p, width, height);
+    if (groundRef.current) groundRef.current.style.opacity = String(ground.cover);
+    if (hazeRef.current) hazeRef.current.style.opacity = ground.haze.toFixed(3);
+    const glow = glowRef.current;
+    if (glow) {
+      glow.style.opacity = ground.warmth.toFixed(3);
+      glow.style.visibility = ground.warmth > 0.005 ? 'visible' : 'hidden';
+      glow.style.transform = `translate(${ground.x.toFixed(1)}px, ${ground.y.toFixed(1)}px) scale(${(ground.radius / 100).toFixed(3)}, ${((ground.radius * ground.squash) / 100).toFixed(3)})`;
+    }
+
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    if (p > JOURNEY_COVER[0] + 0.18 || p < JOURNEY_OPEN[0]) return;
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    const opening = seg(p, KARDASHEV.open) > 0 ? toPx(kardashevParts(p)) : 0;
+    drawKardashev(context, p, width, height, tint.current, opening);
   }, []);
 
-  // La ola avanza con el scroll: cada sistema traza su ruta y se enciende, y
-  // tras el frente la galaxia pasa de salvaje a habitada
-  const spread = (p: number) => {
-    const wave = easeInOut(seg(p, GALAXY.spread)) * (COLONIES.length + 4);
-    COLONIES.forEach((colony, index) => {
-      const local = clamp01((wave - index) / 4);
-      const route = routeRefs.current[index];
-      if (route) {
-        route.setAttribute('stroke-dashoffset', (colony.length * (1 - local)).toFixed(2));
-        route.setAttribute('opacity', local > 0 ? '1' : '0');
-      }
-      const star = colonyRefs.current[index];
-      if (star) star.setAttribute('opacity', clamp01(local * 2 - 1).toFixed(3));
-    });
-    const front = wave <= 0 ? 0.1 : COLONIES[Math.min(COLONIES.length - 1, Math.floor(wave))].reach / 2 + 6;
-    discRef.current?.style.setProperty('--lit', `${(wave >= COLONIES.length ? 140 : front).toFixed(2)}%`);
-  };
-
-  // Zambullida: las estrellas cercanas se abren hacia los bordes como estelas
-  const fly = (p: number) => {
-    const dive = seg(p, GALAXY.dive) ** 1.6;
-    // Pasan durante la zambullida y se apagan antes de que entre el título
-    const shown = seg(p, [GALAXY.dive[0], GALAXY.dive[0] + 0.04]) * (1 - seg(p, GALAXY.flybyOut));
-    FLYBY.forEach((star, index) => {
-      const line = flybyRefs.current[index];
-      if (!line) return;
-      const z = star.z - dive * 1.5;
-      if (z <= 0.06 || shown <= 0) {
-        line.setAttribute('opacity', '0');
-        return;
-      }
-      const near = 0.55 / z;
-      const tail = 0.55 / (z + 0.06 + dive * 0.25);
-      line.setAttribute('x1', (star.x * tail).toFixed(2));
-      line.setAttribute('y1', (star.y * tail).toFixed(2));
-      line.setAttribute('x2', (star.x * near).toFixed(2));
-      line.setAttribute('y2', (star.y * near).toFixed(2));
-      line.setAttribute('stroke-width', Math.min(1.6, 0.18 / z).toFixed(3));
-      line.setAttribute('opacity', (shown * clamp01((1.7 - z) * 1.4) * clamp01(z * 4)).toFixed(3));
-    });
-  };
-  const paint = (p: number) => {
-    spread(p);
-    fly(p);
-  };
-  useMotionValueEvent(progress, 'change', paint);
-  useEffect(() => paint(progress.get()));
+  useMotionValueEvent(progress, 'change', draw);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    tint.current = accentRgb(canvas);
+    const measure = () => {
+      const width = canvas.clientWidth || 1;
+      const height = canvas.clientHeight || 1;
+      // Resolución normal: el viaje mueve miles de luces y en movimiento
+      // la doble resolución no se nota
+      const ratio = 1;
+      size.current = { width, height, ratio };
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+      draw(progress.get());
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('resize', measure);
+      const fx = document.querySelector<HTMLElement>('.mo-starfx');
+      if (fx) fx.style.opacity = '';
+    };
+  }, [progress, draw]);
 
   return (
-    <span className="mo-journey-galaxy" aria-hidden="true">
-      <motion.span className="mo-journey-galaxy-tilt" style={{ scaleY: tilt, opacity }}>
-        <motion.span
-          ref={discRef}
-          className="mo-journey-galaxy-disc"
-          style={{ scale, rotate }}
-        >
-          <canvas ref={wildRef} />
-          <canvas ref={litRef} className="is-lit" />
-          <svg viewBox="-100 -100 200 200">
-            {COLONIES.map((colony, index) => (
-              <line
-                key={`r${index}`}
-                className="is-route"
-                x1={colony.px}
-                y1={colony.py}
-                x2={colony.x}
-                y2={colony.y}
-                strokeDasharray={colony.length}
-                strokeDashoffset={colony.length}
-                opacity={0}
-                ref={(element) => { routeRefs.current[index] = element; }}
-              />
-            ))}
-            {COLONIES.map((colony, index) => (
-              <circle
-                key={`c${index}`}
-                className="is-colony"
-                cx={colony.x}
-                cy={colony.y}
-                r={0.55}
-                opacity={0}
-                ref={(element) => { colonyRefs.current[index] = element; }}
-              />
-            ))}
-          </svg>
-        </motion.span>
-      </motion.span>
-      <motion.span className="mo-journey-galaxy-bulge" style={{ opacity: bulge }} />
-      <svg className="mo-journey-galaxy-flyby" viewBox="-100 -100 200 200">
-        {FLYBY.map((star, index) => (
-          <line
-            key={index}
-            className={star.warm ? 'is-warm' : undefined}
-            opacity={0}
-            ref={(element) => { flybyRefs.current[index] = element; }}
-          />
-        ))}
-      </svg>
-    </span>
+    <motion.div className="mo-journey-stage is-kardashev" style={{ opacity }} aria-hidden="true">
+      <div ref={groundRef} className="mo-kardashev-ground" />
+      <div ref={hazeRef} className="mo-kardashev-haze" />
+      <div ref={glowRef} className="mo-kardashev-glow" />
+      <canvas ref={canvasRef} />
+    </motion.div>
   );
 };
 
@@ -2548,7 +2400,7 @@ export const JourneyOverlay = ({
     case 'tunnel':
       return <PropulsionChase progress={progress} />;
     case 'galaxy':
-      return <Galaxy progress={progress} />;
+      return <KardashevZoom progress={progress} />;
     case 'signal':
       return <SignalSearch progress={progress} label={label} />;
     default:

@@ -162,64 +162,6 @@
   stroke-width: 18;
 }
 
-/* Galaxia: un dibujo centrado que escala */
-.mo-journey-galaxy {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: min(120vmin, 1100px);
-  height: min(120vmin, 1100px);
-  translate: -50% -50%;
-  overflow: visible;
-  pointer-events: none;
-}
-
-/* Reentrada: el plasma que corre por los bordes, pegado a la cámara */
-.mo-journey-stage.is-horizon .is-edge {
-  stroke: #ffb27a;
-  stroke-linecap: round;
-}
-
-/* El fuego envuelve la pantalla: solo cambia su opacidad */
-.mo-reentry-fire {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(
-    ellipse 72% 68% at 50% 50%,
-    transparent 52%,
-    rgba(255, 140, 80, 0.16) 72%,
-    rgba(255, 96, 48, 0.42) 90%,
-    rgba(255, 70, 40, 0.6) 100%
-  );
-  opacity: 0;
-  visibility: hidden;
-  will-change: opacity;
-}
-
-/* Las nubes que cruzamos: un degradado fijo que solo se mueve y escala */
-.mo-reentry-cloud {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 200px;
-  height: 80px;
-  margin: -40px 0 0 -100px;
-  pointer-events: none;
-  /* Varios grumos superpuestos: un óvalo solo parece niebla. Son de polvo,
-     del color del planeta a medio terraformar: claros al centro y más
-     rojizos hacia el borde */
-  background:
-    radial-gradient(closest-side, rgba(255, 214, 178, 0.7), rgba(214, 128, 84, 0.24) 60%, transparent),
-    radial-gradient(closest-side, rgba(255, 226, 196, 0.75), rgba(222, 140, 92, 0.26) 60%, transparent),
-    radial-gradient(closest-side, rgba(246, 196, 158, 0.6), rgba(200, 112, 72, 0.22) 60%, transparent);
-  background-size: 52% 90%, 50% 100%, 40% 80%;
-  background-position: 6% 80%, 46% 0%, 96% 90%;
-  background-repeat: no-repeat;
-  visibility: hidden;
-  will-change: transform, opacity;
-}
-
 /* Agujero negro: el resplandor del gas caliente alrededor de la sombra. Lo
    mueve y escala el viaje; transparente adentro, donde está la sombra */
 .mo-hole-glow {
@@ -238,6 +180,54 @@
     transparent 100%
   );
   opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* Kardashev: el suelo bajo la ciudad, la bruma del horizonte y el
+   resplandor de la ciudad. El viaje solo los mueve, escala y apaga */
+.mo-journey-stage.is-kardashev canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.mo-kardashev-ground,
+.mo-kardashev-haze {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mo-kardashev-ground {
+  /* El mismo violeta de luna del planeta, para que el cambio no se note */
+  background: rgb(10, 11, 33);
+}
+
+.mo-kardashev-haze {
+  bottom: 50%;
+  background: linear-gradient(rgba(64, 84, 140, 0.3), rgba(64, 84, 140, 0));
+}
+
+.mo-kardashev-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 200px;
+  height: 200px;
+  margin: -100px 0 0 -100px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle closest-side,
+    rgba(255, 170, 90, 0.5) 0%,
+    rgba(255, 170, 90, 0.28) 20%,
+    rgba(255, 170, 90, 0.07) 50%,
+    rgba(255, 170, 90, 0) 100%
+  );
+  opacity: 0;
+  visibility: hidden;
   pointer-events: none;
   will-change: transform, opacity;
 }
@@ -387,114 +377,6 @@
   stroke: color-mix(in srgb, var(--accent) 75%, #ffffff);
   stroke-width: 1;
   filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 60%, transparent));
-}
-
-/* Disco galáctico; dentro gira la espiral. Queda detrás de la ventana: el
-   capítulo se abre como un hueco en el núcleo de la galaxia. La inclinación
-   la anima el viaje (de canto a casi de frente) */
-.mo-journey-galaxy {
-  display: block;
-  z-index: -1;
-  width: min(160vmin, 1500px);
-  height: min(160vmin, 1500px);
-}
-
-.mo-journey-galaxy-tilt {
-  position: absolute;
-  inset: 0;
-  display: block;
-  will-change: transform, opacity;
-}
-
-/* Núcleo abultado: redondo aunque el disco se vea de canto */
-.mo-journey-galaxy-bulge {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 22%;
-  height: 22%;
-  translate: -50% -50%;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(255, 244, 226, 0.95) 0%,
-    rgba(255, 217, 168, 0.55) 22%,
-    color-mix(in srgb, var(--accent) 22%, transparent) 50%,
-    transparent 72%
-  );
-  mix-blend-mode: screen;
-  opacity: 0;
-  pointer-events: none;
-  will-change: opacity;
-}
-
-/* Estrellas que pasan volando durante la zambullida */
-.mo-journey-galaxy-flyby {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.mo-journey-galaxy-flyby line {
-  stroke: #eef2ff;
-  stroke-linecap: round;
-}
-
-.mo-journey-galaxy-flyby line.is-warm {
-  stroke: color-mix(in srgb, var(--accent) 55%, #ffffff);
-}
-
-.mo-journey-galaxy-disc {
-  position: absolute;
-  inset: 0;
-  display: block;
-  will-change: transform, opacity;
-}
-
-.mo-journey-galaxy-disc canvas,
-.mo-journey-galaxy-disc svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-/* El disco se disuelve en los bordes: el lienzo cuadrado nunca se ve */
-.mo-journey-galaxy-disc canvas {
-  -webkit-mask-image: radial-gradient(circle closest-side, #000 72%, transparent 100%);
-  mask-image: radial-gradient(circle closest-side, #000 72%, transparent 100%);
-}
-
-/* La galaxia habitada se revela tras el frente de la colonización, que
-   avanza desde el sistema de origen (--lit lo mueve el viaje) */
-.mo-journey-galaxy-disc canvas.is-lit {
-  -webkit-mask-image:
-    radial-gradient(circle closest-side, #000 72%, transparent 100%),
-    radial-gradient(ellipse var(--lit, 0.1%) var(--lit, 0.1%) at var(--ox) var(--oy), #000 55%, transparent 100%);
-  -webkit-mask-composite: source-in;
-  mask-image:
-    radial-gradient(circle closest-side, #000 72%, transparent 100%),
-    radial-gradient(ellipse var(--lit, 0.1%) var(--lit, 0.1%) at var(--ox) var(--oy), #000 55%, transparent 100%);
-  mask-composite: intersect;
-}
-
-/* Rutas de colonización: hilos de luz entre sistemas */
-.mo-journey-galaxy .is-route {
-  stroke: color-mix(in srgb, var(--accent) 65%, #ffffff);
-  stroke-width: 0.14;
-  stroke-opacity: 0.75;
-  stroke-linecap: round;
-}
-
-.mo-journey-galaxy .is-colony {
-  fill: #ffffff;
-  stroke: var(--accent);
-  stroke-width: 0.5;
-  stroke-opacity: 0.4;
 }
 
 /* Número monumental del capítulo: contorno + relleno que sube con el scroll */
