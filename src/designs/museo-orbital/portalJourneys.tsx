@@ -5,7 +5,7 @@ import { drawHabitat, habitatRoll, habitatSkyHidden, habitatWindow } from './hab
 import { CHASE, chaseBank, drawChase } from './propulsionChase';
 import { KARDASHEV, drawKardashev, kardashevGround, kardashevSkyDim, kardashevTurn } from './kardashevZoom';
 import { skyDrift } from './roomShared';
-import { drawTug } from './tileAssembly';
+import { drawShipyard, yardClip, yardRoll, yardSkyHidden } from './orbitalShipyard';
 
 /* Viajes de los portales: cada capítulo abre su ventana de una forma
    distinta, siempre con trazos finos de luz. Comparten el mismo guion:
@@ -47,7 +47,11 @@ export const journeyFor = (chapterId: string): JourneyKind => JOURNEYS[chapterId
 interface JourneyHold { range: [number, number]; extra: number }
 const JOURNEY_HOLDS: Partial<Record<JourneyKind, JourneyHold[]>> = {
   // El astillero: la imagen se arma al fondo del dique
-  blueprint: [{ range: [0.12, 0.28], extra: 70 }],
+  // y antes, bajar la vista sobre la Tierra y rodear el dique
+  blueprint: [
+    { range: [0.02, 0.12], extra: 60 },
+    { range: [0.12, 0.28], extra: 70 },
+  ],
   // El atraque: rozar el anillo, rodearlo hasta su eje, igualar el giro y
   // entrar por el túnel del cubo
   torus: [
@@ -235,132 +239,6 @@ export const journeyImageCamera = (kind: JourneyKind, p: number) => {
   return { x, y, rotate: (camera.roll * 180) / Math.PI };
 };
 
-/* Obra en el espacio: un túnel de andamios se traza solo frente a nosotros
-   y gira hasta quedar de frente; al fondo, la flota trae las teselas de la
-   imagen y las grúas pórtico las bajan a su lugar. Con la obra terminada
-   entramos por el túnel hasta ella. En píxeles, compartido por el recorte y
-   el dibujo */
-const YARD = {
-  frame: [0.02, 0.12],
-  align: [0.03, 0.14],
-  approach: [0.07, 0.14],
-  build: [0.13, 0.28],
-  dive: [0.27, JOURNEY_COVER[1]],
-} satisfies Record<string, [number, number]>;
-// En sus unidades: el hueco de la imagen (1.6 x 0.9), el ancho de las
-// columnas del andamio a su alrededor, el largo del túnel, en cuántos
-// tramos se divide y cuántos pisos tiene
-const YARD_W = 0.8;
-const YARD_H = 0.45;
-const YARD_MARGIN = 0.14;
-const YARD_DEPTH = 1.4;
-const YARD_BAYS = 4;
-const YARD_LEVELS = 4;
-// Distancia de la cámara a la imagen: mientras el andamio se construye,
-// frente a él, mientras se arma la imagen y al final (ya dentro, con la
-// imagen cubriendo la pantalla)
-const YARD_FAR = 5.2;
-const YARD_NEAR = 3.3;
-const YARD_PUSH = 3;
-const YARD_END = 0.55;
-// Las grúas torre del techo: medio ancho del mástil, sus tramos, largo de
-// la pluma (y en cuántos paños de celosía) y de la contrapluma
-const YARD_TOWER = { mast: 0.035, sections: 8, jib: 1.05, panels: 10, counter: 0.3 };
-// Dónde se paran (x, fondo), cuánto se alzan y hacia qué lado tienden la
-// pluma: cada una baja las teselas de una mitad de la imagen
-const YARD_CRANES = [
-  { x: -0.68, z: 0.25, height: 0.5, side: 1 },
-  { x: 0.68, z: -0.15, height: 0.62, side: -1 },
-];
-// Giro de la pluma sobre el mástil (rad), que va y viene con el scroll
-const craneSlew = (p: number, index: number) => 0.42 * Math.sin(p * 26 + index * 1.9);
-// La grilla de la imagen y cuánto tarda cada tesela en llegar
-const YARD_COLS = 12;
-const YARD_ROWS = 7;
-const YARD_FLIGHT = 0.04;
-
-const yardParts = (p: number, width: number, height: number) => {
-  const align = easeInOut(seg(p, YARD.align));
-  const back = YARD_FAR * (YARD_NEAR / YARD_FAR) ** easeInOut(seg(p, YARD.approach))
-    * (YARD_PUSH / YARD_NEAR) ** easeInOut(seg(p, YARD.build))
-    * (YARD_END / YARD_PUSH) ** easeInOut(seg(p, YARD.dive));
-  const scale = Math.min(width, height);
-  const cx = width / 2 - (1 - align) * width * 0.1;
-  // La obra va un poco más abajo para que entren las grúas del techo; al
-  // entrar vuelve al centro
-  const cy = height / 2 + (1 - align) * height * 0.04 + height * 0.13 * (1 - easeInOut(seg(p, YARD.dive)));
-  return {
-    scale,
-    back,
-    cx,
-    cy,
-    yaw: 0.65 * (1 - align),
-    pitch: -0.22 * (1 - align),
-    // El fondo del dique ya de frente: ahí se arma la imagen
-    window: {
-      left: cx - (scale * YARD_W) / back,
-      top: cy - (scale * YARD_H) / back,
-      width: (2 * scale * YARD_W) / back,
-      height: (2 * scale * YARD_H) / back,
-    },
-  };
-};
-
-// Cada tesela: cuándo despega (del centro hacia afuera), de qué lado llega,
-// a qué altura y con cuánto arco; una de cada tres viene remolcada
-const YARD_TILES = Array.from({ length: YARD_COLS * YARD_ROWS }, (_, index) => {
-  const col = index % YARD_COLS;
-  const row = Math.floor(index / YARD_COLS);
-  const spread = Math.hypot(
-    (col - (YARD_COLS - 1) / 2) / ((YARD_COLS - 1) / 2),
-    ((row - (YARD_ROWS - 1) / 2) / ((YARD_ROWS - 1) / 2)) * 0.6,
-  ) / Math.hypot(1, 0.6);
-  const order = Math.min(1, spread * 0.85 + seeded(index + 401) * 0.15);
-  const launch = YARD.build[0] + order * (YARD.build[1] - YARD.build[0] - YARD_FLIGHT);
-  return {
-    col,
-    row,
-    launch,
-    side: col < YARD_COLS / 2 ? -1 : 1,
-    height: seeded(index + 607) - 0.5,
-    arc: (seeded(index + 811) - 0.5) * 0.35,
-    spin: (seeded(index + 503) - 0.5) * 3.2,
-    tug: index % 3 === 1 ? Math.floor(index / 3) % 3 : -1,
-  };
-});
-
-const yardFlight = (tile: (typeof YARD_TILES)[number], p: number) => seg(p, [tile.launch, tile.launch + YARD_FLIGHT]);
-
-/* Recorte de la imagen: solo las teselas que ya calzaron (por filas, en
-   tramos seguidos); con todas puestas, el fondo entero del dique */
-const yardClip = (p: number) => {
-  const { window: box } = yardParts(p, window.innerWidth, window.innerHeight);
-  const cellWidth = box.width / YARD_COLS;
-  const cellHeight = box.height / YARD_ROWS;
-  const rect = (left: number, top: number, right: number, bottom: number) =>
-    `M ${left.toFixed(1)} ${top.toFixed(1)} H ${right.toFixed(1)} V ${bottom.toFixed(1)} H ${left.toFixed(1)} Z`;
-  if (p >= YARD.build[1]) return `path('${rect(box.left, box.top, box.left + box.width, box.top + box.height)}')`;
-  const parts: string[] = [];
-  for (let row = 0; row < YARD_ROWS; row++) {
-    let start = -1;
-    for (let col = 0; col <= YARD_COLS; col++) {
-      const landed = col < YARD_COLS && yardFlight(YARD_TILES[row * YARD_COLS + col], p) >= 1;
-      if (landed && start < 0) start = col;
-      if (!landed && start >= 0) {
-        // Medio píxel de más para que no se vean juntas
-        parts.push(rect(
-          box.left + start * cellWidth - 0.5,
-          box.top + row * cellHeight - 0.5,
-          box.left + col * cellWidth + 0.5,
-          box.top + (row + 1) * cellHeight + 0.5,
-        ));
-        start = -1;
-      }
-    }
-  }
-  return parts.length ? `path('${parts.join(' ')}')` : 'inset(50%)';
-};
-
 /* Recorte de la imagen del capítulo según el viaje */
 export const journeyClip = (kind: JourneyKind, p: number): string => {
   switch (kind) {
@@ -371,7 +249,7 @@ export const journeyClip = (kind: JourneyKind, p: number): string => {
       return `circle(${(opening > 0 ? opening + cover : 0).toFixed(1)}px at 50% 50%)`;
     }
     case 'blueprint':
-      return yardClip(p);
+      return yardClip(p, window.innerWidth, window.innerHeight);
     case 'horizon': {
       const width = window.innerWidth;
       const height = window.innerHeight;
@@ -544,12 +422,6 @@ const HabitatDock = ({ progress }: { progress: MotionValue<number> }) => {
 
 /* ---------------- Astillero: el dique de vigas y la imagen que se arma al fondo ---------------- */
 
-/* El dique como un dibujo de líneas finas en perspectiva: la boca, el fondo,
-   las cuadernas de cada tramo y las diagonales del enrejado. Al fondo, la
-   grilla vacía de la imagen; las teselas llegan volando desde fuera de la
-   pantalla (algunas remolcadas) y, al calzar, el recorte deja ver la imagen
-   real en su lugar: el lienzo solo dibuja lo que vuela */
-
 // Escala de la imagen del portal (la misma que le da SalaPortal) para que
 // cada tesela en vuelo muestre justo el trozo que tapará
 const portalImageScale = (p: number) => {
@@ -568,6 +440,7 @@ const Shipyard = ({ progress, image }: { progress: MotionValue<number>; image?: 
   const size = useRef({ width: 1, height: 1, ratio: 1 });
   const tint = useRef<number[]>([32, 214, 199]);
   const picture = useRef<HTMLImageElement | null>(null);
+  const lastRoll = useRef(Number.NaN);
   const opacity = useTransform(
     progress,
     [JOURNEY_OPEN[0], JOURNEY_OPEN[0] + 0.03, JOURNEY_COVER[0], JOURNEY_COVER[0] + 0.16],
@@ -579,451 +452,33 @@ const Shipyard = ({ progress, image }: { progress: MotionValue<number>; image?: 
     const context = canvas?.getContext('2d');
     if (!canvas || !context) return;
     const { width, height, ratio } = size.current;
+
+    // El cielo de fondo rueda con la cámara
+    const roll = yardRoll(p);
+    const delta = roll - lastRoll.current;
+    if (Math.abs(delta) < 1) {
+      skyDrift.spin.x = width / 2;
+      skyDrift.spin.y = height / 2;
+      skyDrift.spin.depth = 0;
+      skyDrift.spin.angle += delta;
+    }
+    lastRoll.current = roll;
+
+    // Las constelaciones de la capa de efectos van encima: se apagan para
+    // no cruzar la Tierra
+    const fx = document.querySelector<HTMLElement>('.mo-starfx');
+    if (fx) {
+      const hidden = p > JOURNEY_OPEN[0] && p < JOURNEY_COVER[0] + 0.16
+        ? yardSkyHidden(p) * (1 - seg(p, [JOURNEY_COVER[0], JOURNEY_COVER[0] + 0.16]))
+        : 0;
+      fx.style.opacity = hidden > 0 ? (1 - hidden).toFixed(3) : '';
+    }
+
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
     if (p > JOURNEY_COVER[0] + 0.16 || p < JOURNEY_OPEN[0]) return;
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
-
-    const { scale, back, cx, cy, yaw, pitch, window: box } = yardParts(p, width, height);
-    const [r, g, b] = tint.current;
-    const color = (alpha: number, white: number) =>
-      `rgba(${Math.round(r + (255 - r) * white)}, ${Math.round(g + (255 - g) * white)}, ${Math.round(b + (255 - b) * white)}, ${alpha.toFixed(3)})`;
-
-    // Del dique a la pantalla: gira sobre su centro y la cámara mira por su
-    // eje desde `back` delante del fondo. Lo que queda detrás de la cámara
-    // (al entrar) se recorta en un plano cercano
-    const cosYaw = Math.cos(yaw);
-    const sinYaw = Math.sin(yaw);
-    const cosPitch = Math.cos(pitch);
-    const sinPitch = Math.sin(pitch);
-    const camera = -YARD_DEPTH / 2 + back;
-    const view = (x: number, y: number, z: number) => {
-      const x1 = x * cosYaw + z * sinYaw;
-      const z1 = -x * sinYaw + z * cosYaw;
-      const y2 = y * cosPitch - z1 * sinPitch;
-      const z2 = y * sinPitch + z1 * cosPitch;
-      return [x1, y2, camera - z2] as const;
-    };
-    const NEAR = 0.04;
-    // Las vigas tienen cuerpo: se guardan sus extremos en pantalla (con su
-    // profundidad, para el grosor) y se pintan juntas al final
-    const solids = new Map<Path2D, number[][]>();
-    const segment = (path: Path2D, a: readonly number[], b2: readonly number[]) => {
-      let [ax, ay, ad] = view(a[0], a[1], a[2]);
-      let [bx, by, bd] = view(b2[0], b2[1], b2[2]);
-      if (ad < NEAR && bd < NEAR) return;
-      if (ad < NEAR || bd < NEAR) {
-        const t = (NEAR - ad) / (bd - ad);
-        const x = ax + (bx - ax) * t;
-        const y = ay + (by - ay) * t;
-        if (ad < NEAR) [ax, ay, ad] = [x, y, NEAR];
-        else [bx, by, bd] = [x, y, NEAR];
-      }
-      const list = solids.get(path) ?? [];
-      list.push([cx + (scale * ax) / ad, cy + (scale * ay) / ad, ad, cx + (scale * bx) / bd, cy + (scale * by) / bd, bd]);
-      solids.set(path, list);
-    };
-
-    // El andamio se traza solo: cada viga crece desde su arranque según su
-    // turno (de la boca al fondo: montantes, travesaños, largueros,
-    // diagonales y al final las grúas)
-    const built = seg(p, YARD.frame);
-    const grow = (order: number) => easeInOut(seg(built, [order * 0.72, order * 0.72 + 0.28]));
-    const frame = new Path2D();
-    const bracing = new Path2D();
-    const beam = (path: Path2D, a: number[], b2: number[], order: number): void => {
-      const t = grow(order);
-      if (t <= 0) return;
-      segment(path, a, [a[0] + (b2[0] - a[0]) * t, a[1] + (b2[1] - a[1]) * t, a[2] + (b2[2] - a[2]) * t]);
-    };
-    const outerW = YARD_W + YARD_MARGIN;
-    const outerH = YARD_H + YARD_MARGIN;
-    const front = -YARD_DEPTH / 2 + YARD_DEPTH;
-    const rear = -YARD_DEPTH / 2;
-    // El andamio es un túnel: marcos repetidos de la boca hasta la imagen,
-    // cada uno con sus columnas a los lados y sus travesaños arriba y abajo
-    const planes = Array.from({ length: YARD_BAYS + 1 }, (_, bay) => front - (bay / YARD_BAYS) * YARD_DEPTH);
-    const columns = [-outerW, -YARD_W, YARD_W, outerW];
-    const levelY = (level: number) => outerH - (level / YARD_LEVELS) * outerH * 2;
-    planes.forEach((z, bay) => {
-      const delay = (bay / YARD_BAYS) * 0.25;
-      // Montantes que suben desde abajo
-      columns.forEach((x, index) => beam(frame, [x, outerH, z], [x, -outerH, z], delay + index * 0.03));
-      for (let level = 0; level <= YARD_LEVELS; level++) {
-        // Arriba y abajo cruzan todo el ancho; en medio, solo las columnas
-        const spans = level === 0 || level === YARD_LEVELS ? [[-outerW, outerW]] : [[-outerW, -YARD_W], [YARD_W, outerW]];
-        for (const [from, to] of spans) beam(level % YARD_LEVELS ? bracing : frame, [from, levelY(level), z], [to, levelY(level), z], delay + 0.15);
-      }
-      if (bay === YARD_BAYS) return;
-      // Largueros hacia el fondo y diagonales en las caras que miran al túnel
-      const next = planes[bay + 1];
-      for (let level = 0; level <= YARD_LEVELS; level++) {
-        for (const x of columns) beam(level % YARD_LEVELS ? bracing : frame, [x, levelY(level), z], [x, levelY(level), next], delay + 0.25);
-      }
-      for (let level = 0; level < YARD_LEVELS; level++) {
-        const flip = (bay + level) % 2;
-        for (const x of [-YARD_W, YARD_W]) {
-          beam(bracing, [x, levelY(level), flip ? z : next], [x, levelY(level + 1), flip ? next : z], delay + 0.4);
-        }
-      }
-    });
-    // Pisos: plataformas macizas a lo largo del túnel en cada nivel de las
-    // columnas. Lo que queda detrás de la cámara se recorta
-    const plates: { points: number[][]; alpha: number }[] = [];
-    for (let level = 1; level < YARD_LEVELS; level++) {
-      const y = levelY(level);
-      const t = grow(0.3 + (level / YARD_LEVELS) * 0.25);
-      if (t <= 0) continue;
-      for (const [from, to] of [[-outerW, -YARD_W], [YARD_W, outerW]]) {
-        const depth = front - (front - rear) * t;
-        const corners = [[from, y, front], [to, y, front], [to, y, depth], [from, y, depth]].map(([x, py, z]) => view(x, py, z));
-        const clipped: (readonly number[])[] = [];
-        corners.forEach((point, index) => {
-          const other = corners[(index + 1) % corners.length];
-          if (point[2] >= NEAR) clipped.push(point);
-          if ((point[2] >= NEAR) !== (other[2] >= NEAR)) {
-            const k = (NEAR - point[2]) / (other[2] - point[2]);
-            clipped.push([point[0] + (other[0] - point[0]) * k, point[1] + (other[1] - point[1]) * k, NEAR]);
-          }
-        });
-        if (clipped.length < 3) continue;
-        plates.push({ points: clipped.map(([x, py, d]) => [cx + (scale * x) / d, cy + (scale * py) / d]), alpha: 1 });
-      }
-    }
-
-    // Grúas torre sobre el techo del andamio, como en un edificio en obra:
-    // el mástil enrejado con su cabina, la pluma en celosía tendida sobre la
-    // boca hacia el otro lado, la contrapluma con su contrapeso y los
-    // tirantes. Son las que bajan las teselas (más abajo, sus cables)
-    const blocks: number[][][] = [];
-    const block = (corners: number[][]) => {
-      const points = corners.map(([x, y, z]) => view(x, y, z));
-      if (points.some(([, , d]) => d < NEAR)) return;
-      blocks.push(points.map(([x, y, d]) => [cx + (scale * x) / d, cy + (scale * y) / d]));
-    };
-    const { mast, sections } = YARD_TOWER;
-    YARD_CRANES.forEach((crane, index) => {
-      const { x: towerX, z: towerZ, side } = crane;
-      const base = -outerH;
-      const towerTop = -outerH - crane.height;
-      const delay = index * 0.05;
-      // El pie: una zapata sobre el techo del andamio
-      if (grow(0.55 + delay) > 0) {
-        block([
-          [towerX - mast * 2.2, base, towerZ + mast],
-          [towerX + mast * 2.2, base, towerZ + mast],
-          [towerX + mast * 2.2, base - 0.02, towerZ + mast],
-          [towerX - mast * 2.2, base - 0.02, towerZ + mast],
-        ]);
-      }
-      // El mástil: cuatro cordones, peldaños en cada tramo y diagonales
-      const corners = [[-mast, -mast], [mast, -mast], [mast, mast], [-mast, mast]];
-      corners.forEach(([dx, dz], corner) => beam(frame, [towerX + dx, base, towerZ + dz], [towerX + dx, towerTop, towerZ + dz], 0.55 + delay + corner * 0.02));
-      for (let level = 0; level < sections; level++) {
-        const low = base - (level / sections) * (base - towerTop);
-        const high = base - ((level + 1) / sections) * (base - towerTop);
-        const order = 0.58 + delay + (level / sections) * 0.15;
-        const flip = level % 2 ? 1 : -1;
-        beam(bracing, [towerX - mast, high, towerZ + mast], [towerX + mast, high, towerZ + mast], order);
-        beam(bracing, [towerX - mast * flip, low, towerZ + mast], [towerX + mast * flip, high, towerZ + mast], order);
-      }
-      // La corona de giro, arriba del mástil
-      if (grow(0.72 + delay) > 0) {
-        block([
-          [towerX - mast * 1.6, towerTop + 0.022, towerZ + mast],
-          [towerX + mast * 1.6, towerTop + 0.022, towerZ + mast],
-          [towerX + mast * 1.6, towerTop, towerZ + mast],
-          [towerX - mast * 1.6, towerTop, towerZ + mast],
-        ]);
-      }
-
-      // Todo lo de arriba gira sobre el mástil, de ida y vuelta
-      const slew = craneSlew(p, index);
-      const dirX = side * Math.cos(slew);
-      const dirZ = Math.sin(slew);
-      const along = (length: number, y: number) => [towerX + dirX * length, y, towerZ + dirZ * length];
-      const { jib, counter, panels } = YARD_TOWER;
-      const deck = towerTop - 0.005;
-      const chord = towerTop - 0.065;
-      const order = 0.75 + delay;
-      // Pluma en celosía: el cordón de abajo recto, el de arriba baja hacia
-      // la punta, y diagonales entre ambos
-      const upper = (length: number) => chord + (deck - 0.02 - chord) * (length / jib);
-      beam(frame, along(0, deck), along(jib, deck), order);
-      beam(frame, along(0, chord), along(jib, upper(jib)), order);
-      beam(frame, along(jib, deck), along(jib, upper(jib)), order + 0.04);
-      for (let panel = 0; panel < panels; panel++) {
-        const a = (panel / panels) * jib;
-        const b2 = ((panel + 1) / panels) * jib;
-        beam(bracing, along(a, panel % 2 ? upper(a) : deck), along(b2, panel % 2 ? deck : upper(b2)), order + 0.04);
-      }
-      // Contrapluma, más corta y robusta
-      beam(frame, along(0, deck), along(-counter, deck), order);
-      beam(frame, along(0, chord + 0.02), along(-counter, deck - 0.03), order);
-      for (let panel = 0; panel < 3; panel++) {
-        beam(bracing, along((-panel / 3) * counter, panel % 2 ? deck - 0.03 : deck), along((-(panel + 1) / 3) * counter, panel % 2 ? deck : deck - 0.03), order + 0.04);
-      }
-      // La torreta en A y los tirantes hacia la pluma y la contrapluma
-      const peak = towerTop - 0.22;
-      beam(frame, along(-0.04, chord), along(0, peak), order + 0.02);
-      beam(frame, along(0.04, chord), along(0, peak), order + 0.02);
-      beam(bracing, along(0, peak), along(jib * 0.45, upper(jib * 0.45)), order + 0.06);
-      beam(bracing, along(0, peak), along(jib * 0.85, upper(jib * 0.85)), order + 0.06);
-      beam(bracing, along(0, peak), along(-counter, deck - 0.03), order + 0.06);
-      if (grow(order + 0.08) >= 1) {
-        // La cabina junto a la raíz de la pluma
-        const cabin = [along(0.03, deck), along(0.13, deck)];
-        block([
-          [cabin[0][0], deck + 0.005, cabin[0][2]],
-          [cabin[1][0], deck + 0.005, cabin[1][2]],
-          [cabin[1][0], deck + 0.07, cabin[1][2]],
-          [cabin[0][0], deck + 0.07, cabin[0][2]],
-        ]);
-        // El contrapeso: un solo bloque al final de la contrapluma
-        const from = along(-counter * 0.6, deck);
-        const to = along(-counter, deck);
-        block([
-          [from[0], deck + 0.005, from[2]],
-          [to[0], deck + 0.005, to[2]],
-          [to[0], deck + 0.06, to[2]],
-          [from[0], deck + 0.06, from[2]],
-        ]);
-      }
-    });
-
-    context.lineCap = 'round';
-    context.globalCompositeOperation = 'lighter';
-    context.globalCompositeOperation = 'source-over';
-    // Los pisos: una placa oscura con su canto encendido
-    plates.forEach(({ points, alpha }) => {
-      context.beginPath();
-      points.forEach(([x, y], index) => (index ? context.lineTo(x, y) : context.moveTo(x, y)));
-      context.closePath();
-      context.fillStyle = `rgba(8, 12, 10, ${(0.85 * alpha).toFixed(3)})`;
-      context.fill();
-      context.strokeStyle = color(0.35 * alpha, 0.3);
-      context.lineWidth = 0.8;
-      context.stroke();
-    });
-    // Bloques macizos de las grúas: cabinas, contrapesos y las piezas que cuelgan
-    blocks.forEach((points) => {
-      context.beginPath();
-      points.forEach(([x, y], index) => (index ? context.lineTo(x, y) : context.moveTo(x, y)));
-      context.closePath();
-      context.fillStyle = 'rgba(10, 15, 12, 0.96)';
-      context.fill();
-      context.strokeStyle = color(0.7, 0.45);
-      context.lineWidth = 1;
-      context.stroke();
-    });
-    // Cada viga como un perfil macizo: cuerpo oscuro que tapa lo de atrás,
-    // el canto que mira al sol (arriba a la derecha) encendido y el otro en
-    // sombra. Su grosor sigue la perspectiva
-    const solid = (path: Path2D, thick: number, light: number) => {
-      const shade = new Path2D();
-      const lit = new Path2D();
-      const dark = new Path2D();
-      (solids.get(path) ?? []).forEach(([ax, ay, ad, bx, by, bd]) => {
-        const length = Math.hypot(bx - ax, by - ay) || 1;
-        let nx = -(by - ay) / length;
-        let ny = (bx - ax) / length;
-        if (nx * 0.6 - ny * 0.8 < 0) {
-          nx = -nx;
-          ny = -ny;
-        }
-        const wa = Math.max(0.7, (scale * thick) / ad);
-        const wb = Math.max(0.7, (scale * thick) / bd);
-        shade.moveTo(ax + nx * wa, ay + ny * wa);
-        shade.lineTo(bx + nx * wb, by + ny * wb);
-        shade.lineTo(bx - nx * wb, by - ny * wb);
-        shade.lineTo(ax - nx * wa, ay - ny * wa);
-        shade.closePath();
-        lit.moveTo(ax + nx * wa, ay + ny * wa);
-        lit.lineTo(bx + nx * wb, by + ny * wb);
-        dark.moveTo(ax - nx * wa, ay - ny * wa);
-        dark.lineTo(bx - nx * wb, by - ny * wb);
-      });
-      context.fillStyle = 'rgba(6, 10, 9, 0.94)';
-      context.fill(shade);
-      context.lineWidth = 1;
-      context.strokeStyle = color(0.16 * light, 0.1);
-      context.stroke(dark);
-      context.strokeStyle = color(0.85 * light, 0.5);
-      context.stroke(lit);
-    };
-    solid(bracing, 0.01, 0.55);
-    solid(frame, 0.03, 1);
-    context.globalAlpha = 1;
-    context.globalCompositeOperation = 'lighter';
-
-    // Las grúas bajan las teselas: el carro corre por la pluma hasta quedar
-    // sobre la tesela que llega y su cable la acompaña el último tramo
-    if (built >= 1) {
-      const hoists = new Path2D();
-      YARD_TILES.forEach((tile) => {
-        const flight = yardFlight(tile, p);
-        if (flight < 0.55 || flight >= 1) return;
-        const tx = box.left + (tile.col + 0.5) * (box.width / YARD_COLS);
-        const ty = box.top + (tile.row + 0.5) * (box.height / YARD_ROWS);
-        // El carro se pone sobre la tesela, a lo largo de la pluma girada
-        const which = tile.col < YARD_COLS / 2 ? 0 : 1;
-        const crane = YARD_CRANES[which];
-        const slew = craneSlew(p, which);
-        const dirX = crane.side * Math.cos(slew);
-        const reach = Math.max(0.1, Math.min(YARD_TOWER.jib, (((tx - cx) * back) / scale - crane.x) / dirX));
-        const [hx, hy, hd] = view(crane.x + dirX * reach, -YARD_H - YARD_MARGIN - crane.height, crane.z + Math.sin(slew) * reach);
-        if (hd <= NEAR) return;
-        const trolleyX = cx + (scale * hx) / hd;
-        const trolleyY = cy + (scale * hy) / hd;
-        const t = easeInOut((flight - 0.55) / 0.45);
-        const [x, y] = [trolleyX + (tx - trolleyX) * t, trolleyY + (ty - trolleyY) * t];
-        hoists.moveTo(trolleyX, trolleyY);
-        hoists.lineTo(x, y);
-        hoists.rect(trolleyX - 3, trolleyY - 2, 6, 4);
-      });
-      context.lineWidth = 1;
-      context.strokeStyle = color(0.6, 0.6);
-      context.stroke(hoists);
-    }
-
-    // El fondo ya de frente: la grilla de lo que falta por armar
-    const building = seg(p, [YARD.build[0] - 0.02, YARD.build[0]]) * (1 - seg(p, [YARD.build[1], YARD.build[1] + 0.02]));
-    const cellWidth = box.width / YARD_COLS;
-    const cellHeight = box.height / YARD_ROWS;
-    if (building > 0) {
-      const empty = new Path2D();
-      YARD_TILES.forEach((tile) => {
-        if (yardFlight(tile, p) >= 1) return;
-        empty.rect(box.left + tile.col * cellWidth, box.top + tile.row * cellHeight, cellWidth, cellHeight);
-      });
-      context.lineWidth = 0.6;
-      context.strokeStyle = color(0.14 * building, 0.2);
-      context.stroke(empty);
-    }
-
-    // Las teselas en vuelo y sus remolcadores. Cada una muestra el trozo de
-    // la imagen que va a tapar, como se verá al calzar
-    context.globalCompositeOperation = 'source-over';
-    const photo = picture.current;
-    const ready = Boolean(photo?.complete && photo.naturalWidth > 1);
-    const zoom = portalImageScale(p);
-    const fit = ready && photo ? Math.max(width / photo.naturalWidth, height / photo.naturalHeight) : 1;
-    const toImage = (x: number, y: number) => {
-      const u = width / 2 + (x - width / 2) / zoom;
-      const v = height / 2 + (y - height / 2) / zoom;
-      return [(u - (width - (photo?.naturalWidth ?? 0) * fit) / 2) / fit, (v - (height - (photo?.naturalHeight ?? 0) * fit) / 2) / fit];
-    };
-    const lead = Math.max(cellWidth, cellHeight) * 0.6 + 12;
-    YARD_TILES.forEach((tile) => {
-      const flight = yardFlight(tile, p);
-      const away = tile.tug >= 0 ? seg(p, [tile.launch + YARD_FLIGHT, tile.launch + YARD_FLIGHT + 0.03]) : 1;
-      if (flight <= 0 || (flight >= 1 && away >= 1)) return;
-      const targetX = box.left + (tile.col + 0.5) * cellWidth;
-      const targetY = box.top + (tile.row + 0.5) * cellHeight;
-      const startX = tile.side < 0 ? -cellWidth * 2 : width + cellWidth * 2;
-      const startY = cy + tile.height * height * 0.9;
-      const along = (t: number) => {
-        const eased = easeInOut(t);
-        return [
-          startX + (targetX - startX) * eased,
-          startY + (targetY - startY) * eased + Math.sin(Math.PI * t) * tile.arc * height,
-        ] as const;
-      };
-      const [x, y] = along(flight);
-      if (flight < 1) {
-        const grow = easeInOut(flight);
-        context.setTransform(ratio, 0, 0, ratio, x * ratio, y * ratio);
-        context.rotate(tile.spin * (1 - grow));
-        context.scale(0.5 + 0.5 * grow, 0.5 + 0.5 * grow);
-        const halfWidth = cellWidth / 2 + 0.25;
-        const halfHeight = cellHeight / 2 + 0.25;
-        if (ready && photo) {
-          const [sx, sy] = toImage(targetX - halfWidth, targetY - halfHeight);
-          const [ex, ey] = toImage(targetX + halfWidth, targetY + halfHeight);
-          context.drawImage(photo, sx, sy, ex - sx, ey - sy, -halfWidth, -halfHeight, halfWidth * 2, halfHeight * 2);
-        } else {
-          context.fillStyle = '#12161a';
-          context.fillRect(-halfWidth, -halfHeight, halfWidth * 2, halfHeight * 2);
-        }
-        // Un filo de luz que se apaga al calzar
-        context.lineWidth = 1;
-        context.strokeStyle = color(0.75 * (1 - grow), 0.6);
-        context.strokeRect(-halfWidth + 0.5, -halfHeight + 0.5, halfWidth * 2 - 1, halfHeight * 2 - 1);
-      }
-      if (tile.tug < 0) return;
-      // El remolcador va delante de su tesela; al soltarla sigue de largo y se apaga
-      const [aheadX, aheadY] = along(Math.min(1, flight + 0.03));
-      let headingX = aheadX - x;
-      let headingY = aheadY - y;
-      if (Math.hypot(headingX, headingY) < 0.5) {
-        headingX = targetX - startX;
-        headingY = targetY - startY;
-      }
-      const length = Math.hypot(headingX, headingY) || 1;
-      const dx = headingX / length;
-      const dy = headingY / length;
-      const drift = away * away * Math.max(width, height) * 0.5;
-      const tugX = x + dx * (lead + drift) - dy * drift * 0.4 * tile.side;
-      const tugY = y + dy * (lead + drift) + dx * drift * 0.4 * tile.side;
-      context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      if (flight < 1) {
-        context.strokeStyle = 'rgba(255, 240, 222, 0.45)';
-        context.lineWidth = 1;
-        context.beginPath();
-        context.moveTo(tugX - dx * 14, tugY - dy * 14);
-        context.lineTo(x, y);
-        context.stroke();
-      }
-      context.setTransform(ratio, 0, 0, ratio, tugX * ratio, tugY * ratio);
-      context.rotate(Math.atan2(dy, dx));
-      context.globalAlpha = 1 - away;
-      drawTug(context, tile.tug);
-      context.globalAlpha = 1;
-    });
-
-    // Soldadura: al calzar, cada tesela suelta un destello y unas chispas
-    context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    context.globalCompositeOperation = 'lighter';
-    YARD_TILES.forEach((tile, index) => {
-      const weld = seg(p, [tile.launch + YARD_FLIGHT, tile.launch + YARD_FLIGHT + 0.014]);
-      if (weld <= 0 || weld >= 1) return;
-      const x = box.left + (tile.col + 0.5) * cellWidth;
-      const y = box.top + (tile.row + 0.5) * cellHeight;
-      const glow = 1 - weld;
-      const halo = context.createRadialGradient(x, y, 0, x, y, cellWidth * 0.6);
-      halo.addColorStop(0, `rgba(255, 244, 220, ${(0.55 * glow).toFixed(3)})`);
-      halo.addColorStop(0.2, `rgba(255, 190, 120, ${(0.18 * glow).toFixed(3)})`);
-      halo.addColorStop(1, 'rgba(255, 150, 80, 0)');
-      context.fillStyle = halo;
-      context.fillRect(x - cellWidth, y - cellWidth, cellWidth * 2, cellWidth * 2);
-      context.strokeStyle = `rgba(255, 214, 160, ${(0.9 * glow).toFixed(3)})`;
-      context.lineWidth = 1;
-      context.beginPath();
-      for (let spark = 0; spark < 5; spark++) {
-        const angle = seeded(index * 13 + spark) * Math.PI * 2;
-        const reach = cellWidth * (0.3 + 0.9 * weld) * (0.6 + seeded(index * 7 + spark) * 0.6);
-        const sx = x + Math.cos(angle) * reach;
-        // Caen un poco, como chispas
-        const sy = y + Math.sin(angle) * reach + weld * weld * cellHeight * 0.6;
-        context.moveTo(sx, sy);
-        context.lineTo(sx - Math.cos(angle) * 4, sy - Math.sin(angle) * 4);
-      }
-      context.stroke();
-    });
-    context.globalCompositeOperation = 'source-over';
-
-    // El marco del fondo: un borde nítido con halo alrededor de la imagen
-    context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    if (yaw < 0.01) {
-      context.globalCompositeOperation = 'lighter';
-      context.strokeStyle = color(0.12, 0.2);
-      context.lineWidth = 10;
-      context.strokeRect(box.left, box.top, box.width, box.height);
-      context.strokeStyle = color(0.85, 0.6);
-      context.lineWidth = 1.2;
-      context.strokeRect(box.left, box.top, box.width, box.height);
-      context.globalCompositeOperation = 'source-over';
-    }
+    drawShipyard(context, p, { width, height, ratio, tint: tint.current, photo: picture.current, zoom: portalImageScale(p) });
   }, []);
 
   useMotionValueEvent(progress, 'change', draw);
@@ -1053,7 +508,11 @@ const Shipyard = ({ progress, image }: { progress: MotionValue<number>; image?: 
     };
     measure();
     window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('resize', measure);
+      const fx = document.querySelector<HTMLElement>('.mo-starfx');
+      if (fx) fx.style.opacity = '';
+    };
   }, [progress, draw]);
 
   return <motion.canvas ref={canvasRef} className="mo-journey-stage is-yard" style={{ opacity }} aria-hidden="true" />;
