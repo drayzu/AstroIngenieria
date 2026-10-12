@@ -1,6 +1,5 @@
-import { memo, useEffect, useMemo, useRef, type CSSProperties, type RefObject } from 'react';
+import { memo, useMemo, type CSSProperties, type RefObject } from 'react';
 import type { CorridorKind } from './salaRooms';
-import { terrainTiles } from './horizonTerrain';
 
 /* Lo que hay detrás de cada pasillo. Todo es estático: GalleryCorridor solo
    cambia opacidades y transformaciones de estas capas en cada cuadro. */
@@ -16,9 +15,7 @@ export type SceneParts = Partial<Record<
   | 'living'
   | 'clouds'
   | 'sky'
-  | 'terrainBarren'
-  | 'terrainWater'
-  | 'terrainLife'
+  | 'terrain'
   | 'night'
   | 'cloudStrip'
   | 'sun'
@@ -78,66 +75,38 @@ export const CorridorScene = memo(({
 
 type Bind = (key: keyof SceneParts) => (element: ScenePart) => void;
 
-/* Ingeniería planetaria: de noche sobre un desierto oxidado; el sol sale con
-   la terraformación, la luz barre el suelo, se llenan los mares y la tierra
-   firme reverdece. El suelo es una trama de puntos que corre con la pared */
-const HorizonScene = ({ bind }: { bind: Bind }) => {
-  const planes = useRef<(HTMLElement | null)[]>([]);
-
-  useEffect(() => {
-    let alive = true;
-    void terrainTiles().then((tiles) => {
-      if (!alive) return;
-      [tiles.barren, tiles.water, tiles.life].forEach((url, index) => {
-        planes.current[index]?.style.setProperty('background-image', `url(${url})`);
-      });
-    });
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  const plane = (key: 'terrainBarren' | 'terrainWater' | 'terrainLife', index: number, variant: string) => (
-    <span
-      className={`mo-horizon-terrain is-${variant}`}
-      ref={(element) => {
-        planes.current[index] = element;
-        bind(key)(element);
-      }}
-    />
-  );
-
-  return (
-    <div className="mo-horizon" aria-hidden="true">
-      {/* El cielo de día: la atmósfera nueva dispersa la luz y apaga las estrellas */}
-      <span className="mo-horizon-sky" ref={bind('sky')} />
-      {/* Amanecer: el sol asoma tras el borde a medida que el mundo despierta */}
-      <span className="mo-horizon-dawn" ref={bind('dawn')} />
-      <span className="mo-horizon-sun" ref={bind('sun')}>
-        <span className="mo-horizon-sun-flare" />
-      </span>
-      <span className="mo-horizon-air is-barren" ref={bind('barren')} />
-      <span className="mo-horizon-air is-living" ref={bind('living')} />
-      <div className="mo-horizon-clouds" ref={bind('clouds')}>
-        <span className="mo-horizon-cloud-strip" ref={bind('cloudStrip')} />
-      </div>
-      <div className="mo-horizon-planet">
-        <div className="mo-horizon-ground">
-          {plane('terrainBarren', 0, 'barren')}
-          {plane('terrainWater', 1, 'water')}
-          {plane('terrainLife', 2, 'life')}
-          {/* La noche se retira de derecha a izquierda cuando sale el sol */}
-          <span className="mo-horizon-night" ref={bind('night')} />
-        </div>
-        {/* Bruma en el limbo: polvo oxidado que se vuelve aire azul */}
-        <span className="mo-horizon-limb is-barren" ref={bind('groundBarren')} />
-        <span className="mo-horizon-limb is-living" ref={bind('groundLiving')} />
-      </div>
-      {/* Con océanos, el sol se refleja en el agua bajo el horizonte */}
-      <span className="mo-horizon-glint" ref={bind('glint')} />
+/* Ingeniería planetaria: de noche sobre Marte; el sol sale con la
+   terraformación, la luz barre el suelo, el mar llena las tierras bajas y la
+   tierra firme reverdece. El suelo es el relieve real de Marte, que gira con
+   la pared (ver marsGround) */
+const HorizonScene = ({ bind }: { bind: Bind }) => (
+  <div className="mo-horizon" aria-hidden="true">
+    {/* El cielo de día: la atmósfera nueva dispersa la luz y apaga las estrellas */}
+    <span className="mo-horizon-sky" ref={bind('sky')} />
+    {/* Amanecer: el sol asoma tras el borde a medida que el mundo despierta */}
+    <span className="mo-horizon-dawn" ref={bind('dawn')} />
+    <span className="mo-horizon-sun" ref={bind('sun')}>
+      <span className="mo-horizon-sun-flare" />
+    </span>
+    <span className="mo-horizon-air is-barren" ref={bind('barren')} />
+    <span className="mo-horizon-air is-living" ref={bind('living')} />
+    <div className="mo-horizon-clouds" ref={bind('clouds')}>
+      <span className="mo-horizon-cloud-strip" ref={bind('cloudStrip')} />
     </div>
-  );
-};
+    <div className="mo-horizon-planet">
+      <div className="mo-horizon-ground">
+        <canvas className="mo-horizon-mars" ref={bind('terrain')} />
+        {/* La noche se retira de derecha a izquierda cuando sale el sol */}
+        <span className="mo-horizon-night" ref={bind('night')} />
+      </div>
+      {/* Bruma en el limbo: polvo oxidado que se vuelve aire azul */}
+      <span className="mo-horizon-limb is-barren" ref={bind('groundBarren')} />
+      <span className="mo-horizon-limb is-living" ref={bind('groundLiving')} />
+    </div>
+    {/* Con océanos, el sol se refleja en el agua bajo el horizonte */}
+    <span className="mo-horizon-glint" ref={bind('glint')} />
+  </div>
+);
 
 /* Cada pieza de una escala aparece cuando el avance del grupo (--grow, que
    escribe GalleryCorridor) pasa su umbral --t: la civilización se construye

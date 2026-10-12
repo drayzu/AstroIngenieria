@@ -653,8 +653,8 @@
   box-shadow: inset 0 1px 0 rgba(245, 241, 232, 0.2);
 }
 
-/* El suelo: una trama de puntos en tres capas con el mismo relieve (desierto,
-   mares y tierra viva) que GalleryCorridor desliza con la pared */
+/* El suelo: el relieve de Marte en un lienzo (ver marsGround), que gira con
+   la pared mientras el mar sube y la tierra reverdece */
 .mo-horizon-ground {
   position: absolute;
   top: 0;
@@ -664,18 +664,11 @@
   overflow: hidden;
 }
 
-.mo-horizon-terrain {
+.mo-horizon-mars {
   position: absolute;
-  inset: 0 auto 0 0;
-  width: calc(100% + 1024px);
-  background-repeat: repeat-x;
-  background-size: 1024px 240px;
-  will-change: transform, opacity;
-}
-
-.mo-horizon-terrain.is-water,
-.mo-horizon-terrain.is-life {
-  opacity: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 /* La noche: oscura a la izquierda, transparente a la derecha; al amanecer

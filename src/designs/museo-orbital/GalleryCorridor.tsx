@@ -5,7 +5,7 @@ import type { AstroConcept } from '../../types';
 import type { CorridorKind } from './salaRooms';
 import { RoomHud, RoomProgress } from './RoomHud';
 import { CorridorScene, type SceneParts } from './corridorScenes';
-import { TERRAIN_WIDTH } from './horizonTerrain';
+import { paintMarsGround } from './marsGround';
 import { clamp, clamp01, offsetWithin, skyDrift, smoothstep, toRoman, useRoomLoop, wallGain } from './roomShared';
 import './galleryCorridor.css';
 
@@ -308,7 +308,7 @@ export const GalleryCorridor = memo(({
       }
     }
 
-    paintScene(kind, scene.current, { wall, progress, beta, ticks: tickPositions, rimTop, dawnAt });
+    paintScene(kind, scene.current, { wall, progress, beta, ticks: tickPositions, rimTop, rimRadius, dawnAt });
     const showReading = (reading: { value: string; unit: string }) => {
       const key = reading.value + reading.unit;
       if (key === state.reading) return;
@@ -348,7 +348,7 @@ export const GalleryCorridor = memo(({
     const state = live.current;
     state.velocity = 0;
     state.lastWall = Number.NaN;
-    paintScene(kind, scene.current, { wall: Number.NaN, progress: Number.NaN, beta: 0, ticks: [], rimTop: 0, dawnAt: 0 });
+    paintScene(kind, scene.current, { wall: Number.NaN, progress: Number.NaN, beta: 0, ticks: [], rimTop: 0, rimRadius: 1, dawnAt: 0 });
   };
 
   const refresh = useRoomLoop(sectionRef, scrollRef, (frame) => paint(frame.offset), { onIdle: settle });
@@ -547,6 +547,7 @@ interface SceneFrame {
   beta: number;
   ticks: number[];
   rimTop: number;
+  rimRadius: number;
   dawnAt: number;
 }
 
@@ -598,17 +599,13 @@ const paintScene = (kind: CorridorKind, parts: SceneParts, frame: SceneFrame) =>
     parts.sky?.style.setProperty('opacity', (day * (0.35 + life * 0.65)).toFixed(3));
     const seas = smoothstep(frame.dawnAt, (frame.ticks[3] ?? 0.66) + 0.04, frame.progress);
     const green = smoothstep(frame.ticks[3] ?? 0.66, Math.min(0.98, (frame.ticks[4] ?? 0.86) + 0.06), frame.progress);
-    parts.terrainWater?.style.setProperty('opacity', seas.toFixed(3));
-    parts.terrainLife?.style.setProperty('opacity', green.toFixed(3));
-    // Las curvas oxidadas ceden ante las verdes
-    parts.terrainBarren?.style.setProperty('opacity', (1 - green).toFixed(3));
     parts.glint?.style.setProperty('opacity', (seas * smoothstep(0.1, 0.45, rise)).toFixed(3));
     parts.clouds?.style.setProperty('opacity', smoothstep(0.42, 0.95, frame.progress).toFixed(3));
-    // Superficie y nubes giran con el planeta, más lento que la pared
-    const terrain = `translate3d(${(-((frame.wall * 0.55) % TERRAIN_WIDTH)).toFixed(1)}px, 0, 0)`;
-    parts.terrainBarren?.style.setProperty('transform', terrain);
-    parts.terrainWater?.style.setProperty('transform', terrain);
-    parts.terrainLife?.style.setProperty('transform', terrain);
+    // Superficie y nubes giran con el planeta, más lento que la pared; el
+    // mar sube y la tierra reverdece sobre el relieve de Marte
+    if (parts.terrain instanceof HTMLCanvasElement) {
+      paintMarsGround(parts.terrain, { wall: frame.wall, radius: frame.rimRadius, seas, green });
+    }
     parts.cloudStrip?.style.setProperty('transform', `translate3d(${(-((frame.wall * 0.3) % 1600)).toFixed(1)}px, 0, 0)`);
     return;
   }
