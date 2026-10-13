@@ -1,6 +1,6 @@
-[![Intro principal — Astroingeniería](docs/readme/intros/intro-principal.gif)](docs/readme/intros/intro-principal.mp4)
+[![Intro principal — Astroingeniería](docs/readme/intros/intro-principal.gif)](https://drayzu.github.io/AstroIngenieria/)
 
-[![Nueve capítulos — mosaico sincronizado](docs/readme/intros/mosaico-capitulos.gif)](docs/readme/intros/mosaico-capitulos.mp4)
+[![Nueve capítulos — mosaico sincronizado](docs/readme/intros/mosaico-capitulos.gif)](https://drayzu.github.io/AstroIngenieria/)
 
 <p align="center">
   <a href="https://drayzu.github.io/AstroIngenieria/">
