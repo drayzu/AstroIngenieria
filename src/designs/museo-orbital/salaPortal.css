@@ -162,28 +162,6 @@
   stroke-width: 18;
 }
 
-/* Agujero negro: el resplandor del gas caliente alrededor de la sombra. Lo
-   mueve y escala el viaje; transparente adentro, donde está la sombra */
-.mo-hole-glow {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 200px;
-  height: 200px;
-  margin: -100px 0 0 -100px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle closest-side,
-    transparent 28%,
-    rgba(255, 150, 70, 0.42) 30%,
-    rgba(230, 80, 40, 0.14) 55%,
-    transparent 100%
-  );
-  opacity: 0;
-  pointer-events: none;
-  will-change: transform, opacity;
-}
-
 /* Kardashev: el suelo bajo la ciudad, la bruma del horizonte y el
    resplandor de la ciudad. El viaje solo los mueve, escala y apaga */
 .mo-journey-stage.is-kardashev canvas {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useMotionValueEvent, useTransform, type MotionValue } from 'framer-motion';
-import { HOLE, drawHole, holeCenter, holeGlow, holeRadius, holeRoll } from './blackHoleFall';
+import { HOLE, holeCenter, holeRadius, holeRoll, holeSkyHidden, paintHole, prepareHole } from './blackHoleFall';
 import { drawHabitat, habitatRoll, habitatSkyHidden, habitatWindow } from './habitatFlyby';
 import { CHASE, chaseBank, drawChase } from './propulsionChase';
 import { KARDASHEV, drawKardashev, kardashevGround, kardashevSkyDim, kardashevTurn } from './kardashevZoom';
@@ -58,8 +58,12 @@ const JOURNEY_HOLDS: Partial<Record<JourneyKind, JourneyHold[]>> = {
     { range: [0.03, 0.2], extra: 90 },
     { range: [0.2, 0.29], extra: 60 },
   ],
-  // La caída: acercarse al agujero negro, rodearlo y zambullirse
-  starburst: [{ range: [0.03, 0.27], extra: 80 }],
+  // La caída: llegar al agujero negro y volar rasante sobre su disco (el
+  // tramo más largo), y zambullirse en el remolino
+  starburst: [
+    { range: [0.03, 0.2], extra: 170 },
+    { range: [0.2, 0.27], extra: 70 },
+  ],
   // Kardashev: subir de la ciudad al planeta, a la estrella y a la galaxia
   galaxy: [{ range: [0.03, 0.27], extra: 110 }],
   // La persecución: rodear la nave, acelerar y el salto
@@ -796,83 +800,104 @@ const HorizonRim = ({ progress }: { progress: MotionValue<number> }) => {
 
 /* ---------------- Agujero negro: caemos al otro lado ---------------- */
 
+// Píxeles reales por píxel CSS del agujero: se ajusta a lo que aguanta el
+// equipo y se recuerda para la próxima pasada
+let holeResolution = 0;
+
 const BlackHole = ({ progress }: { progress: MotionValue<number> }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const glowRef = useRef<HTMLDivElement>(null);
-  const size = useRef({ width: 1, height: 1, ratio: 1 });
-  const tint = useRef<number[]>([255, 122, 89]);
-  const lastRoll = useRef(Number.NaN);
   const opacity = useTransform(
     progress,
     [JOURNEY_OPEN[0], JOURNEY_OPEN[0] + 0.03, JOURNEY_COVER[0] + 0.08, JOURNEY_COVER[0] + 0.18],
     [0, 1, 1, 0],
   );
 
-  const draw = useCallback((p: number) => {
-    const canvas = canvasRef.current;
-    const context = canvas?.getContext('2d');
-    if (!canvas || !context) return;
-    const { width, height, ratio } = size.current;
-
-    // El cielo de fondo gira con la cámara, alrededor del agujero
-    const roll = holeRoll(p);
-    const delta = roll - lastRoll.current;
-    if (Math.abs(delta) < 1) {
-      const [shiftX, shiftY] = holeCenter(p, width, height);
-      skyDrift.spin.x = width / 2 + shiftX;
-      skyDrift.spin.y = height / 2 + shiftY;
-      skyDrift.spin.depth = 0;
-      skyDrift.spin.angle -= delta;
-    }
-    lastRoll.current = roll;
-
-    const { radius, opening } = holeParts(p, width, height);
-    // El resplandor del gas caliente va aparte, en CSS: solo se mueve y se
-    // escala, sin repintar un degradado enorme en cada cuadro
-    const glow = glowRef.current;
-    if (glow) {
-      const [shiftX, shiftY] = holeCenter(p, width, height);
-      glow.style.transform = `translate(${shiftX.toFixed(1)}px, ${shiftY.toFixed(1)}px) scale(${((radius * 6.8) / 200).toFixed(3)})`;
-      const shine = holeGlow(p);
-      glow.style.opacity = shine.toFixed(3);
-      // Apagado, ni siquiera se compone
-      glow.style.visibility = shine > 0.005 ? 'visible' : 'hidden';
-    }
-
-    context.setTransform(1, 0, 0, 1, 0, 0);
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    if (p > JOURNEY_COVER[0] + 0.18 || p < JOURNEY_OPEN[0]) return;
-    context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    drawHole(context, p, width, height, tint.current, radius, opening);
-  }, []);
-
-  useMotionValueEvent(progress, 'change', draw);
+  /* El shader dibuja en cada cuadro mientras el viaje está a la vista: el
+     gas sigue girando con el scroll quieto. Con el scroll quieto basta la
+     mitad de los cuadros */
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    tint.current = accentRgb(canvas);
-    const measure = () => {
+    let frame = 0;
+    let lastRoll = Number.NaN;
+    let lastP = Number.NaN;
+    let lastMove = 0;
+    let lastFrame = 0;
+    let beat = 0;
+    // Baja sola si los cuadros se atrasan (en pocos cuadros, para que no se
+    // note) y vuelve de a poco si sobra tiempo
+    const best = Math.min(1, 0.75 * Math.max(1, window.devicePixelRatio || 1));
+    if (!holeResolution) holeResolution = best;
+    let late = 0;
+    let early = 0;
+    const tick = (now: number) => {
+      frame = 0;
+      const p = progress.get();
+      const active = p > JOURNEY_OPEN[0] && p < JOURNEY_COVER[0] + 0.18;
+      // Las constelaciones de la capa de efectos, que va por encima de los
+      // portales, quedarían planas sobre el cielo curvado
+      const fx = document.querySelector<HTMLElement>('.mo-starfx');
+      if (fx) {
+        const hidden = active ? holeSkyHidden(p) : 0;
+        fx.style.opacity = hidden > 0 ? (1 - hidden).toFixed(3) : '';
+      }
+      if (!active) {
+        lastFrame = 0;
+        return;
+      }
+      frame = requestAnimationFrame(tick);
+      if (p !== lastP) lastMove = now;
+      lastP = p;
+      if (now - lastMove > 1200 && beat++ % 2) return;
+
       const width = canvas.clientWidth || 1;
       const height = canvas.clientHeight || 1;
-      // Resolución normal, sin la doble de las pantallas densas: la caída
-      // mueve muchos trazos largos y en movimiento no se nota
-      const ratio = 1;
-      size.current = { width, height, ratio };
-      canvas.width = Math.round(width * ratio);
-      canvas.height = Math.round(height * ratio);
-      draw(progress.get());
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, [progress, draw]);
+      // El cielo de la página, debajo, gira con la cámara alrededor del agujero
+      const roll = holeRoll(p);
+      if (Math.abs(roll - lastRoll) < 1) {
+        const [shiftX, shiftY] = holeCenter(p, width, height);
+        skyDrift.spin.x = width / 2 + shiftX;
+        skyDrift.spin.y = height / 2 + shiftY;
+        skyDrift.spin.depth = 0;
+        skyDrift.spin.angle -= roll - lastRoll;
+      }
+      lastRoll = roll;
 
-  return (
-    <>
-      <div ref={glowRef} className="mo-hole-glow" aria-hidden="true" />
-      <motion.canvas ref={canvasRef} className="mo-journey-stage is-blackhole" style={{ opacity }} aria-hidden="true" />
-    </>
-  );
+      if (lastFrame && now - lastMove < 1200) {
+        const gap = now - lastFrame;
+        late = gap > 40 ? late + 2 : gap > 24 ? late + 1 : 0;
+        early = gap < 18 ? early + 1 : 0;
+        if (late >= 4 && holeResolution > 0.35) {
+          holeResolution = Math.max(0.35, holeResolution * 0.8);
+          late = 0;
+        } else if (early > 180 && holeResolution < best) {
+          holeResolution = Math.min(best, holeResolution * 1.08);
+          early = 0;
+        }
+      }
+      lastFrame = now;
+      const { radius, opening } = holeParts(p, width, height);
+      paintHole(canvas, { p, time: now / 1000, width, height, resolution: holeResolution, radius, opening });
+    };
+    const wake = () => {
+      if (!frame) frame = requestAnimationFrame(tick);
+    };
+    const unsubscribe = progress.on('change', wake);
+    wake();
+    const idle = window.requestIdleCallback
+      ? window.requestIdleCallback(() => prepareHole(canvas), { timeout: 6000 })
+      : window.setTimeout(() => prepareHole(canvas), 3000);
+    return () => {
+      unsubscribe();
+      cancelAnimationFrame(frame);
+      if (window.cancelIdleCallback) window.cancelIdleCallback(idle);
+      else window.clearTimeout(idle);
+      const fx = document.querySelector<HTMLElement>('.mo-starfx');
+      if (fx) fx.style.opacity = '';
+    };
+  }, [progress]);
+
+  return <motion.canvas ref={canvasRef} className="mo-journey-stage is-blackhole" style={{ opacity }} aria-hidden="true" />;
 };
 
 /* ---------------- Enjambre de Dyson: los paneles eclipsan la estrella ---------------- */
