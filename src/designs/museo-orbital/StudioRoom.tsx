@@ -17,6 +17,7 @@ import { getReadingConnections, type ReadingContext } from '../../data/readingJo
 import { ArticleReader } from '../shared/ArticleReader';
 import { ImageLightbox, type ImageLightboxImage } from '../shared/ImageLightbox';
 import { StudyDiagram } from './StudyDiagrams';
+import { isObraFlightRunning, OBRA_LANDED_EVENT, obraFlightSupported } from './obraFlight';
 import './museoOrbital.css';
 
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
@@ -27,10 +28,12 @@ interface StudioProps {
   siblings: AstroConcept[];
   navigationContext: ReadingContext;
   enableFlight?: boolean;
+  /* 'flight': la cámara entró en el cuadro y la sala ya está en su sitio */
+  arrival?: 'flight' | 'fade';
   inVitrine: boolean;
   onToggleVitrine: (conceptId: string) => void;
   onClose: () => void;
-  onSelect: (concept: AstroConcept) => void;
+  onSelect: (concept: AstroConcept, direction: 1 | -1) => void;
 }
 
 export const StudioRoom = ({
@@ -39,12 +42,32 @@ export const StudioRoom = ({
   siblings,
   navigationContext,
   enableFlight = true,
+  arrival = 'fade',
   inVitrine,
   onToggleVitrine,
   onClose,
   onSelect,
 }: StudioProps) => {
   const { locale, t } = useLocale();
+  // El viaje hacia el cuadro reemplaza el vuelo compartido de framer
+  const sharedFlight = enableFlight && !obraFlightSupported();
+  const [arrivedByFlight] = useState(arrival === 'flight');
+  // Lo que más cuesta montar (el artículo, las miniaturas) espera a que la
+  // cámara se pose cuando está viajando: al entrar en el cuadro o al pasar de sala
+  const [settledFor, setSettledFor] = useState<string | null>(() => (isObraFlightRunning() ? null : concept.id));
+  useEffect(() => {
+    const show = () => setSettledFor(concept.id);
+    if (!isObraFlightRunning()) {
+      show();
+      return;
+    }
+    window.addEventListener(OBRA_LANDED_EVENT, show, { once: true });
+    const timer = window.setTimeout(show, 1800);
+    return () => {
+      window.removeEventListener(OBRA_LANDED_EVENT, show);
+      window.clearTimeout(timer);
+    };
+  }, [concept.id]);
   const panelRef = useRef<HTMLDivElement>(null);
   const backdropPressRef = useRef<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -167,9 +190,9 @@ export const StudioRoom = ({
       }
       if ((event.target as HTMLElement)?.closest('input, textarea')) return;
       if (event.key === 'ArrowRight' && next) {
-        onSelect(next);
+        onSelect(next, 1);
       } else if (event.key === 'ArrowLeft' && previous) {
-        onSelect(previous);
+        onSelect(previous, -1);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -197,11 +220,11 @@ export const StudioRoom = ({
 
   return (
     <motion.div
-      className={`mo-studio${lightboxOpen ? ' is-lightbox-open' : ''}`}
+      className={`mo-studio${lightboxOpen ? ' is-lightbox-open' : ''}${arrivedByFlight ? ' is-arriving' : ''}`}
       role="dialog"
       aria-modal="true"
       aria-label={t("Sala de estudio: {0}", concept.title)}
-      initial={{ opacity: 0 }}
+      initial={arrivedByFlight ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
@@ -254,7 +277,7 @@ export const StudioRoom = ({
             <button
               type="button"
               disabled={!previous}
-              onClick={() => previous && onSelect(previous)}
+              onClick={() => previous && onSelect(previous, -1)}
               data-cursor-label={t("Anterior")}
               aria-label={previousLabel}
               title={previousLabel}
@@ -264,7 +287,7 @@ export const StudioRoom = ({
             <button
               type="button"
               disabled={!next}
-              onClick={() => next && onSelect(next)}
+              onClick={() => next && onSelect(next, 1)}
               data-cursor-label={t("Siguiente")}
               aria-label={nextLabel}
               title={nextLabel}
@@ -305,11 +328,14 @@ export const StudioRoom = ({
                 >
                   <motion.div
                     className="mo-studio-imgframe"
-                    layoutId={enableFlight ? `obra-${concept.id}` : undefined}
+                    layoutId={sharedFlight ? `obra-${concept.id}` : undefined}
                   >
                     <div className="mo-studio-zoomer">
                       <div className="mo-kb">
-                        <AnimatePresence mode="wait">
+                        {/* Cada obra estrena su imagen ya puesta (llega con la
+                            cámara o con la sala que entra de lado); el
+                            fundido queda para cambiar de variante */}
+                        <AnimatePresence mode="wait" initial={false} key={concept.id}>
                           <motion.img
                             key={variant.src}
                             src={variant.src}
@@ -364,7 +390,9 @@ export const StudioRoom = ({
                       data-cursor-label={item.label}
                       aria-pressed={itemIndex === variantIndex}
                     >
-                      <img src={item.src} alt="" loading="lazy" decoding="async" />
+                      {/* Cada miniatura es la ilustración completa: decodificarla
+                          a mitad del viaje frenaría la cámara */}
+                      <img src={settledFor === concept.id ? item.src : undefined} alt="" loading="lazy" decoding="async" />
                       <span>{item.label}</span>
                     </button>
                   ))}
@@ -412,12 +440,12 @@ export const StudioRoom = ({
           <StudyDiagram conceptId={concept.id} />
 
           <section className="mo-tab-pane mo-tab-pane-with-back" aria-label={t("Lectura del tema")}>
-            <ArticleReader
+            {settledFor === concept.id && <ArticleReader
               key={concept.id}
               concept={concept}
               onContentReady={restoreLanguagePosition}
               onLightboxOpenChange={handleArticleLightboxOpenChange}
-            />
+            />}
             <button
               type="button"
               className="mo-back-to-top"

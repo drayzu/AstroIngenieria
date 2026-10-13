@@ -57,6 +57,7 @@ import {
 } from './PlaygroundArcade';
 import { DistortOverlay } from './DistortOverlay';
 import { SalaPortal } from './SalaPortal';
+import { flyIntoObra, flyOutOfObra, obraFlightSupported, panStudio, prewarmObraFlight } from './obraFlight';
 import { prewarmChapterWarp, warpTo } from './chapterWarp';
 import { GalleryCorridor, type CorridorGroup } from './GalleryCorridor';
 import { OrbitRoom } from './OrbitRoom';
@@ -2034,7 +2035,7 @@ const Obra = memo(({
             >
             {approvedImage ? <motion.img
               ref={imgRef}
-              layoutId={enableFlight ? `obra-${concept.id}` : undefined}
+              layoutId={enableFlight && !obraFlightSupported() ? `obra-${concept.id}` : undefined}
               src={shouldLoadImage ? approvedImage : TRANSPARENT_IMAGE}
               alt={concept.illustration.alt}
               loading="lazy"
@@ -2293,6 +2294,7 @@ const Vitrina = memo(({
               <motion.article
                 key={concept.id}
                 className="mo-vitrina-card"
+                data-concept-id={concept.id}
                 role="button"
                 tabIndex={0}
                 aria-label={t("Abrir sala de estudio: {0}", concept.title)}
@@ -2611,6 +2613,8 @@ export default function MuseoOrbital() {
   const [vitrineIds, setVitrineIds] = useState<string[]>(loadVitrine);
   const initialReading = useRef(readingFromHash(vitrineIds));
   const [active, setActive] = useState<AstroConcept | null>(initialReading.current.concept);
+  // Cómo llegó la sala de estudio: con la cámara entrando en el cuadro o con un fundido
+  const [studioArrival, setStudioArrival] = useState<'flight' | 'fade'>('fade');
   const [readingContext, setReadingContext] = useState<ReadingContext>(initialReading.current.context);
   const [activeHallId, setActiveHallId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -3600,6 +3604,9 @@ export default function MuseoOrbital() {
   // El salto entre capítulos se prepara en un momento ocioso
   useEffect(() => prewarmChapterWarp(), []);
 
+  // Las obras bajo el cursor dejan sus imágenes listas para entrar en el cuadro
+  useEffect(() => prewarmObraFlight(), []);
+
   // La velocidad del scroll estira las obras y deja atrás sus marcos
   useVelocityWarp(rootRef, Boolean(reduced));
 
@@ -3616,27 +3623,47 @@ export default function MuseoOrbital() {
     window.dispatchEvent(new CustomEvent('mo-replay-intro'));
   }, [reduced]);
 
-  const openJourneyConcept = useCallback((concept: AstroConcept) => {
+  // Abrir una obra es entrar en el cuadro; sin View Transitions, el vuelo de siempre
+  const openConcept = useCallback((concept: AstroConcept, context: ReadingContext) => {
+    const flew = flyIntoObra({
+      conceptId: concept.id,
+      scope: context === 'vitrine' ? 'vitrine' : 'journey',
+      commit: () => flushSync(() => {
+        setStudioArrival('flight');
+        setReadingContext(context);
+        setActive(concept);
+      }),
+    });
+    if (flew) return;
     triggerFlight();
-    setReadingContext('journey');
+    setStudioArrival('fade');
+    setReadingContext(context);
     setActive(concept);
   }, [triggerFlight]);
+
+  const openJourneyConcept = useCallback((concept: AstroConcept) => {
+    openConcept(concept, 'journey');
+  }, [openConcept]);
 
   const openVitrineConcept = useCallback((concept: AstroConcept) => {
-    triggerFlight();
-    setReadingContext('vitrine');
-    setActive(concept);
-  }, [triggerFlight]);
+    openConcept(concept, 'vitrine');
+  }, [openConcept]);
 
-  const selectActiveConcept = useCallback((concept: AstroConcept) => {
+  const selectActiveConcept = useCallback((concept: AstroConcept, direction: 1 | -1 = 1) => {
+    if (panStudio(direction, () => flushSync(() => setActive(concept)))) return;
     triggerFlight();
     setActive(concept);
   }, [triggerFlight]);
 
   const closeConcept = useCallback(() => {
+    if (active && flyOutOfObra({
+      conceptId: active.id,
+      scope: readingContext === 'vitrine' ? 'vitrine' : 'journey',
+      commit: () => flushSync(() => setActive(null)),
+    })) return;
     triggerFlight();
     setActive(null);
-  }, [triggerFlight]);
+  }, [active, readingContext, triggerFlight]);
 
   const toggleVitrine = useCallback((conceptId: string) => {
     if (active?.id === conceptId && readingContext === 'vitrine') {
@@ -4071,6 +4098,7 @@ export default function MuseoOrbital() {
             siblings={activeSiblings}
             navigationContext={activeUsesVitrineNavigation ? 'vitrine' : 'journey'}
             enableFlight={!reduced}
+            arrival={studioArrival}
             inVitrine={vitrineIds.includes(active.id)}
             onToggleVitrine={toggleVitrine}
             onClose={closeConcept}

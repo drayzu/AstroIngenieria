@@ -1,0 +1,202 @@
+/* ============ Entrar en el cuadro ============
+   Capa del viaje (marco, ventana, imagen y estelas) y reglas de la View
+   Transition que lo sostiene. Las animaciones se escriben desde
+   obraFlight.ts: aquí solo quedan los estados de partida. */
+
+.mo-flight {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+}
+
+.mo-flight-streaks,
+.mo-flight-frame {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+
+.mo-flight-streaks {
+  opacity: 0;
+}
+
+/* El marco: paspartú hueco (los anchos llegan por estilo) y un filo nítido
+   del color del capítulo. Nada de sombras difusas: el marco se agranda
+   varias veces y Chrome lo rasteriza a esa escala (un blur así costó
+   ~150 ms de GPU). El brillo de la obra ya viaja en la captura de la pared. */
+.mo-flight-frame {
+  box-sizing: border-box;
+  border-style: solid;
+  background: none;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 70%, var(--frame-line));
+}
+
+.mo-flight-window {
+  position: absolute;
+  overflow: clip;
+}
+
+/* Fondo de la ventana: tapa la obra de la captura mientras la imagen, más
+   al fondo, todavía no la cubre entera */
+.mo-flight-window-bg {
+  position: absolute;
+  inset: 0;
+  background: #0b0c0d;
+}
+
+.mo-flight-image {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  max-width: none;
+  transform-origin: 0 0;
+}
+
+.mo-flight-pending {
+  background: linear-gradient(135deg, #121517, #090b0c 55%, #16181a);
+}
+
+/* ---- La transición del viaje ---- */
+
+html.mo-obra-flying::view-transition {
+  background: #030405;
+}
+
+html.mo-obra-flying::view-transition-group(*) {
+  animation: none;
+}
+
+html.mo-obra-flying::view-transition-old(*),
+html.mo-obra-flying::view-transition-new(*) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html.mo-obra-flying::view-transition-old(root),
+html.mo-obra-flying::view-transition-new(root) {
+  transform-origin: 0 0;
+}
+
+/* Primer cuadro de la entrada: la sala todavía no está */
+html.mo-obra-entering::view-transition-new(root) {
+  opacity: 0;
+}
+
+/* ---- Anterior / siguiente: la cámara camina de lado por la galería ---- */
+
+html.mo-studio-panning .mo-studio-panel {
+  view-transition-name: mo-studio-panel;
+}
+
+html.mo-studio-panning::view-transition-group(mo-studio-panel) {
+  animation-duration: 0.82s;
+  animation-timing-function: cubic-bezier(0.65, 0, 0.25, 1);
+}
+
+html.mo-studio-panning::view-transition-image-pair(mo-studio-panel) {
+  perspective: 2200px;
+}
+
+html.mo-studio-panning::view-transition-old(mo-studio-panel),
+html.mo-studio-panning::view-transition-new(mo-studio-panel) {
+  mix-blend-mode: normal;
+  animation-duration: 0.82s;
+  animation-timing-function: cubic-bezier(0.65, 0, 0.25, 1);
+  animation-fill-mode: both;
+  backface-visibility: hidden;
+}
+
+html.mo-pan-next::view-transition-old(mo-studio-panel) {
+  animation-name: mo-pan-out-left;
+}
+
+html.mo-pan-next::view-transition-new(mo-studio-panel) {
+  animation-name: mo-pan-in-right;
+}
+
+html.mo-pan-prev::view-transition-old(mo-studio-panel) {
+  animation-name: mo-pan-out-right;
+}
+
+html.mo-pan-prev::view-transition-new(mo-studio-panel) {
+  animation-name: mo-pan-in-left;
+}
+
+@keyframes mo-pan-out-left {
+  to {
+    opacity: 0.2;
+    transform: translateX(-106%) rotateY(16deg) scale(0.9);
+  }
+}
+
+@keyframes mo-pan-in-right {
+  from {
+    opacity: 0.2;
+    transform: translateX(106%) rotateY(-16deg) scale(0.9);
+  }
+}
+
+@keyframes mo-pan-out-right {
+  to {
+    opacity: 0.2;
+    transform: translateX(106%) rotateY(-16deg) scale(0.9);
+  }
+}
+
+@keyframes mo-pan-in-left {
+  from {
+    opacity: 0.2;
+    transform: translateX(-106%) rotateY(16deg) scale(0.9);
+  }
+}
+
+/* ---- La sala que recibe el viaje: su contenido llega cuando la cámara se posa ---- */
+
+.mo-studio.is-arriving .mo-studio-topbar,
+.mo-studio.is-arriving .mo-studio-figure figcaption,
+.mo-studio.is-arriving .mo-filmstrip {
+  animation: mo-studio-arrive-fade 0.5s ease 0.8s both;
+}
+
+.mo-studio.is-arriving .mo-studio-brief > * {
+  animation: mo-studio-arrive-rise 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.mo-studio.is-arriving .mo-studio-brief > :nth-child(1) { animation-delay: 0.78s; }
+.mo-studio.is-arriving .mo-studio-brief > :nth-child(2) { animation-delay: 0.84s; }
+.mo-studio.is-arriving .mo-studio-brief > :nth-child(3) { animation-delay: 0.9s; }
+.mo-studio.is-arriving .mo-studio-brief > :nth-child(4) { animation-delay: 0.96s; }
+.mo-studio.is-arriving .mo-studio-brief > :nth-child(n + 5) { animation-delay: 1.02s; }
+
+@keyframes mo-studio-arrive-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes mo-studio-arrive-rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+}
+
+/* La obra sin pared a la que volver: un punto de luz del color de su capítulo */
+.mo-flight-star {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  opacity: 0;
+  background: #fff;
+  box-shadow:
+    0 0 6px 2px #fff,
+    0 0 22px 8px color-mix(in srgb, var(--accent) 85%, #fff),
+    0 0 60px 22px color-mix(in srgb, var(--accent) 45%, transparent);
+  transform: translate(-50%, -50%);
+}
