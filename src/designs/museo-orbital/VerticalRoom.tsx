@@ -193,9 +193,12 @@ export const VerticalRoom = memo(({
       wheelR = wheelRadius(stops, center);
       if (wheel.current) {
         drawWheel(wheel.current, { center, radius: wheelR, gap: geometry.current.gap, spokes: wheelSpokes(stops, wheelR), masts: stops.map((stop) => stop.at) });
-        // Se desvanece antes de que termine la sala: no llega al portal siguiente
+        // Sigue entera hasta pasar la última obra y se desvanece antes de que
+        // termine la sala: no llega al portal siguiente
         const remaining = bodyHeight - offset - viewport;
-        wheel.current.canvas.style.opacity = smoothstep(viewport * 0.1, viewport * 0.9, remaining).toFixed(3);
+        const lastAt = stops.length ? stops[stops.length - 1].at : center;
+        const past = 1 - smoothstep(lastAt, lastAt + viewport * 0.6, center);
+        wheel.current.canvas.style.opacity = Math.min(past, smoothstep(-viewport * 0.4, viewport * 0.2, remaining)).toFixed(3);
       }
       // El cielo gira con ella alrededor del eje; lo lejano, más despacio
       const moved = center - state.wheelCenter;
