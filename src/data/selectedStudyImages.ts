@@ -4,6 +4,7 @@ const assetBase = `${import.meta.env.BASE_URL}illustrations/selected/`;
 export const selectedStudyImages: Record<string, readonly string[]> = {
   astroingenieria: [
     `${assetBase}astroingenieria/v08.webp`,
+    `${assetBase}astroingenieria/11.webp`,
     `${assetBase}astroingenieria/v07.webp`,
   ],
   iss: [

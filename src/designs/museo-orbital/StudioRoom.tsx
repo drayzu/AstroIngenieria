@@ -10,6 +10,7 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import { plausibilityLabels, scaleLabels } from '../../data/astroData';
 import { selectedStudyImage, selectedStudyImages } from '../../data/selectedStudyImages';
+import { selectedStudyImageTitle } from '../../data/selectedStudyImageTitles';
 import type { AstroChapter, AstroConcept } from '../../types';
 import { metricRows, metricValueLabel } from '../../data/metricProfile';
 import { getReadingConnections, type ReadingContext } from '../../data/readingJourney';
@@ -59,13 +60,17 @@ export const StudioRoom = ({
 
   const variants = useMemo(() => {
     const approved = selectedStudyImages[concept.id];
-    return approved?.map((src, index) => ({
-      id: `seleccion-${index}`,
-      label: index === 0 ? t("Principal") : t("Adicional {0}", index),
-      src,
-      caption: index === 0 ? t("{0} · imagen principal", concept.title) : t("{0} · imagen adicional", concept.title),
-    })) ?? [];
-  }, [concept, t]);
+    return approved?.map((src, index) => {
+      const title = selectedStudyImageTitle(concept.id, src, locale);
+      return {
+        id: `seleccion-${index}`,
+        label: index === 0 ? t("Principal") : t("Adicional {0}", index),
+        src,
+        caption: title ? `${concept.title} · ${title}`
+          : index === 0 ? t("{0} · imagen principal", concept.title) : t("{0} · imagen adicional", concept.title),
+      };
+    }) ?? [];
+  }, [concept, locale, t]);
   const approvedImage = selectedStudyImage(concept.id);
   const [variantIndex, setVariantIndex] = useState(0);
 
@@ -355,6 +360,7 @@ export const StudioRoom = ({
                       type="button"
                       className={itemIndex === variantIndex ? 'is-active' : ''}
                       onClick={() => selectVariant(itemIndex)}
+                      title={item.caption}
                       data-cursor-label={item.label}
                       aria-pressed={itemIndex === variantIndex}
                     >
