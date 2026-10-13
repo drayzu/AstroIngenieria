@@ -41,7 +41,7 @@ export const YARD = {
   // Amanecer orbital: el sol sale por el borde de la Tierra y su luz
   // recorre el dique de izquierda a derecha
   rise: [0.15, 0.2],
-  sweep: [0.165, 0.22],
+  sweep: [0.16, 0.235],
   // Luego sigue subiendo, parejo, hasta que entramos
   climb: [0.18, 0.34],
   // Hasta el final de COVER en portalJourneys
@@ -705,25 +705,26 @@ export const drawShipyard = (context: CanvasRenderingContext2D, p: number, frame
   // canto encendido y el otro en sombra. De noche las alumbra la Tierra
   // desde abajo; al amanecer, una ola de sol las recorre desde la izquierda
   // (con un filo dorado al frente de la ola). Su grosor sigue la perspectiva
+  // La ola es ancha y gradual: en cada viga la luz de la Tierra se apaga
+  // mientras la del sol se enciende en el canto opuesto, sin saltos
+  const DAWN_BAND = Math.max(180, width * 0.32);
+  const DAWN_STEPS = 10;
   const sweep = seg(p, YARD.sweep);
-  const dawn = sweep > 0 ? mix(Math.min(sun[0], 0) - 80, width + 120, easeInOut(sweep)) : -Infinity;
-  const DAWN_BAND = 70;
+  const dawn = sweep > 0 ? mix(Math.min(sun[0], 0) - 80, width + 120 + DAWN_BAND, easeInOut(sweep)) : -Infinity;
   const solid = (list: number[][], thick: number, light: number) => {
     const shade = new Path2D();
     const dark = new Path2D();
-    const lit = [new Path2D(), new Path2D(), new Path2D()];
+    const earthLit = Array.from({ length: DAWN_STEPS + 1 }, () => new Path2D());
+    const sunLit = Array.from({ length: DAWN_STEPS + 1 }, () => new Path2D());
     list.forEach(([ax, ay, ad, bx, by, bd]) => {
       const length = Math.hypot(bx - ax, by - ay) || 1;
-      let nx = -(by - ay) / length;
-      let ny = (bx - ax) / length;
+      const nx = -(by - ay) / length;
+      const ny = (bx - ax) / length;
       const mx = (ax + bx) / 2;
-      const bucket = mx < dawn - DAWN_BAND ? 2 : mx < dawn ? 1 : 0;
-      const lightX = bucket ? sun[0] - mx : down[0];
-      const lightY = bucket ? sun[1] - (ay + by) / 2 : down[1];
-      if (nx * lightX + ny * lightY < 0) {
-        nx = -nx;
-        ny = -ny;
-      }
+      const step = Math.round(easeInOut(clamp01((dawn - mx) / DAWN_BAND)) * DAWN_STEPS);
+      // De qué lado da cada luz
+      const earthSide = nx * down[0] + ny * down[1] < 0 ? -1 : 1;
+      const sunSide = nx * (sun[0] - mx) + ny * (sun[1] - (ay + by) / 2) < 0 ? -1 : 1;
       const wa = Math.max(0.7, (scale * thick) / ad);
       const wb = Math.max(0.7, (scale * thick) / bd);
       shade.moveTo(ax + nx * wa, ay + ny * wa);
@@ -731,22 +732,33 @@ export const drawShipyard = (context: CanvasRenderingContext2D, p: number, frame
       shade.lineTo(bx - nx * wb, by - ny * wb);
       shade.lineTo(ax - nx * wa, ay - ny * wa);
       shade.closePath();
-      lit[bucket].moveTo(ax + nx * wa, ay + ny * wa);
-      lit[bucket].lineTo(bx + nx * wb, by + ny * wb);
-      dark.moveTo(ax - nx * wa, ay - ny * wa);
-      dark.lineTo(bx - nx * wb, by - ny * wb);
+      const edge = (path: Path2D, side: number) => {
+        path.moveTo(ax + side * nx * wa, ay + side * ny * wa);
+        path.lineTo(bx + side * nx * wb, by + side * ny * wb);
+      };
+      if (step < DAWN_STEPS) edge(earthLit[step], earthSide);
+      if (step > 0) edge(sunLit[step], sunSide);
+      edge(dark, step * 2 < DAWN_STEPS ? -earthSide : -sunSide);
     });
     context.fillStyle = 'rgba(6, 10, 9, 0.94)';
     context.fill(shade);
     context.lineWidth = 1;
     context.strokeStyle = color(0.16 * light, 0.1);
     context.stroke(dark);
-    context.strokeStyle = color(0.72 * light, 0.35);
-    context.stroke(lit[0]);
-    context.strokeStyle = `rgba(255, 190, 120, ${(0.95 * light).toFixed(3)})`;
-    context.stroke(lit[1]);
-    context.strokeStyle = color(0.95 * light, 0.72);
-    context.stroke(lit[2]);
+    for (let step = 0; step <= DAWN_STEPS; step++) {
+      const day = step / DAWN_STEPS;
+      if (day < 1) {
+        context.strokeStyle = color(0.72 * light * (1 - day), 0.35);
+        context.stroke(earthLit[step]);
+      }
+      if (day > 0) {
+        context.strokeStyle = color(0.95 * light * day, 0.72);
+        context.stroke(sunLit[step]);
+        // El filo dorado va al frente de la ola
+        context.strokeStyle = `rgba(255, 190, 120, ${(0.8 * light * Math.sin(Math.PI * day)).toFixed(3)})`;
+        context.stroke(sunLit[step]);
+      }
+    }
   };
   solid(braceBeams, 0.01, 0.55);
   solid(frameBeams, 0.028, 1);
