@@ -4,6 +4,8 @@
   </a>
 </p>
 
+[![Intro principal — Astroingeniería](docs/readme/intros/intro-principal.gif)](docs/readme/intros/intro-principal.mp4)
+
 [![Capítulo 1 — Introducción: La constelación era un andamio](docs/readme/intros/capitulo-01-intro.gif)](docs/readme/intros/capitulo-01-intro.mp4)
 
 [![Capítulo 2 — Hábitats espaciales: Sobrevuelo y atraque al hábitat](docs/readme/intros/capitulo-02-habitats.gif)](docs/readme/intros/capitulo-02-habitats.mp4)
