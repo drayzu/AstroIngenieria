@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "deploy:dcc": "node scripts/deployDcc.mjs",
+    "setup:dcc": "node scripts/setupDccSsh.mjs",
+    "check:dcc": "node scripts/deployDcc.mjs --check",
     "generate:illustrations": "node scripts/generateIllustrations.mjs",
     "prepare:visual-layers": "node scripts/prepareVisualLayers.mjs",
     "lint": "eslint .",
