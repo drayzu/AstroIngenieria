@@ -57,6 +57,8 @@ const LATE_NUMBER: Partial<Record<JourneyKind, { in: [number, number]; fill: [nu
   torus: { in: [0.268, 0.305], fill: [0.275, 0.312], from: 0.3 },
   // En el astillero, cuando la imagen ya está armada al fondo del dique
   blueprint: { in: [0.27, 0.31], fill: [0.28, 0.32], from: 0.5 },
+  // En el enjambre, desde el centro de la estrella cuando se abre la ventana
+  dyson: { in: [0.255, 0.3], fill: [0.265, 0.31], from: 0.3 },
   // En la caída, en el centro de la sombra cuando se abre la ventana
   starburst: { in: [0.255, 0.3], fill: [0.265, 0.31], from: 0.3 },
   // En Kardashev, en el núcleo de la galaxia cuando se abre la ventana

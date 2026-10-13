@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useMotionValueEvent, useTransform, type MotionValue } from 'framer-motion';
 import { HOLE, holeCenter, holeRadius, holeRoll, holeSkyHidden, paintHole, prepareHole } from './blackHoleFall';
+import { SWARM, drawSwarm, prepareSwarm, starRadius, swarmRoll, swarmSkyHidden } from './dysonSwarm';
 import { drawHabitat, habitatRoll, habitatSkyHidden, habitatWindow } from './habitatFlyby';
 import { CHASE, chaseBank, drawChase } from './propulsionChase';
 import { KARDASHEV, drawKardashev, kardashevGround, kardashevSkyDim, kardashevTurn } from './kardashevZoom';
@@ -57,6 +58,15 @@ const JOURNEY_HOLDS: Partial<Record<JourneyKind, JourneyHold[]>> = {
   torus: [
     { range: [0.03, 0.2], extra: 90 },
     { range: [0.2, 0.29], extra: 60 },
+  ],
+  // El enjambre: acercarse a la estrella, cruzar el anillo a contraluz,
+  // volar junto a él mientras la ola lo despliega (el tramo más largo) y
+  // virar hacia la estrella
+  dyson: [
+    { range: [0.02, 0.085], extra: 50 },
+    { range: [0.085, 0.128], extra: 70 },
+    { range: [0.128, 0.205], extra: 120 },
+    { range: [0.205, 0.27], extra: 30 },
   ],
   // La caída: llegar al agujero negro y volar rasante sobre su disco (el
   // tramo más largo), y zambullirse en el remolino
@@ -149,13 +159,11 @@ const chaseParts = (p: number): RadiusParts => ({
   max: 76 * easeInOut(seg(p, JOURNEY_COVER)),
 });
 
-/* Enjambre de Dyson: los paneles se ensamblan alrededor de la estrella y
-   solo después, con la luz ya capturada, se abre la ventana */
-const DYSON = { gather: [0.02, 0.17], open: [0.15, 0.31] } satisfies Record<string, [number, number]>;
-const dysonParts = (p: number): RadiusParts => ({
-  min: 30 * easeOut(seg(p, DYSON.open)),
-  max: 76 * easeInOut(seg(p, JOURNEY_COVER)),
-});
+/* Energía: la ventana se abre en el disco de la estrella y, al cubrir, crece con él */
+const sunParts = (p: number, width: number, height: number) => {
+  const opening = starRadius(p, width, height) * easeOut(seg(p, SWARM.open));
+  return opening > 0 ? opening + toPx({ min: 0, max: 76 * easeInOut(seg(p, JOURNEY_COVER)) }) : 0;
+};
 
 /* Colapso: la luz se condensa en un punto, el punto destella y recién
    entonces se abre la ventana, primero en vmin y luego cubriendo */
@@ -267,7 +275,7 @@ export const journeyClip = (kind: JourneyKind, p: number): string => {
     case 'collapse':
       return `circle(${collapseRadius(p)} at 50% 50%)`;
     case 'dyson':
-      return `circle(${cssRadius(dysonParts(p))} at 50% 50%)`;
+      return `circle(${sunParts(p, window.innerWidth, window.innerHeight).toFixed(1)}px at 50% 50%)`;
     case 'starburst':
       return `circle(${holeParts(p, window.innerWidth, window.innerHeight).opening.toFixed(1)}px at 50% 50%)`;
     case 'tunnel':
@@ -900,124 +908,82 @@ const BlackHole = ({ progress }: { progress: MotionValue<number> }) => {
   return <motion.canvas ref={canvasRef} className="mo-journey-stage is-blackhole" style={{ opacity }} aria-hidden="true" />;
 };
 
-/* ---------------- Enjambre de Dyson: los paneles eclipsan la estrella ---------------- */
+/* ---------------- Energía: cruzamos el enjambre de Dyson hasta su estrella ---------------- */
 
-// Muchos planos orbitales con pocas placas cada uno: el enjambre se lee
-// como una nube alrededor de la estrella, no como elipses punteadas
-const SWARM_PANELS = Array.from({ length: 18 }, (_, orbitIndex) => {
-  const tilt = seeded(orbitIndex + 21) * 180 - 90;
-  const squash = 0.12 + seeded(orbitIndex + 57) * 0.8;
-  const radius = 1.55 + seeded(orbitIndex + 83) * 1.1;
-  const speed = (0.45 + seeded(orbitIndex + 119) * 0.7) * (orbitIndex % 2 ? -1 : 1);
-  return Array.from({ length: 12 }, (_, index) => ({
-    tilt,
-    squash,
-    radius,
-    speed,
-    phase: (index + seeded(orbitIndex * 97 + index) * 0.8) / 12,
-    // Orden de llegada: las placas se ensamblan en desorden
-    rank: seeded(orbitIndex * 131 + index + 7),
-    glint: seeded(orbitIndex * 53 + index + 3) * Math.PI * 2,
-  }));
-}).flat();
-
-const DysonEclipse = ({ progress }: { progress: MotionValue<number> }) => {
-  const starRef = useRef<SVGCircleElement>(null);
-  const haloRef = useRef<SVGCircleElement>(null);
-  const heatRef = useRef<SVGCircleElement>(null);
-  const panelRefs = useRef<(SVGLineElement | null)[]>([]);
-  const states = useRef<string[]>([]);
-  const ringSize = useTransform(progress, (p) => `calc(2 * ${cssRadius(dysonParts(p))})`);
-  const ringOpacity = useTransform(progress, [DYSON.open[0], DYSON.open[0] + 0.03, JOURNEY_COVER[0], JOURNEY_COVER[0] + 0.12], [0, 1, 1, 0]);
-  const opacity = useOverlayOpacity(progress, 0.14);
-
-  const draw = useCallback((p: number, width: number, height: number) => {
-    const star = Math.min(width, height) * 0.085;
-    const opened = toPx(dysonParts(p));
-    const opening = seg(p, DYSON.open);
-    // La luz capturada: la estrella pierde brillo y queda el calor rojo
-    const captured = easeInOut(seg(p, [0.05, 0.17]));
-    starRef.current?.setAttribute('r', star.toFixed(1));
-    starRef.current?.setAttribute('opacity', ((1 - 0.6 * captured) * (1 - opening)).toFixed(3));
-    haloRef.current?.setAttribute('r', (star * 3.2).toFixed(1));
-    haloRef.current?.setAttribute('opacity', ((1 - 0.75 * captured) * (1 - opening)).toFixed(3));
-    heatRef.current?.setAttribute('r', (star * 2.4).toFixed(1));
-    heatRef.current?.setAttribute('opacity', (captured * 0.85 * (1 - opening)).toFixed(3));
-
-    const assembled = easeOut(seg(p, DYSON.gather));
-    const unit = Math.max(star, opened * 0.52);
-    // Lo que tapa a los paneles de atrás: la estrella y luego la ventana
-    const occluder = Math.max(star * (1 - opening), opened);
-    SWARM_PANELS.forEach((panel, index) => {
-      const line = panelRefs.current[index];
-      if (!line) return;
-      let state = 'is-hidden';
-      if (panel.rank < assembled) {
-        const theta = panel.phase * Math.PI * 2 + p * panel.speed * Math.PI * 2.2;
-        const radius = panel.radius * unit;
-        const ex = Math.cos(theta) * radius;
-        const ey = Math.sin(theta) * radius * panel.squash;
-        const tilt = (panel.tilt * Math.PI) / 180;
-        const x = ex * Math.cos(tilt) - ey * Math.sin(tilt);
-        const y = ex * Math.sin(tilt) + ey * Math.cos(tilt);
-        // Cada panel se orienta según su órbita: se lee como placa, no como punto
-        const tx = -Math.sin(theta) * radius;
-        const ty = Math.cos(theta) * radius * panel.squash;
-        const dx = tx * Math.cos(tilt) - ty * Math.sin(tilt);
-        const dy = tx * Math.sin(tilt) + ty * Math.cos(tilt);
-        const length = Math.hypot(dx, dy) || 1;
-        const half = star * 0.065;
-        line.setAttribute('x1', (x - (dx / length) * half).toFixed(1));
-        line.setAttribute('y1', (y - (dy / length) * half).toFixed(1));
-        line.setAttribute('x2', (x + (dx / length) * half).toFixed(1));
-        line.setAttribute('y2', (y + (dy / length) * half).toFixed(1));
-        const front = Math.sin(theta) > 0;
-        const inside = Math.hypot(x, y) < occluder;
-        // Sobre la estrella las de delante son siluetas; sobre la imagen, nada
-        const eclipse = opening < 0.25;
-        state = front ? (inside ? (eclipse ? 'is-shadow' : 'is-hidden') : 'is-front') : inside ? 'is-hidden' : 'is-back';
-        // Destello: cada placa refleja la luz al girar
-        line.setAttribute('stroke-opacity', state === 'is-front' ? (0.45 + 0.55 * Math.abs(Math.cos(theta * 1.5 + panel.glint))).toFixed(3) : '1');
-      }
-      if (states.current[index] !== state) {
-        states.current[index] = state;
-        line.setAttribute('class', state);
-      }
-    });
-  }, []);
-  const svgRef = useStageSvg(progress, draw);
-
-  return (
-    <>
-      <motion.svg ref={svgRef} className="mo-journey-stage is-dyson" style={{ opacity }} aria-hidden="true">
-        <defs>
-          <radialGradient id="mo-dyson-star">
-            <stop offset="0" stopColor="#fffdf6" />
-            <stop offset="0.55" stopColor="#fff1cc" />
-            <stop offset="0.85" style={{ stopColor: 'var(--accent)' }} />
-            <stop offset="1" style={{ stopColor: 'var(--accent)' }} stopOpacity="0.6" />
-          </radialGradient>
-          <radialGradient id="mo-dyson-halo">
-            <stop offset="0" style={{ stopColor: 'var(--accent)' }} stopOpacity="0.5" />
-            <stop offset="0.4" style={{ stopColor: 'var(--accent)' }} stopOpacity="0.14" />
-            <stop offset="1" style={{ stopColor: 'var(--accent)' }} stopOpacity="0" />
-          </radialGradient>
-          <radialGradient id="mo-dyson-heat">
-            <stop offset="0" stopColor="#ff6a3c" stopOpacity="0.55" />
-            <stop offset="0.5" stopColor="#c8321e" stopOpacity="0.2" />
-            <stop offset="1" stopColor="#8a1a12" stopOpacity="0" />
-          </radialGradient>
-        </defs>
-        <circle ref={haloRef} fill="url(#mo-dyson-halo)" />
-        <circle ref={heatRef} fill="url(#mo-dyson-heat)" />
-        <circle ref={starRef} fill="url(#mo-dyson-star)" />
-        {SWARM_PANELS.map((_, index) => (
-          <line key={index} className="is-hidden" ref={(element) => { panelRefs.current[index] = element; }} />
-        ))}
-      </motion.svg>
-      <motion.span className="mo-journey-ring" style={{ width: ringSize, height: ringSize, opacity: ringOpacity }} />
-    </>
+const DysonSwarm = ({ progress }: { progress: MotionValue<number> }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const size = useRef({ width: 1, height: 1, ratio: 1 });
+  const lastRoll = useRef(Number.NaN);
+  const opacity = useTransform(
+    progress,
+    [JOURNEY_OPEN[0], JOURNEY_OPEN[0] + 0.03, JOURNEY_COVER[0] + 0.08, JOURNEY_COVER[0] + 0.18],
+    [0, 1, 1, 0],
   );
+
+  const draw = useCallback((p: number) => {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext('2d');
+    if (!canvas || !context) return;
+    const { width, height, ratio } = size.current;
+
+    // El cielo de fondo se ladea con la cámara
+    const roll = swarmRoll(p);
+    const delta = roll - lastRoll.current;
+    if (Math.abs(delta) < 1) {
+      skyDrift.spin.x = width / 2;
+      skyDrift.spin.y = height / 2;
+      skyDrift.spin.depth = 0;
+      skyDrift.spin.angle += delta;
+    }
+    lastRoll.current = roll;
+
+    // Nuestro cielo gira con la cámara: las constelaciones de la capa de
+    // efectos, que va encima, se apagan mientras dura
+    const fx = document.querySelector<HTMLElement>('.mo-starfx');
+    if (fx) {
+      const hidden = p > JOURNEY_OPEN[0] && p < JOURNEY_COVER[0] + 0.18
+        ? swarmSkyHidden(p) * (1 - seg(p, [JOURNEY_COVER[0] + 0.08, JOURNEY_COVER[0] + 0.18]))
+        : 0;
+      fx.style.opacity = hidden > 0 ? (1 - hidden).toFixed(3) : '';
+    }
+
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    if (p > JOURNEY_COVER[0] + 0.18 || p < JOURNEY_OPEN[0]) return;
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    drawSwarm(context, p, width, height, sunParts(p, width, height));
+  }, []);
+
+  useMotionValueEvent(progress, 'change', draw);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const measure = () => {
+      const width = canvas.clientWidth || 1;
+      const height = canvas.clientHeight || 1;
+      // Resolución normal, sin la doble de las pantallas densas: las placas
+      // pasan rápido y en movimiento no se nota
+      const ratio = 1;
+      size.current = { width, height, ratio };
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+      draw(progress.get());
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    // La estrella se pinta una sola vez, en un rato libre: no en el primer
+    // cuadro del viaje
+    const idle = window.requestIdleCallback?.(prepareSwarm) ?? window.setTimeout(prepareSwarm, 200);
+    return () => {
+      window.removeEventListener('resize', measure);
+      if (window.cancelIdleCallback) window.cancelIdleCallback(idle);
+      else window.clearTimeout(idle);
+      const fx = document.querySelector<HTMLElement>('.mo-starfx');
+      if (fx) fx.style.opacity = '';
+    };
+  }, [progress, draw]);
+
+  return <motion.canvas ref={canvasRef} className="mo-journey-stage is-swarm" style={{ opacity }} aria-hidden="true" />;
 };
 
 /* ---------------- Propulsión: seguimos a la nave hasta la luz ---------------- */
@@ -1614,7 +1580,7 @@ export const JourneyOverlay = ({
     case 'horizon':
       return <HorizonRim progress={progress} />;
     case 'dyson':
-      return <DysonEclipse progress={progress} />;
+      return <DysonSwarm progress={progress} />;
     case 'starburst':
       return <BlackHole progress={progress} />;
     case 'tunnel':

@@ -220,29 +220,6 @@
   pointer-events: none;
 }
 
-/* Enjambre de Dyson: placas que brillan de frente y eclipsan la estrella */
-.mo-journey-stage.is-dyson line {
-  stroke-width: 3;
-}
-
-.mo-journey-stage.is-dyson .is-front {
-  stroke: color-mix(in srgb, var(--accent) 60%, #ffffff);
-}
-
-.mo-journey-stage.is-dyson .is-back {
-  stroke: color-mix(in srgb, var(--accent) 55%, transparent);
-  opacity: 0.45;
-}
-
-.mo-journey-stage.is-dyson .is-shadow {
-  stroke: #140c05;
-  opacity: 0.92;
-}
-
-.mo-journey-stage.is-dyson .is-hidden {
-  opacity: 0;
-}
-
 /* Señal: un radar rodea la ventana. El centro queda libre para el mensaje
    y la ventana; el ruido del cielo solo se ve en la estela del barrido,
    como el fósforo de una pantalla (--trail lo mueve el viaje) */
