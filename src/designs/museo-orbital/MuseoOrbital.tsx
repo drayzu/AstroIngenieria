@@ -57,6 +57,7 @@ import {
 } from './PlaygroundArcade';
 import { DistortOverlay } from './DistortOverlay';
 import { SalaPortal } from './SalaPortal';
+import { prewarmChapterWarp, warpTo } from './chapterWarp';
 import { GalleryCorridor, type CorridorGroup } from './GalleryCorridor';
 import { OrbitRoom } from './OrbitRoom';
 import { VerticalRoom } from './VerticalRoom';
@@ -172,11 +173,10 @@ const getVitrineConcepts = (ids: readonly string[], locale: Locale = 'es') =>
     .map((id) => getCatalog(locale).conceptById.get(id))
     .filter((item): item is AstroConcept => Boolean(item));
 
+// Toda la navegación viaja por hiperespacio (o con scroll suave si está cerca)
 const scrollToId = (id: string) => {
-  window.dispatchEvent(new CustomEvent('mo-warp'));
   const target = document.getElementById(id);
-  if (!target) return;
-  if (!smoothScrollTo(target)) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (target) warpTo(target);
 };
 
 const loadPlaygroundRecords = (): Record<PlaygroundControlMode, PlaygroundRecord[]> => {
@@ -1771,6 +1771,7 @@ const HallIndex = memo(({ activeId, fillRef }: { activeId: string | null; fillRe
         className={`mo-hall-chip${activeId === chapter.id ? ' is-active' : ''}`}
         aria-current={activeId === chapter.id ? 'location' : undefined}
         style={{ '--accent': chapter.color } as CSSProperties}
+        data-warp-target={`sala-${chapter.id}`}
         onClick={() => scrollToId(`sala-${chapter.id}`)}
       >
         <b>{chapter.number}</b>
@@ -2176,7 +2177,7 @@ const Sala = memo(({
   onSelect: (concept: AstroConcept) => void;
 }) => {
   const sectionRef = useRef<HTMLElement>(null);
-  const { locale } = useLocale();
+  const { locale, t } = useLocale();
   const { conceptById } = getCatalog(locale);
   const reduced = useReducedMotion();
   // Cada capítulo se recorre a su manera; con movimiento reducido, el muro de siempre
@@ -2209,6 +2210,10 @@ const Sala = memo(({
       className={`mo-sala mo-layer${previous ? ' has-portal' : ''}`}
       ref={sectionRef}
       style={{ '--accent': chapter.color } as CSSProperties}
+      data-warp-number={chapter.number.padStart(2, '0')}
+      data-warp-kicker={`${t('Capítulo')} ${chapter.number.padStart(2, '0')}`}
+      data-warp-title={chapter.title}
+      data-warp-image={chapter.visual?.sectionImage ?? chapter.visual?.heroImage}
     >
       {/* Con portal, el propio salto es la introducción del capítulo: la
           cabecera queda solo para lectores de pantalla */}
@@ -2532,6 +2537,7 @@ const MenuOverlay = memo(({
               <button
                 type="button"
                 style={{ '--accent': chapter.color } as CSSProperties}
+                data-warp-target={`sala-${chapter.id}`}
                 onClick={() => onGo(`sala-${chapter.id}`)}
                 data-cursor-label={t("Capítulo {0}", chapter.number.padStart(2, '0'))}
               >
@@ -3591,6 +3597,9 @@ export default function MuseoOrbital() {
     return startSmoothScroll(root);
   }, []);
 
+  // El salto entre capítulos se prepara en un momento ocioso
+  useEffect(() => prewarmChapterWarp(), []);
+
   // La velocidad del scroll estira las obras y deja atrás sus marcos
   useVelocityWarp(rootRef, Boolean(reduced));
 
@@ -3983,8 +3992,7 @@ export default function MuseoOrbital() {
           aria-label={t("Volver a la portada")}
           onClick={(event) => {
             if (event.detail > 0) event.currentTarget.blur();
-            window.dispatchEvent(new CustomEvent('mo-warp'));
-            if (!smoothScrollTo(0)) rootRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+            warpTo(0);
           }}
         >
           <span className="mo-rail-disc" aria-hidden="true" />
@@ -4001,6 +4009,7 @@ export default function MuseoOrbital() {
             style={{ '--accent': chapter.color } as CSSProperties}
             aria-label={t("Capítulo {0}: {1}", chapter.number.padStart(2, '0'), chapter.title)}
             aria-current={activeHallId === chapter.id ? 'location' : undefined}
+            data-warp-target={`sala-${chapter.id}`}
             onClick={(event) => {
               // Con mouse no se conserva el foco: el índice se cierra al salir
               if (event.detail > 0) event.currentTarget.blur();

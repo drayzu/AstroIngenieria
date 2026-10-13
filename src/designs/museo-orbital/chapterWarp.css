@@ -1,0 +1,106 @@
+/* Salto al hiperespacio entre capítulos (chapterWarp.ts). Vive en <body>,
+   fuera de .mo-root: por encima de todo el museo durante el viaje. El lienzo
+   lo dibuja un worker; el resto se anima solo en opacidad y transformación,
+   que corren en el compositor. */
+
+.mo-warp {
+  --warp-to: 201, 168, 106;
+  position: fixed;
+  inset: 0;
+  z-index: 127;
+  pointer-events: none;
+  overflow: hidden;
+  contain: strict;
+}
+
+.mo-warp[hidden] {
+  display: none;
+}
+
+/* Mientras viajamos, la página no recibe clics */
+.mo-warp.is-active {
+  pointer-events: auto;
+}
+
+.mo-warp > * {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Solo cubre si no hay WebGL (o el worker aún se prepara) */
+.mo-warp-veil {
+  inset: 0;
+  background: #040509;
+  opacity: 0;
+}
+
+.mo-warp-field {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.mo-warp-markers,
+.mo-warp-arrival {
+  left: 50%;
+  top: 50%;
+}
+
+.mo-warp-markers {
+  width: 0;
+  height: 0;
+}
+
+.mo-warp-marker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
+  font-weight: 600;
+  font-size: 150px;
+  line-height: 1;
+  color: color-mix(in srgb, var(--marker) 14%, transparent);
+  -webkit-text-stroke: 1.6px color-mix(in srgb, var(--marker) 85%, #f5f1e8);
+  opacity: 0;
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+
+.mo-warp-arrival {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: min(86vw, 760px);
+  text-align: center;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.mo-warp-kicker {
+  font-family: 'JetBrains Mono Variable', ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: rgb(var(--warp-to));
+}
+
+.mo-warp-kicker:empty {
+  display: none;
+}
+
+.mo-warp-title {
+  font-family: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
+  font-weight: 400;
+  font-size: clamp(30px, 4.4vw, 58px);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: #f5f1e8;
+  text-shadow: 0 0 28px rgba(var(--warp-to), 0.35);
+}
+
+@media (max-width: 720px) {
+  .mo-warp-marker {
+    font-size: 96px;
+  }
+}

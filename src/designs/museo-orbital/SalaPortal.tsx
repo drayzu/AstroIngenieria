@@ -23,6 +23,7 @@ import {
   journeyWarp,
   type JourneyKind,
 } from './portalJourneys';
+import { isScrollWarping } from './chapterWarp';
 import './salaPortal.css';
 
 const EASE_OUT = cubicBezier(0.16, 1, 0.3, 1);
@@ -126,6 +127,9 @@ export const SalaPortal = ({
   const lastValue = useRef(0);
   const crossed = useRef<boolean | null>(null);
   useMotionValueEvent(scrollYProgress, 'change', (value) => {
+    // En un salto por hiperespacio el portal no recorre su viaje fuera de
+    // pantalla: el muelle salta directo al nuevo progreso
+    if (isScrollWarping()) progress.jump(value);
     const delta = value - lastValue.current;
     lastValue.current = value;
     const side = value >= 0.5;
