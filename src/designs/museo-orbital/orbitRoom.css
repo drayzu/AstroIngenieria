@@ -12,7 +12,7 @@
 
 .mo-orbit-stage {
   --edge: clamp(20px, 5vw, 72px);
-  --item-w: min(30vw, 480px);
+  --item-w: min(36vw, 580px);
   position: sticky;
   top: 0;
   box-sizing: border-box;
@@ -425,7 +425,7 @@
 }
 
 .mo-orbit-item .mo-frame-mask {
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 21 / 9;
 }
 
 .mo-orbit .mo-frame-zoom {
