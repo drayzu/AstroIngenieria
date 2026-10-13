@@ -110,58 +110,6 @@
   pointer-events: none;
 }
 
-/* Horizonte: borde del planeta, atmósfera que se forma y el sol que asoma */
-.mo-journey-stage.is-horizon .is-glow,
-.mo-journey-stage.is-horizon .is-line,
-.mo-journey-stage.is-horizon .is-gleam,
-.mo-journey-stage.is-horizon .is-heat {
-  fill: none;
-}
-
-/* Sombra de la esfera vista desde lejos */
-.mo-journey-stage.is-horizon .is-shade {
-  fill: url(#mo-horizon-shade);
-}
-
-/* Entrada atmosférica: el borde incandescente y el plasma que pasa */
-.mo-journey-stage.is-horizon .is-heat {
-  stroke: #ff8a4c;
-}
-
-.mo-journey-stage.is-horizon .is-heat-1 {
-  stroke: #ffe2c2;
-}
-
-.mo-journey-stage.is-horizon .is-plasma {
-  stroke: #ffc49a;
-  stroke-linecap: round;
-}
-
-.mo-journey-stage.is-horizon .is-glow {
-  stroke: color-mix(in srgb, var(--accent) 30%, transparent);
-  stroke-width: 14;
-}
-
-.mo-journey-stage.is-horizon .is-line {
-  stroke: color-mix(in srgb, var(--accent) 80%, #ffffff);
-  stroke-width: 1.5;
-}
-
-.mo-journey-stage.is-horizon .is-gleam {
-  stroke: url(#mo-horizon-gleam);
-  stroke-width: 3;
-}
-
-.mo-journey-stage.is-horizon .is-flare {
-  stroke: url(#mo-horizon-flare);
-  stroke-width: 2.5;
-  stroke-linecap: round;
-}
-
-.mo-journey-stage.is-horizon .is-flare.is-soft {
-  stroke-width: 18;
-}
-
 /* Kardashev: el suelo bajo la ciudad, la bruma del horizonte y el
    resplandor de la ciudad. El viaje solo los mueve, escala y apaga */
 .mo-journey-stage.is-kardashev canvas {
@@ -219,6 +167,7 @@
   overflow: visible;
   pointer-events: none;
 }
+
 
 /* Señal: un radar rodea la ventana. El centro queda libre para el mensaje
    y la ventana; el ruido del cielo solo se ve en la estela del barrido,
@@ -291,16 +240,74 @@
   fill: none;
 }
 
-/* Nuestra radio escapando: burbujas finas desde una Tierra diminuta */
+/* El cielo del observatorio: tapa el de fondo mientras la cámara mira
+   alrededor (el nuestro se mueve con ella); solo cambia su opacidad */
+.mo-dish-sky {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, #050309 0%, #0b0614 55%, #140b1f 100%);
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity;
+}
+
+/* El resplandor de la Vía Láctea: una franja de nubes suaves ya pintada,
+   que la cámara solo mueve, gira y escala */
+.mo-dish-band {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2600px;
+  height: 360px;
+  margin: -180px 0 0 -1300px;
+  pointer-events: none;
+  /* Grumos de distinto tamaño a lo largo y a los lados, el núcleo más
+     ancho y cálido, y una veta oscura de polvo que lo parte */
+  background:
+    linear-gradient(176deg, transparent 47%, rgba(8, 4, 14, 0.35) 50%, transparent 53%),
+    radial-gradient(ellipse 13% 42% at 50% 50%, rgba(255, 222, 238, 0.2), transparent 70%),
+    radial-gradient(ellipse 8% 28% at 42% 40%, rgba(236, 206, 255, 0.14), transparent 70%),
+    radial-gradient(ellipse 10% 24% at 58% 62%, rgba(236, 206, 255, 0.12), transparent 70%),
+    radial-gradient(ellipse 12% 20% at 33% 58%, rgba(214, 186, 255, 0.1), transparent 72%),
+    radial-gradient(ellipse 9% 26% at 25% 42%, rgba(214, 186, 255, 0.08), transparent 72%),
+    radial-gradient(ellipse 12% 22% at 68% 45%, rgba(214, 186, 255, 0.1), transparent 72%),
+    radial-gradient(ellipse 9% 20% at 77% 58%, rgba(214, 186, 255, 0.07), transparent 72%),
+    radial-gradient(ellipse 40% 30% at 50% 50%, rgba(200, 170, 255, 0.06), transparent 75%);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+  opacity: 0;
+  visibility: hidden;
+  will-change: transform, opacity;
+}
+
+/* El resplandor del cielo sobre los cerros; su borde de abajo va en el filo */
+.mo-dish-haze {
+  position: absolute;
+  left: -25%;
+  top: -24%;
+  width: 150%;
+  height: 24%;
+  pointer-events: none;
+  /* Desvanecido arriba y abajo: no deja ningún borde recto */
+  background: linear-gradient(
+    0deg,
+    transparent,
+    color-mix(in srgb, var(--accent) 15%, transparent) 30%,
+    transparent
+  );
+  transform-origin: 50% 100%;
+  opacity: 0;
+  visibility: hidden;
+  will-change: transform, opacity;
+}
+
+/* Los pulsos del radar: burbujas finas que salen de la antena */
 .mo-journey-stage.is-signal .is-ring {
   stroke: color-mix(in srgb, var(--accent) 60%, #ffffff);
   stroke-width: 1.5;
 }
 
-.mo-journey-stage.is-signal .is-earth {
-  fill: #cfe6ff;
-  filter: drop-shadow(0 0 6px #7fb6ff);
-}
 
 /* El eco, su halo, los pulsos y los corchetes que lo fijan */
 .mo-journey-stage.is-signal .is-echo {
@@ -476,56 +483,4 @@
   .mo-portal-hud em {
     display: none;
   }
-}
-
-/* ---------- Colapso: de la portada a la primera sala ---------- */
-
-.mo-journey-collapse {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  pointer-events: none;
-}
-
-.mo-journey-collapse > * {
-  grid-area: 1 / 1;
-}
-
-/* Resplandor sin borde que se recoge hasta el punto */
-.mo-journey-collapse-gather {
-  width: min(70vmin, 640px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 214, 180, 0.22) 0%, rgba(255, 140, 80, 0.1) 35%, transparent 68%);
-  will-change: transform, opacity;
-}
-
-.mo-journey-collapse-point {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #fff1e0;
-  box-shadow:
-    0 0 8px 2px rgba(255, 196, 150, 0.9),
-    0 0 26px 8px rgba(255, 110, 60, 0.45),
-    0 0 60px 22px rgba(255, 70, 30, 0.16);
-}
-
-.mo-journey-collapse-flare {
-  width: min(92vw, 1500px);
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent 6%,
-    rgba(255, 150, 100, 0.35) 30%,
-    rgba(255, 214, 180, 0.85) 46%,
-    #fff6ea 50%,
-    rgba(255, 214, 180, 0.85) 54%,
-    rgba(255, 150, 100, 0.35) 70%,
-    transparent 94%
-  );
-  box-shadow: 0 0 18px 4px rgba(255, 120, 70, 0.3);
-  will-change: transform, opacity;
 }

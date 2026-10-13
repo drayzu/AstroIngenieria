@@ -3,17 +3,20 @@ import { motion, useMotionValueEvent, useTransform, type MotionValue } from 'fra
 import { HOLE, holeCenter, holeRadius, holeRoll, holeSkyHidden, paintHole, prepareHole } from './blackHoleFall';
 import { SWARM, drawSwarm, prepareSwarm, starRadius, swarmRoll, swarmSkyHidden } from './dysonSwarm';
 import { drawHabitat, habitatRoll, habitatSkyHidden, habitatWindow } from './habitatFlyby';
-import { CHASE, chaseBank, drawChase } from './propulsionChase';
+import { CHASE, CHASE_HOLDS, chaseBank, chaseSkyHidden, drawChase } from './propulsionChase';
 import { KARDASHEV, drawKardashev, kardashevGround, kardashevSkyDim, kardashevTurn } from './kardashevZoom';
+import { DISH, dishRoll, dishSkyCover, drawDish } from './radioDish';
+import { SHIELD, drawShield, marsRadius, shieldSkyHidden } from './magneticShield';
 import { skyDrift } from './roomShared';
 import { drawShipyard, yardClip, yardRoll, yardSkyHidden } from './orbitalShipyard';
+import { drawScaffold, scaffoldRoll, scaffoldSkyHidden, scaffoldWindow } from './skyScaffold';
 
 /* Viajes de los portales: cada capítulo abre su ventana de una forma
    distinta, siempre con trazos finos de luz. Comparten el mismo guion:
    la ventana se abre (OPEN) y luego cubre la pantalla (COVER). */
 
 export type JourneyKind =
-  | 'collapse'
+  | 'scaffold'
   | 'iris'
   | 'torus'
   | 'blueprint'
@@ -28,8 +31,8 @@ export const JOURNEY_OPEN: [number, number] = [0.02, 0.29];
 export const JOURNEY_COVER: [number, number] = [0.34, 0.56];
 
 const JOURNEYS: Record<string, JourneyKind> = {
-  // De la portada a la primera sala: la estrella vuelve a ser el punto de luz
-  intro: 'collapse',
+  // De la portada a la primera sala: la constelación era un andamio
+  intro: 'scaffold',
   habitats: 'torus',
   infrastructure: 'blueprint',
   planetary: 'horizon',
@@ -47,6 +50,8 @@ export const journeyFor = (chapterId: string): JourneyKind => JOURNEYS[chapterId
    La señal alarga las vueltas de búsqueda del radar y el mensaje */
 interface JourneyHold { range: [number, number]; extra: number }
 const JOURNEY_HOLDS: Partial<Record<JourneyKind, JourneyHold[]>> = {
+  // El andamio: la constelación, el paralaje, la ola de vigas y la celda
+  scaffold: [{ range: [0.03, 0.27], extra: 70 }],
   // El astillero: la imagen se arma al fondo del dique
   // y antes, bajar la vista sobre la Tierra y rodear el dique
   blueprint: [
@@ -76,16 +81,21 @@ const JOURNEY_HOLDS: Partial<Record<JourneyKind, JourneyHold[]>> = {
   ],
   // Kardashev: subir de la ciudad al planeta, a la estrella y a la galaxia
   galaxy: [{ range: [0.03, 0.27], extra: 110 }],
-  // La persecución: rodear la nave, acelerar y el salto
-  tunnel: [{ range: [0.03, 0.27], extra: 80 }],
-  // La reentrada: girar hacia el planeta, arder, nivelarse y cruzar las nubes
-  // con un tramo propio y más lento para las nubes
+  // La persecución: los tramos viven junto a su guion, que los usa para
+  // rodar la cámara a ritmo parejo de scroll
+  tunnel: CHASE_HOLDS,
+  // El escudo: llegar con el viento mientras la burbuja se abre, el choque y
+  // la espiral sobre la línea de campo (el tramo más largo) y la calma
   horizon: [
-    { range: [0.03, 0.235], extra: 55 },
-    { range: [0.235, 0.3], extra: 90 },
+    { range: [0.03, 0.104], extra: 90 },
+    { range: [0.104, 0.2], extra: 170 },
+    { range: [0.2, 0.29], extra: 50 },
   ],
+  // La antena: bajar la vista, avanzar por los rieles entre la ola de
+  // antenas y quedar tras la principal
   signal: [
-    { range: [0.03, 0.17], extra: 170 },
+    { range: [0.02, 0.09], extra: 210 },
+    { range: [0.09, 0.17], extra: 140 },
     { range: [0.18, 0.32], extra: 70 },
   ],
 };
@@ -165,90 +175,10 @@ const sunParts = (p: number, width: number, height: number) => {
   return opening > 0 ? opening + toPx({ min: 0, max: 76 * easeInOut(seg(p, JOURNEY_COVER)) }) : 0;
 };
 
-/* Colapso: la luz se condensa en un punto, el punto destella y recién
-   entonces se abre la ventana, primero en vmin y luego cubriendo */
-const COLLAPSE = { gather: [0.02, 0.15], flare: [0.13, 0.24], open: [0.2, 0.31] } satisfies Record<string, [number, number]>;
-const collapseRadius = (p: number) => {
-  if (p < COLLAPSE.open[0]) return '0px';
-  const min = 30 * easeOut(seg(p, COLLAPSE.open));
-  const max = 76 * easeInOut(seg(p, JOURNEY_COVER));
-  return `calc(${min.toFixed(3)}vmin + ${max.toFixed(3)}vmax)`;
-};
-
-// El horizonte es un círculo enorme cuyo borde superior sube desde abajo
-const HORIZON_R = 140;
-const horizonRise = (p: number) => ({
-  vh: 44 * easeOut(seg(p, JOURNEY_OPEN)) + 56 * easeInOut(seg(p, JOURNEY_COVER)),
-  vmax: 12 * easeInOut(seg(p, JOURNEY_COVER)),
-});
-
-/* Horizonte: primero un planeta entero que nace de un punto; luego caemos
-   hacia él y su borde se aplana hasta volverse el horizonte. En píxeles,
-   compartido por el recorte y el dibujo */
-const HORIZON_APPROACH: [number, number] = [0.12, JOURNEY_OPEN[1]];
-const planetCircle = (p: number, width: number, height: number) => {
-  const vmin = Math.min(width, height) / 100;
-  const vmax = Math.max(width, height) / 100;
-  const big = HORIZON_R * vmax;
-  if (p >= JOURNEY_OPEN[1]) {
-    const { vh, vmax: lift } = horizonRise(p);
-    return { r: big, cy: height + big - (vh * height) / 100 - lift * vmax };
-  }
-  const small = 13 * vmin * easeOut(seg(p, [JOURNEY_OPEN[0], 0.1]));
-  const approach = easeInOut(seg(p, HORIZON_APPROACH));
-  if (approach <= 0 || small <= 0) return { r: small, cy: height / 2 };
-  // El tamaño crece en escala geométrica: se siente como caer, no como estirar
-  const r = small * (big / small) ** approach;
-  const top = height / 2 - small + (height * 0.56 - (height / 2 - small)) * approach;
-  return { r, cy: top + r };
-};
-
-/* Reentrada: la cámara llega ladeada y gira hacia el planeta, que entra
-   desde abajo a la izquierda. Al entrar en la atmósfera tiembla, el fuego
-   la envuelve y se nivela con un vaivén de cápsula; al final cruzamos las
-   nubes. Todo termina quieto y nivelado antes de que la ventana cubra */
-const REENTRY = {
-  turn: [0.02, 0.19],
-  bank: [0.02, 0.15],
-  level: [0.17, 0.262],
-  settle: [0.24, JOURNEY_OPEN[1]],
-  clouds: [0.235, 0.3],
-} satisfies Record<string, [number, number]>;
-// El fuego de la entrada: crece, llega al máximo y se apaga al nivelarnos
-const reentryHeat = (p: number) => Math.sin(Math.PI * seg(p, [0.15, 0.285])) ** 1.4;
-const reentryCamera = (p: number, width: number, height: number) => {
-  const turn = easeInOut(seg(p, REENTRY.turn));
-  const shake = reentryHeat(p) ** 2;
-  // Grados: de un leve ladeo a la derecha a uno marcado a la izquierda, que
-  // se endereza al entrar y se pasa un poco antes de quedar quieto
-  const degrees =
-    (8 - 30 * easeInOut(seg(p, REENTRY.bank))) * (1 - easeInOut(seg(p, REENTRY.level))) +
-    3 * Math.sin(Math.PI * seg(p, REENTRY.settle)) +
-    0.6 * shake * Math.sin(p * 900);
-  return {
-    roll: (degrees * Math.PI) / 180,
-    panX: -0.3 * width * (1 - turn),
-    panY: 0.22 * height * (1 - turn),
-    shakeX: (6 * shake * (Math.sin(p * 700) + 0.6 * Math.sin(p * 1650 + 1.7))) / 1.6,
-    shakeY: (6 * shake * (Math.sin(p * 820 + 0.6) + 0.6 * Math.sin(p * 1430 + 2.9))) / 1.6,
-  };
-};
-type ReentryCamera = ReturnType<typeof reentryCamera>;
-// Un punto del mundo (desde el centro de la pantalla) tal como lo ve la cámara
-const reentryPlace = ({ roll, panX, panY, shakeX, shakeY }: ReentryCamera, x: number, y: number) => {
-  const cos = Math.cos(roll);
-  const sin = Math.sin(roll);
-  return [shakeX + cos * (x + panX) - sin * (y + panY), shakeY + sin * (x + panX) + cos * (y + panY)];
-};
-
-/* La imagen del capítulo se mueve con el mundo: en la reentrada rueda y
-   tiembla junto al planeta. Los demás viajes la dejan quieta */
-const STILL_IMAGE = { x: 0, y: 0, rotate: 0 };
-export const journeyImageCamera = (kind: JourneyKind, p: number) => {
-  if (kind !== 'horizon' || p >= JOURNEY_OPEN[1]) return STILL_IMAGE;
-  const camera = reentryCamera(p, window.innerWidth, window.innerHeight);
-  const [x, y] = reentryPlace(camera, 0, 0);
-  return { x, y, rotate: (camera.roll * 180) / Math.PI };
+/* Planetaria: la ventana se abre en el disco de Marte y, al cubrir, crece con él */
+const marsParts = (p: number, width: number, height: number) => {
+  const opening = marsRadius(p, width, height) * easeOut(seg(p, SHIELD.open));
+  return opening > 0 ? opening + toPx({ min: 0, max: 76 * easeInOut(seg(p, JOURNEY_COVER)) }) : 0;
 };
 
 /* Recorte de la imagen del capítulo según el viaje */
@@ -262,18 +192,19 @@ export const journeyClip = (kind: JourneyKind, p: number): string => {
     }
     case 'blueprint':
       return yardClip(p, window.innerWidth, window.innerHeight);
-    case 'horizon': {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      const { r, cy } = planetCircle(p, width, height);
-      if (p >= JOURNEY_OPEN[1]) return `circle(${r.toFixed(1)}px at 50% ${cy.toFixed(1)}px)`;
-      const [x, y] = reentryPlace(reentryCamera(p, width, height), 0, cy - height / 2);
-      return `circle(${r.toFixed(1)}px at calc(50% + ${x.toFixed(1)}px) calc(50% + ${y.toFixed(1)}px))`;
-    }
+    case 'horizon':
+      return `circle(${marsParts(p, window.innerWidth, window.innerHeight).toFixed(1)}px at 50% 50%)`;
     case 'galaxy':
       return `circle(${cssRadius(kardashevParts(p))} at 50% 50%)`;
-    case 'collapse':
-      return `circle(${collapseRadius(p)} at 50% 50%)`;
+    case 'scaffold': {
+      // La ventana es la primera celda del armazón
+      const cover = toPx({ min: 0, max: 76 * easeInOut(seg(p, JOURNEY_COVER)) });
+      const corners = scaffoldWindow(p, window.innerWidth, window.innerHeight, cover);
+      if (!corners) return 'circle(0px at 50% 50%)';
+      const points = [];
+      for (let index = 0; index < corners.length; index += 2) points.push(`${corners[index].toFixed(1)}px ${corners[index + 1].toFixed(1)}px`);
+      return `polygon(${points.join(', ')})`;
+    }
     case 'dyson':
       return `circle(${sunParts(p, window.innerWidth, window.innerHeight).toFixed(1)}px at 50% 50%)`;
     case 'starburst':
@@ -327,29 +258,6 @@ const IrisRing = ({ progress }: { progress: MotionValue<number> }) => {
   const size = useTransform(progress, (p) => `calc(2 * ${irisRadius(p)})`);
   const opacity = useOverlayOpacity(progress);
   return <motion.span className="mo-journey-ring" style={{ width: size, height: size, opacity }} />;
-};
-
-/* ---------------- Colapso: la luz se condensa en el punto de partida ---------------- */
-
-const StarCollapse = ({ progress }: { progress: MotionValue<number> }) => {
-  // Un resplandor tenue se recoge hacia el centro mientras nace el punto
-  const gatherScale = useTransform(progress, (p) => 1 - 0.94 * easeInOut(seg(p, COLLAPSE.gather)));
-  const gatherOpacity = useTransform(progress, [COLLAPSE.gather[0], COLLAPSE.gather[0] + 0.05, COLLAPSE.gather[1], COLLAPSE.flare[0] + 0.04], [0, 0.55, 0.9, 0]);
-  const pointScale = useTransform(progress, [COLLAPSE.gather[0], COLLAPSE.gather[1]], [0, 1]);
-  const pointOpacity = useTransform(progress, [COLLAPSE.gather[0], COLLAPSE.gather[0] + 0.06, COLLAPSE.open[0] + 0.02, COLLAPSE.open[1]], [0, 1, 1, 0]);
-  // El punto destella con su destello anamórfico justo antes de abrirse
-  const flareOpacity = useTransform(progress, [COLLAPSE.flare[0], COLLAPSE.flare[0] + 0.03, COLLAPSE.open[0] + 0.02, COLLAPSE.open[1]], [0, 1, 1, 0]);
-  const flareScale = useTransform(progress, [COLLAPSE.flare[0], COLLAPSE.open[0], COLLAPSE.open[1]], [0.2, 1, 1.8]);
-  const ringSize = useTransform(progress, (p) => `calc(2 * ${collapseRadius(p)})`);
-  const ringOpacity = useTransform(progress, [COLLAPSE.open[0], COLLAPSE.open[0] + 0.03, JOURNEY_COVER[0], JOURNEY_COVER[0] + 0.12], [0, 1, 1, 0]);
-  return (
-    <span className="mo-journey-collapse" aria-hidden="true">
-      <motion.span className="mo-journey-collapse-gather" style={{ scale: gatherScale, opacity: gatherOpacity }} />
-      <motion.span className="mo-journey-collapse-flare" style={{ opacity: flareOpacity, scaleX: flareScale }} />
-      <motion.span className="mo-journey-collapse-point" style={{ opacity: pointOpacity, scale: pointScale }} />
-      <motion.span className="mo-journey-ring" style={{ width: ringSize, height: ringSize, opacity: ringOpacity }} />
-    </span>
-  );
 };
 
 /* ---------------- Atraque: sobrevuelo, igualar el giro y el túnel del cubo ---------------- */
@@ -430,6 +338,80 @@ const HabitatDock = ({ progress }: { progress: MotionValue<number> }) => {
   }, [progress, draw]);
 
   return <motion.canvas ref={canvasRef} className="mo-journey-stage is-dock" style={{ opacity }} aria-hidden="true" />;
+};
+
+/* ---------------- Andamio: la constelación que era un armazón ---------------- */
+
+const SkyScaffold = ({ progress }: { progress: MotionValue<number> }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const size = useRef({ width: 1, height: 1, ratio: 1 });
+  const tint = useRef<number[]>([249, 214, 110]);
+  const lastRoll = useRef(Number.NaN);
+  const opacity = useTransform(
+    progress,
+    [JOURNEY_OPEN[0], JOURNEY_OPEN[0] + 0.025, JOURNEY_COVER[0] + 0.08, JOURNEY_COVER[0] + 0.18],
+    [0, 1, 1, 0],
+  );
+
+  const draw = useCallback((p: number) => {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext('2d');
+    if (!canvas || !context) return;
+    const { width, height, ratio } = size.current;
+
+    // El cielo de fondo rueda con la cámara
+    const roll = scaffoldRoll(p);
+    const delta = roll - lastRoll.current;
+    if (Math.abs(delta) < 1) {
+      skyDrift.spin.x = width / 2;
+      skyDrift.spin.y = height / 2;
+      skyDrift.spin.depth = 0;
+      skyDrift.spin.angle -= delta;
+    }
+    lastRoll.current = roll;
+
+    // Las constelaciones de las capas de efectos van encima (en el teléfono
+    // también la de estelas): se apagan para no confundirse con la nuestra
+    const hidden = p > JOURNEY_OPEN[0] && p < JOURNEY_COVER[0] + 0.18
+      ? scaffoldSkyHidden(p) * (1 - seg(p, [JOURNEY_COVER[0], JOURNEY_COVER[0] + 0.18]))
+      : 0;
+    document.querySelectorAll<HTMLElement>('.mo-starfx, .mo-trailfx').forEach((fx) => {
+      fx.style.opacity = hidden > 0 ? (1 - hidden).toFixed(3) : '';
+    });
+
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    if (p > JOURNEY_COVER[0] + 0.18 || p < JOURNEY_OPEN[0]) return;
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    const cover = toPx({ min: 0, max: 76 * easeInOut(seg(p, JOURNEY_COVER)) });
+    drawScaffold(context, p, width, height, tint.current, scaffoldWindow(p, width, height, cover));
+  }, []);
+
+  useMotionValueEvent(progress, 'change', draw);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    tint.current = accentRgb(canvas);
+    const measure = () => {
+      const width = canvas.clientWidth || 1;
+      const height = canvas.clientHeight || 1;
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      size.current = { width, height, ratio };
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+      draw(progress.get());
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('resize', measure);
+      document.querySelectorAll<HTMLElement>('.mo-starfx, .mo-trailfx').forEach((fx) => {
+        fx.style.opacity = '';
+      });
+    };
+  }, [progress, draw]);
+
+  return <motion.canvas ref={canvasRef} className="mo-journey-stage is-scaffold" style={{ opacity }} aria-hidden="true" />;
 };
 
 /* ---------------- Astillero: el dique de vigas y la imagen que se arma al fondo ---------------- */
@@ -530,280 +512,67 @@ const Shipyard = ({ progress, image }: { progress: MotionValue<number>; image?: 
   return <motion.canvas ref={canvasRef} className="mo-journey-stage is-yard" style={{ opacity }} aria-hidden="true" />;
 };
 
-/* ---------------- Horizonte: del planeta entero a su superficie ---------------- */
+/* ---------------- Planetaria: el escudo magnético de Marte ---------------- */
 
-const PLASMA_STREAKS = Array.from({ length: 70 }, (_, index) => ({
-  angle: (seeded(index + 3301) - 0.5) * 1.9,
-  phase: seeded(index + 3407),
-  width: 0.8 + seeded(index + 3511) * 1.4,
-}));
-// El plasma que pasa junto a la cápsula, por los bordes de la pantalla
-const EDGE_STREAKS = Array.from({ length: 56 }, (_, index) => ({
-  angle: seeded(index + 3613) * Math.PI * 2,
-  phase: seeded(index + 3719),
-  width: 0.8 + seeded(index + 3821) * 1.8,
-}));
-// Las nubes del final: nacen cerca del horizonte y pasan a nuestro lado,
-// más por abajo que por arriba, unas tras otras
-// (a un lado y al otro, para que no se amontonen en el centro)
-const CLOUDS = Array.from({ length: 16 }, (_, index) => ({
-  dx: (index % 2 ? 1 : -1) * (0.45 + seeded(index + 3923) * 1.3),
-  dy: -0.25 + seeded(index + 4231) * 0.85,
-  start: (index / 16) * 0.5 + seeded(index + 4027) * 0.06,
-  size: 0.8 + seeded(index + 4129) * 0.6,
-}));
-
-const HorizonRim = ({ progress }: { progress: MotionValue<number> }) => {
-  const worldRef = useRef<SVGGElement>(null);
-  const edgeRefs = useRef<(SVGLineElement | null)[]>([]);
-  const fireRef = useRef<HTMLDivElement>(null);
-  const cloudRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const lastRoll = useRef(Number.NaN);
-  const glowRef = useRef<SVGCircleElement>(null);
-  const lineRef = useRef<SVGCircleElement>(null);
-  const gleamRef = useRef<SVGCircleElement>(null);
-  const shadeRef = useRef<SVGCircleElement>(null);
-  const heatRefs = useRef<(SVGCircleElement | null)[]>([]);
-  const plasmaRefs = useRef<(SVGLineElement | null)[]>([]);
-  const planetMaskRef = useRef<SVGCircleElement>(null);
-  const dustRef = useRef<SVGCircleElement>(null);
-  const lushRef = useRef<SVGCircleElement>(null);
-  const dustGradientRef = useRef<SVGRadialGradientElement>(null);
-  const lushGradientRef = useRef<SVGRadialGradientElement>(null);
-  const dustStopRef = useRef<SVGStopElement>(null);
-  const lushStopRef = useRef<SVGStopElement>(null);
-  const sunRef = useRef<SVGGElement>(null);
-  const sunCoreRef = useRef<SVGCircleElement>(null);
-  const gleamGradientRef = useRef<SVGRadialGradientElement>(null);
-  const flareRef = useRef<SVGLineElement>(null);
-  const flareGlowRef = useRef<SVGLineElement>(null);
-  const flareGradientRef = useRef<SVGLinearGradientElement>(null);
-  const opacity = useOverlayOpacity(progress, 0.12);
-
-  // Se dibuja en píxeles reales sobre el mismo círculo que recorta la imagen
-  const draw = useCallback((p: number, width: number, height: number) => {
-    const planet = planetCircle(p, width, height);
-    const r = Math.max(0.5, planet.r);
-    const cy = planet.cy - height / 2;
-    const base = Math.min(width, height);
-    const approach = easeInOut(seg(p, HORIZON_APPROACH));
-
-    // La cámara: el mundo rueda, gira hacia el planeta y tiembla; el cielo
-    // de fondo rueda con él
-    const camera = reentryCamera(p, width, height);
-    const degrees = (camera.roll * 180) / Math.PI;
-    worldRef.current?.setAttribute(
-      'transform',
-      `translate(${camera.shakeX.toFixed(2)} ${camera.shakeY.toFixed(2)}) rotate(${degrees.toFixed(3)}) translate(${camera.panX.toFixed(1)} ${camera.panY.toFixed(1)})`,
-    );
-    const delta = camera.roll - lastRoll.current;
-    if (Math.abs(delta) < 1) {
-      skyDrift.spin.x = width / 2;
-      skyDrift.spin.y = height / 2;
-      skyDrift.spin.depth = 0;
-      skyDrift.spin.angle += delta;
-    }
-    lastRoll.current = camera.roll;
-
-    // Dentro del fuego: el borde de la pantalla arde y el plasma corre hacia
-    // afuera por los costados. Va pegado a la cámara, no al mundo
-    const heat = reentryHeat(p);
-    const fire = fireRef.current;
-    if (fire) {
-      fire.style.opacity = (heat * (0.88 + 0.12 * Math.sin(p * 520))).toFixed(3);
-      fire.style.visibility = heat > 0.005 ? 'visible' : 'hidden';
-    }
-    const corner = Math.hypot(width, height) / 2;
-    EDGE_STREAKS.forEach((streak, index) => {
-      const line = edgeRefs.current[index];
-      if (!line) return;
-      const travel = (streak.phase + p * 16) % 1;
-      const near = corner * (0.5 + 0.55 * travel);
-      const far = near + corner * (0.05 + 0.18 * heat) * (0.4 + travel);
-      const cos = Math.cos(streak.angle);
-      const sin = Math.sin(streak.angle);
-      line.setAttribute('x1', (cos * near).toFixed(1));
-      line.setAttribute('y1', (sin * near).toFixed(1));
-      line.setAttribute('x2', (cos * far).toFixed(1));
-      line.setAttribute('y2', (sin * far).toFixed(1));
-      line.setAttribute('stroke-width', streak.width.toFixed(2));
-      line.setAttribute('opacity', (0.8 * heat * travel ** 1.2).toFixed(3));
-    });
-
-    // Las nubes: cada una se acerca desde el horizonte (su distancia al punto
-    // de fuga y su tamaño crecen como 1/z) y se desvanece al pasarnos
-    const crossing = seg(p, REENTRY.clouds);
-    CLOUDS.forEach((cloud, index) => {
-      const puff = cloudRefs.current[index];
-      if (!puff) return;
-      const t = seg(crossing, [cloud.start, cloud.start + 0.5]);
-      if (t <= 0 || t >= 1) {
-        puff.style.visibility = 'hidden';
-        return;
-      }
-      const z = 0.7 - 0.6 * t;
-      const spread = (base * 0.14) / z;
-      const [x, y] = reentryPlace(camera, cloud.dx * spread, height * 0.06 + cloud.dy * spread);
-      puff.style.visibility = 'visible';
-      puff.style.opacity = (0.45 * Math.sin(Math.PI * t) ** 1.1).toFixed(3);
-      puff.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${degrees.toFixed(2)}deg) scale(${((base * 0.0014 * cloud.size) / z).toFixed(3)})`;
-    });
-    for (const circle of [glowRef.current, lineRef.current, gleamRef.current, shadeRef.current, ...heatRefs.current]) {
-      circle?.setAttribute('cy', cy.toFixed(1));
-      circle?.setAttribute('r', r.toFixed(1));
-    }
-    planetMaskRef.current?.setAttribute('cy', cy.toFixed(1));
-    planetMaskRef.current?.setAttribute('r', Math.max(0, r - 1).toFixed(1));
-    // Visto desde lejos es una esfera: luz arriba a la izquierda y noche abajo
-    shadeRef.current?.setAttribute('opacity', (1 - approach).toFixed(3));
-
-    // Atmósfera: polvo fino y anaranjado que con la terraformación se vuelve
-    // espeso y del color del capítulo
-    const terraform = easeInOut(seg(p, [0.06, 0.27]));
-    const atmospheres = [
-      { circle: dustRef.current, gradient: dustGradientRef.current, stop: dustStopRef.current, depth: Math.min(base * 0.05, r * 0.16), alpha: 1 - terraform * 0.85 },
-      { circle: lushRef.current, gradient: lushGradientRef.current, stop: lushStopRef.current, depth: Math.min(base * (0.03 + terraform * 0.11), r * 0.3), alpha: terraform },
-    ];
-    for (const { circle, gradient, stop, depth, alpha } of atmospheres) {
-      circle?.setAttribute('cy', cy.toFixed(1));
-      circle?.setAttribute('r', (r + depth).toFixed(1));
-      circle?.setAttribute('opacity', alpha.toFixed(3));
-      gradient?.setAttribute('cy', cy.toFixed(1));
-      gradient?.setAttribute('r', (r + depth).toFixed(1));
-      stop?.setAttribute('offset', (r / (r + depth)).toFixed(4));
-    }
-
-    // Entrada atmosférica: mientras caemos, el borde arde y el plasma pasa a
-    // nuestro lado hacia afuera
-    const entry = heat;
-    heatRefs.current.forEach((heat, index) => {
-      heat?.setAttribute('stroke-width', (base * (index === 0 ? 0.05 : 0.008)).toFixed(1));
-      heat?.setAttribute('opacity', (entry * (index === 0 ? 0.32 : 0.9)).toFixed(3));
-    });
-    PLASMA_STREAKS.forEach((streak, index) => {
-      const line = plasmaRefs.current[index];
-      if (!line) return;
-      // Nacen pegadas al borde ardiente y se desprenden hacia afuera
-      const travel = (streak.phase + p * 14) % 1;
-      const near = r + base * 0.16 * travel ** 1.3;
-      const far = near + base * (0.015 + 0.06 * entry) * (1 - travel * 0.5);
-      const sin = Math.sin(streak.angle);
-      const cos = Math.cos(streak.angle);
-      line.setAttribute('x1', (sin * near).toFixed(1));
-      line.setAttribute('y1', (cy - cos * near).toFixed(1));
-      line.setAttribute('x2', (sin * far).toFixed(1));
-      line.setAttribute('y2', (cy - cos * far).toFixed(1));
-      line.setAttribute('stroke-width', streak.width.toFixed(2));
-      line.setAttribute('opacity', (entry * (1 - travel) ** 1.5).toFixed(3));
-    });
-
-    // El sol es del espacio: asoma tras el planeta pequeño y se apaga al
-    // entrar en la atmósfera; al aterrizar solo queda el horizonte
-    const daylight = 1 - seg(p, [0.13, 0.19]);
-    const angle = Math.asin(Math.max(-0.9, (-0.17 * width) / Math.max(r, 1)));
-    const sun = base * 0.03;
-    const rise = -2.6 * sun + 3.1 * sun * easeOut(seg(p, [0.08, 0.2]));
-    const distance = r + rise;
-    sunCoreRef.current?.setAttribute('r', (sun * 7).toFixed(1));
-    sunRef.current?.setAttribute('opacity', daylight.toFixed(3));
-    sunRef.current?.setAttribute('transform', `translate(${(distance * Math.sin(angle)).toFixed(1)} ${(cy - distance * Math.cos(angle)).toFixed(1)})`);
-    const dawn = seg(p, [0.11, 0.18]);
-    const flare = Math.max(Math.exp(-((rise / (1.1 * sun)) ** 2)), 0.5 * dawn) * daylight;
-    const limbX = r * Math.sin(angle);
-    const limbY = cy - r * Math.cos(angle);
-    // El destello corre a lo largo del borde, tangente a él
-    // Con el planeta pequeño el destello es corto: crece con el horizonte
-    const reach = Math.min(width * 0.42, r * 1.6);
-    const tx = Math.cos(angle) * reach;
-    const ty = Math.sin(angle) * reach;
-    const ends = { x1: limbX - tx, y1: limbY - ty, x2: limbX + tx, y2: limbY + ty };
-    for (const [key, value] of Object.entries(ends)) {
-      flareRef.current?.setAttribute(key, value.toFixed(1));
-      flareGlowRef.current?.setAttribute(key, value.toFixed(1));
-      flareGradientRef.current?.setAttribute(key, value.toFixed(1));
-    }
-    flareRef.current?.setAttribute('opacity', flare.toFixed(3));
-    flareGlowRef.current?.setAttribute('opacity', (flare * 0.6).toFixed(3));
-    gleamGradientRef.current?.setAttribute('cx', limbX.toFixed(1));
-    gleamGradientRef.current?.setAttribute('cy', limbY.toFixed(1));
-    gleamGradientRef.current?.setAttribute('r', (width * 0.32).toFixed(1));
-    gleamRef.current?.setAttribute('opacity', (dawn * daylight).toFixed(3));
-  }, []);
-  const svgRef = useStageSvg(progress, draw);
-
-  return (
-    <>
-      <motion.svg ref={svgRef} className="mo-journey-stage is-horizon" style={{ opacity }} aria-hidden="true">
-        <defs>
-          {/* Solo el cielo: lo que queda tras el planeta no se ve */}
-          <mask id="mo-horizon-sky" maskUnits="userSpaceOnUse" x="-8000" y="-8000" width="16000" height="16000">
-            <rect x="-8000" y="-8000" width="16000" height="16000" fill="#fff" />
-            <circle ref={planetMaskRef} cx="0" fill="#000" />
-          </mask>
-          <radialGradient id="mo-horizon-shade" cx="0.5" cy="0.5" r="0.5" fx="0.32" fy="0.28">
-            <stop offset="0" stopColor="#000" stopOpacity="0" />
-            <stop offset="0.55" stopColor="#000" stopOpacity="0.12" />
-            <stop offset="0.86" stopColor="#020403" stopOpacity="0.62" />
-            <stop offset="1" stopColor="#020403" stopOpacity="0.9" />
-          </radialGradient>
-          <radialGradient id="mo-horizon-dust" ref={dustGradientRef} gradientUnits="userSpaceOnUse" cx="0">
-            <stop ref={dustStopRef} stopColor="#ff9466" stopOpacity="0.5" />
-            <stop offset="1" stopColor="#ff9466" stopOpacity="0" />
-          </radialGradient>
-          <radialGradient id="mo-horizon-lush" ref={lushGradientRef} gradientUnits="userSpaceOnUse" cx="0">
-            <stop ref={lushStopRef} style={{ stopColor: 'var(--accent)' }} stopOpacity="0.55" />
-            <stop offset="1" stopColor="#7fb8ff" stopOpacity="0" />
-          </radialGradient>
-          <radialGradient id="mo-horizon-sun">
-            <stop offset="0" stopColor="#ffffff" />
-            <stop offset="0.12" stopColor="#fff6dc" />
-            <stop offset="0.3" stopColor="#ffe2a8" stopOpacity="0.5" />
-            <stop offset="1" stopColor="#ffd28a" stopOpacity="0" />
-          </radialGradient>
-          <radialGradient id="mo-horizon-gleam" ref={gleamGradientRef} gradientUnits="userSpaceOnUse">
-            <stop offset="0" stopColor="#ffffff" stopOpacity="1" />
-            <stop offset="0.35" stopColor="#fff2d6" stopOpacity="0.5" />
-            <stop offset="1" stopColor="#fff2d6" stopOpacity="0" />
-          </radialGradient>
-          <linearGradient id="mo-horizon-flare" ref={flareGradientRef} gradientUnits="userSpaceOnUse">
-            <stop offset="0" stopColor="#fff6e6" stopOpacity="0" />
-            <stop offset="0.42" stopColor="#fff6e6" stopOpacity="0.55" />
-            <stop offset="0.5" stopColor="#ffffff" stopOpacity="1" />
-            <stop offset="0.58" stopColor="#fff6e6" stopOpacity="0.55" />
-            <stop offset="1" stopColor="#fff6e6" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <g ref={worldRef}>
-          <circle ref={shadeRef} cx="0" className="is-shade" />
-          <g mask="url(#mo-horizon-sky)">
-            <circle ref={dustRef} cx="0" fill="url(#mo-horizon-dust)" />
-            <circle ref={lushRef} cx="0" fill="url(#mo-horizon-lush)" />
-            <g ref={sunRef}>
-              <circle ref={sunCoreRef} className="is-sun" fill="url(#mo-horizon-sun)" />
-            </g>
-            {PLASMA_STREAKS.map((_, index) => (
-              <line key={index} className="is-plasma" ref={(element) => { plasmaRefs.current[index] = element; }} />
-            ))}
-          </g>
-          <circle ref={glowRef} cx="0" className="is-glow" />
-          {[0, 1].map((index) => (
-            <circle key={index} cx="0" className={`is-heat is-heat-${index}`} ref={(element) => { heatRefs.current[index] = element; }} />
-          ))}
-          <circle ref={lineRef} cx="0" className="is-line" />
-          <circle ref={gleamRef} cx="0" className="is-gleam" />
-          <line ref={flareGlowRef} className="is-flare is-soft" />
-          <line ref={flareRef} className="is-flare" />
-        </g>
-        {EDGE_STREAKS.map((_, index) => (
-          <line key={index} className="is-edge" ref={(element) => { edgeRefs.current[index] = element; }} />
-        ))}
-      </motion.svg>
-      {CLOUDS.map((_, index) => (
-        <div key={index} className="mo-reentry-cloud" ref={(element) => { cloudRefs.current[index] = element; }} aria-hidden="true" />
-      ))}
-      <div ref={fireRef} className="mo-reentry-fire" aria-hidden="true" />
-    </>
+const MagneticShield = ({ progress }: { progress: MotionValue<number> }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const size = useRef({ width: 1, height: 1, ratio: 1 });
+  const tint = useRef<number[]>([158, 230, 111]);
+  const opacity = useTransform(
+    progress,
+    [JOURNEY_OPEN[0], JOURNEY_OPEN[0] + 0.03, JOURNEY_COVER[0] + 0.08, JOURNEY_COVER[0] + 0.18],
+    [0, 1, 1, 0],
   );
+
+  const draw = useCallback((p: number) => {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext('2d');
+    if (!canvas || !context) return;
+    const { width, height, ratio } = size.current;
+
+    // El lienzo tapa el cielo de la página, porque la cámara cabecea y rueda;
+    // las constelaciones de la capa de efectos van encima y se apagan
+    const fx = document.querySelector<HTMLElement>('.mo-starfx');
+    if (fx) {
+      const hidden = p > JOURNEY_OPEN[0] && p < JOURNEY_COVER[0] + 0.18
+        ? shieldSkyHidden(p) * (1 - seg(p, [JOURNEY_COVER[0] + 0.08, JOURNEY_COVER[0] + 0.18]))
+        : 0;
+      fx.style.opacity = hidden > 0 ? (1 - hidden).toFixed(3) : '';
+    }
+
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    if (p > JOURNEY_COVER[0] + 0.18 || p < JOURNEY_OPEN[0]) return;
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    drawShield(context, p, width, height, tint.current, marsParts(p, width, height));
+  }, []);
+
+  useMotionValueEvent(progress, 'change', draw);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    tint.current = accentRgb(canvas);
+    const measure = () => {
+      const width = canvas.clientWidth || 1;
+      const height = canvas.clientHeight || 1;
+      // Resolución normal, sin la doble de las pantallas densas: miles de
+      // trazos finos en movimiento cuestan el doble y no se nota la diferencia
+      const ratio = 1;
+      size.current = { width, height, ratio };
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+      draw(progress.get());
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('resize', measure);
+      const fx = document.querySelector<HTMLElement>('.mo-starfx');
+      if (fx) fx.style.opacity = '';
+    };
+  }, [progress, draw]);
+
+  return <motion.canvas ref={canvasRef} className="mo-journey-stage is-shield" style={{ opacity }} aria-hidden="true" />;
 };
 
 /* ---------------- Agujero negro: caemos al otro lado ---------------- */
@@ -1005,16 +774,24 @@ const PropulsionChase = ({ progress }: { progress: MotionValue<number> }) => {
     if (!canvas || !context) return;
     const { width, height, ratio } = size.current;
 
-    // El cielo se ladea con la cámara en la curva
+    // El cielo se ladea con la cámara en la curva y en la vuelta entera.
+    // Aunque el scroll salte, se aplica todo el giro: así el cielo de la
+    // página termina la vuelta junto con la cámara
     const bank = chaseBank(p);
     const delta = bank - lastBank.current;
-    if (Math.abs(delta) < 1) {
+    if (Number.isFinite(delta)) {
       skyDrift.spin.x = width / 2;
       skyDrift.spin.y = height / 2;
       skyDrift.spin.depth = 0;
       skyDrift.spin.angle -= delta;
     }
     lastBank.current = bank;
+
+    const fx = document.querySelector<HTMLElement>('.mo-starfx');
+    if (fx) {
+      const hidden = p > JOURNEY_OPEN[0] && p < JOURNEY_COVER[1] ? chaseSkyHidden(p) : 0;
+      fx.style.opacity = hidden > 0 ? (1 - hidden).toFixed(3) : '';
+    }
 
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
@@ -1048,8 +825,10 @@ const PropulsionChase = ({ progress }: { progress: MotionValue<number> }) => {
 
 /* ---------------- Señal: un radar que escucha radio hasta encontrar a alguien ---------------- */
 
-/* Guion de la señal: nuestra propia radio se escapa al espacio; luego un
-   radar rodea la ventana y su barrido deja tras de sí el ruido del cielo,
+/* Guion de la señal: bajamos la vista del cielo a un radiotelescopio, lo
+   seguimos mientras apunta arriba y quedamos tras su plato; su borde se
+   vuelve el radar, que lanza sus pulsos y escucha. El barrido deja tras de
+   sí el ruido del cielo,
    como el fósforo de una pantalla. En cada vuelta asoma un eco, cada vez
    más claro; en la última frena sobre él y lo fija, y del eco brota un
    mensaje de píxeles: el retrato de quien lo envía, un planeta vivo con un
@@ -1057,12 +836,14 @@ const PropulsionChase = ({ progress }: { progress: MotionValue<number> }) => {
    capítulo; el número real aparece sobre él, la ventana se abre detrás y
    el radar queda rodeándola */
 const SIGNAL = {
-  bubble: [0.02, 0.16],
-  scope: [0.03, 0.09],
-  search: [0.03, 0.17],
+  bubble: [0.08, 0.16],
+  scope: [DISH.handoff[0], DISH.handoff[1]],
+  search: [0.08, 0.17],
   lock: [0.16, 0.2],
   dim: [0.17, 0.24],
   fold: [0.185, 0.235],
+  // Ya armado, el planeta guiña un ojo antes de descifrarse
+  wink: [0.236, 0.25],
   decode: [0.25, 0.29],
   open: [0.285, 0.33],
   reveal: [0.295, 0.33],
@@ -1102,6 +883,8 @@ const ellipseReach = (x: number, y: number, cx: number, cy: number, rx: number, 
   const v = -(x - cx) * s + (y - cy) * c;
   return Math.hypot(u / rx, v / ry);
 };
+// El ojo derecho, el que guiña
+const RIGHT_EYE = { x: 0.2, y: 0.08, reach: 0.12 };
 const inPlanet = (x: number, y: number) => {
   const r = Math.hypot(x, y);
   // El planeta y sus ojos (el derecho apenas menor)
@@ -1142,8 +925,8 @@ const samplePlanet = (count: number) => {
    mismo número que dibuja el portal (su tipografía, tamaño y lugar), así el
    mensaje descifrado calza con él y el número real puede aparecer encima.
    Cada píxel del número se empareja con uno del planeta, por ángulo */
-interface GlyphCell { x: number; y: number; px: number; py: number }
-interface PixelGlyph { cell: number; planetCell: number; center: { x: number; y: number }; cells: GlyphCell[] }
+interface GlyphCell { x: number; y: number; px: number; py: number; eye: boolean }
+interface PixelGlyph { cell: number; planetCell: number; eyeY: number; center: { x: number; y: number }; cells: GlyphCell[] }
 const pixelateNumber = (svg: SVGSVGElement, label: string): PixelGlyph | null => {
   const number = svg.closest('.mo-portal-stage')?.querySelector<HTMLElement>('.mo-portal-no');
   if (!number || !label) return null;
@@ -1205,11 +988,13 @@ const pixelateNumber = (svg: SVGSVGElement, label: string): PixelGlyph | null =>
   return {
     cell,
     planetCell: planet.step * radius,
+    eyeY: RIGHT_EYE.y * radius,
     center,
     cells: planetCells.map((point, index) => ({
       ...numberCells[Math.floor((index * numberCells.length) / planetCells.length)],
       px: point.x * radius,
       py: point.y * radius,
+      eye: Math.hypot(point.x - RIGHT_EYE.x, point.y - RIGHT_EYE.y) < RIGHT_EYE.reach,
     })),
   };
 };
@@ -1260,7 +1045,13 @@ const SignalSearch = ({ progress, label }: { progress: MotionValue<number>; labe
   const scopeRef = useRef<HTMLSpanElement>(null);
   const noiseRef = useRef<HTMLCanvasElement>(null);
   const ringRefs = useRef<(SVGCircleElement | null)[]>([]);
-  const earthRef = useRef<SVGCircleElement>(null);
+  const dishRef = useRef<HTMLCanvasElement>(null);
+  const dishSkyRef = useRef<HTMLDivElement>(null);
+  const dishBandRef = useRef<HTMLDivElement>(null);
+  const dishHazeRef = useRef<HTMLDivElement>(null);
+  const dishSize = useRef({ width: 1, height: 1, ratio: 1 });
+  const dishTint = useRef<number[]>([240, 92, 255]);
+  const lastRoll = useRef(Number.NaN);
   const echoRef = useRef<SVGCircleElement>(null);
   const echoGlowRef = useRef<SVGCircleElement>(null);
   const pulseRef = useRef<SVGCircleElement>(null);
@@ -1292,7 +1083,57 @@ const SignalSearch = ({ progress, label }: { progress: MotionValue<number>; labe
     // La estela de fósforo sigue al barrido
     scopeRef.current?.style.setProperty('--trail', `${(angle - AFTERGLOW).toFixed(2)}deg`);
 
-    // I · Nuestra radio se escapa: una Tierra y burbujas que se alejan
+    // 0 · La antena: la seguimos con la mirada hasta quedar tras su plato,
+    // cuyo borde mide lo mismo que el radar que lo reemplaza. El cielo de
+    // fondo se ladea con la cámara
+    const roll = dishRoll(p);
+    const turned = roll - lastRoll.current;
+    if (Math.abs(turned) < 1) {
+      skyDrift.spin.x = width / 2;
+      skyDrift.spin.y = height / 2;
+      skyDrift.spin.depth = 0;
+      skyDrift.spin.angle += turned;
+    }
+    lastRoll.current = roll;
+    // Mientras estamos en el observatorio el cielo es el nuestro, que se
+    // mueve con la cámara: el de fondo y sus constelaciones se tapan
+    const cover = dishSkyCover(p);
+    const sky = dishSkyRef.current;
+    if (sky) {
+      sky.style.opacity = cover.toFixed(3);
+      sky.style.visibility = cover > 0.005 ? 'visible' : 'hidden';
+    }
+    const fx = document.querySelector<HTMLElement>('.mo-starfx');
+    if (fx) fx.style.opacity = cover > 0 ? (1 - cover).toFixed(3) : '';
+    const canvas = dishRef.current;
+    const context = canvas?.getContext('2d');
+    if (canvas && context) {
+      const { ratio } = dishSize.current;
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      const rim = 0.44 * scopeSize(width, height) * scopeScale(p);
+      const { band, haze } = drawDish(context, p, width, height, dishTint.current, rim);
+      // El resplandor de la Vía Láctea y el del horizonte: solo se mueven
+      const bandLayer = dishBandRef.current;
+      if (bandLayer) {
+        bandLayer.style.visibility = band ? 'visible' : 'hidden';
+        if (band) {
+          bandLayer.style.opacity = band.opacity.toFixed(3);
+          bandLayer.style.transform = `translate(${band.x.toFixed(1)}px, ${band.y.toFixed(1)}px) rotate(${band.angle.toFixed(4)}rad) scale(${band.scale.toFixed(3)})`;
+        }
+      }
+      const hazeLayer = dishHazeRef.current;
+      if (hazeLayer) {
+        hazeLayer.style.visibility = haze ? 'visible' : 'hidden';
+        if (haze) {
+          hazeLayer.style.opacity = haze.opacity.toFixed(3);
+          hazeLayer.style.transform = `translateY(${haze.y.toFixed(1)}px) rotate(${haze.roll.toFixed(4)}rad)`;
+        }
+      }
+    }
+
+    // I · El radar lanza sus pulsos: burbujas que se alejan desde la antena
     const bubble = seg(p, SIGNAL.bubble);
     const reach = Math.hypot(width, height) * 0.62;
     ringRefs.current.forEach((ring, index) => {
@@ -1301,7 +1142,6 @@ const SignalSearch = ({ progress, label }: { progress: MotionValue<number>; labe
       ring.setAttribute('r', (easeOut(local) * reach).toFixed(1));
       ring.setAttribute('opacity', (local > 0 ? (1 - local) * 0.8 : 0).toFixed(3));
     });
-    earthRef.current?.setAttribute('opacity', (1 - seg(p, [SIGNAL.bubble[0] + 0.05, SIGNAL.bubble[1]])).toFixed(3));
 
     // II · El eco: asoma en cada vuelta y se confirma en la última
     const size = scopeSize(width, height) * scopeScale(p);
@@ -1358,6 +1198,9 @@ const SignalSearch = ({ progress, label }: { progress: MotionValue<number>; labe
     const scatter = 1 + 1.6 * seg(p, SIGNAL.scatter) ** 2;
     const glyphOpacity = 1 - seg(p, SIGNAL.reveal);
     const planetSide = (glyph?.planetCell ?? cell) * 0.82;
+    // El guiño: los píxeles del ojo derecho se juntan en una raya y vuelven
+    const blink = 1 - 0.88 * Math.sin(Math.PI * seg(p, SIGNAL.wink)) ** 0.6;
+    const eyeY = glyph?.eyeY ?? 0;
     const count = cells.length;
     cells.forEach((target, index) => {
       const pixel = pixelRefs.current[index];
@@ -1369,8 +1212,9 @@ const SignalSearch = ({ progress, label }: { progress: MotionValue<number>; labe
         pixel.setAttribute('opacity', '0');
         return;
       }
-      const planetX = center.x + target.px * cos - target.py * sin;
-      const planetY = center.y + target.px * sin + target.py * cos;
+      const py = target.eye ? eyeY + (target.py - eyeY) * blink : target.py;
+      const planetX = center.x + target.px * cos - py * sin;
+      const planetY = center.y + target.px * sin + py * cos;
       // Viajan en arco, como un chorro de datos que se curva hacia el dibujo
       const bend = Math.sin(local * Math.PI) * cell * 5;
       const dx = planetX - echo.x;
@@ -1429,9 +1273,31 @@ const SignalSearch = ({ progress, label }: { progress: MotionValue<number>; labe
     const svg = svgRef.current;
     if (svg) draw(progress.get(), svg.clientWidth || 1, svg.clientHeight || 1);
   }, [glyph, draw, progress, svgRef]);
+  // El lienzo de la antena, del tamaño del escenario
+  useEffect(() => {
+    const canvas = dishRef.current;
+    if (!canvas) return;
+    dishTint.current = accentRgb(canvas);
+    const measure = () => {
+      const width = canvas.clientWidth || 1;
+      const height = canvas.clientHeight || 1;
+      const ratio = Math.min(window.devicePixelRatio || 1, 1.25);
+      dishSize.current = { width, height, ratio };
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+      draw(progress.get(), width, height);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [draw, progress]);
 
   return (
     <>
+      <div ref={dishSkyRef} className="mo-dish-sky" aria-hidden="true" />
+      <div ref={dishBandRef} className="mo-dish-band" aria-hidden="true" />
+      <div ref={dishHazeRef} className="mo-dish-haze" aria-hidden="true" />
+      <canvas ref={dishRef} className="mo-journey-stage is-dish" aria-hidden="true" />
       <motion.span ref={scopeRef} className="mo-journey-scope" style={{ scale, opacity: scopeOpacity }} aria-hidden="true">
         <motion.canvas ref={noiseRef} style={{ opacity: noiseOpacity }} />
         <i className="is-range" />
@@ -1442,7 +1308,6 @@ const SignalSearch = ({ progress, label }: { progress: MotionValue<number>; labe
         {Array.from({ length: RADIO_RINGS }, (_, index) => (
           <circle key={index} className="is-ring" r={0} opacity={0} ref={(element) => { ringRefs.current[index] = element; }} />
         ))}
-        <circle ref={earthRef} className="is-earth" r={3.5} />
         <circle ref={pulseRef} className="is-pulse" r={0} opacity={0} />
         <circle ref={echoGlowRef} className="is-echo-glow" r={0} opacity={0} />
         <circle ref={echoRef} className="is-echo" r={0} opacity={0} />
@@ -1571,14 +1436,14 @@ export const JourneyOverlay = ({
   image?: string;
 }) => {
   switch (kind) {
-    case 'collapse':
-      return <StarCollapse progress={progress} />;
+    case 'scaffold':
+      return <SkyScaffold progress={progress} />;
     case 'torus':
       return <HabitatDock progress={progress} />;
     case 'blueprint':
       return <Shipyard progress={progress} image={image} />;
     case 'horizon':
-      return <HorizonRim progress={progress} />;
+      return <MagneticShield progress={progress} />;
     case 'dyson':
       return <DysonSwarm progress={progress} />;
     case 'starburst':

@@ -18,7 +18,6 @@ import {
   journeyClip,
   journeyExtra,
   journeyFor,
-  journeyImageCamera,
   journeyTime,
   journeyWarp,
   type JourneyKind,
@@ -51,7 +50,8 @@ const T = {
 // En la señal el número no crece: aparece en su sitio sobre el mismo número
 // armado en píxeles
 const LATE_NUMBER: Partial<Record<JourneyKind, { in: [number, number]; fill: [number, number]; from?: number }>> = {
-  collapse: { in: [0.22, 0.32], fill: [0.25, 0.34] },
+  // En el andamio, al centro de la primera celda cuando se abre la ventana
+  scaffold: { in: [0.278, 0.312], fill: [0.286, 0.318], from: 0.3 },
   signal: { in: [0.29, 0.31], fill: [0.29, 0.315], from: 1 },
   // En el atraque, al fondo del túnel del cubo cuando se enciende la ventana
   torus: { in: [0.268, 0.305], fill: [0.275, 0.312], from: 0.3 },
@@ -65,8 +65,8 @@ const LATE_NUMBER: Partial<Record<JourneyKind, { in: [number, number]; fill: [nu
   galaxy: { in: [0.27, 0.31], fill: [0.28, 0.315], from: 0.3 },
   // En la persecución, desde el punto de fuga donde se perdió la nave
   tunnel: { in: [0.26, 0.3], fill: [0.27, 0.31], from: 0.15 },
-  // En la reentrada, sobre la colonia cuando terminamos de cruzar las nubes
-  horizon: { in: [0.275, 0.31], fill: [0.285, 0.32], from: 0.5 },
+  // En el escudo, desde el centro de Marte cuando se abre la ventana
+  horizon: { in: [0.265, 0.3], fill: [0.275, 0.31], from: 0.3 },
 };
 
 /* ---------------- Palabra del título, revelada por scroll ---------------- */
@@ -165,17 +165,13 @@ export const SalaPortal = ({
     [T.irisOpen[0], T.irisCover[0], T.irisCover[1], T.textIn[1]],
     [1.45, 1.15, 1.07, 1],
   );
-  // En los viajes con cámara la imagen rueda y tiembla con el mundo
-  const imageX = useTransform(progress, (p) => journeyImageCamera(journey, p).x);
-  const imageY = useTransform(progress, (p) => journeyImageCamera(journey, p).y);
-  const imageRotate = useTransform(progress, (p) => journeyImageCamera(journey, p).rotate);
   // La imagen se oscurece recién cuando llega el texto, no durante la pausa
   const scrimOpacity = useTransform(progress, T.textIn, [0.1, 0.5]);
   const irisOpacity = useTransform(progress, T.imageFade, [1, 0.32]);
 
   // Número monumental: llega desde el fondo, se rellena y lo atravesamos.
-  // En el colapso espera a que la estrella sea un punto y destelle; en la
-  // señal, a que el mensaje esté armado
+  // En los viajes con cámara espera a que se abra la ventana; en la señal, a
+  // que el mensaje esté armado
   const lateNumber = LATE_NUMBER[journey];
   const numberIn = lateNumber?.in ?? T.numberIn;
   const numberFill = lateNumber?.fill ?? T.numberFill;
@@ -233,9 +229,6 @@ export const SalaPortal = ({
             className="mo-portal-image"
             style={{
               scale: imageScale,
-              x: imageX,
-              y: imageY,
-              rotate: imageRotate,
               backgroundImage: near && image ? `url(${image})` : undefined,
             }}
           />
