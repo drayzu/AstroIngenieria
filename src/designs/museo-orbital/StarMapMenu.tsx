@@ -193,7 +193,11 @@ const MenuPanel = ({ open, activeId, onClose, onGo, onExited }: Props & { onExit
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !leaving.current) onClose();
+      if (leaving.current) return;
+      // M lo abrió desde el museo; la misma tecla lo cierra
+      const mapKey = (event.key === 'm' || event.key === 'M')
+        && !event.repeat && !event.altKey && !event.ctrlKey && !event.metaKey;
+      if (event.key === 'Escape' || mapKey) onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -336,7 +340,7 @@ const MenuPanel = ({ open, activeId, onClose, onGo, onExited }: Props & { onExit
       className={`mo-menu${mapped ? '' : ' is-plain'}${cursor ? ' has-cursor' : ''}`}
       role="dialog"
       aria-modal="true"
-      aria-label={t('Índice del museo')}
+      aria-label={t('Mapa del museo')}
       onPointerMove={onPointerMove}
       onPointerDown={onPointerDown}
       onPointerLeave={() => {
@@ -358,10 +362,10 @@ const MenuPanel = ({ open, activeId, onClose, onGo, onExited }: Props & { onExit
           className="mo-menu-close"
           onClick={onClose}
           data-cursor-label={t('Cerrar')}
-        >{t('✕ Cerrar índice')}</button>
+        >{t('✕ Cerrar mapa')}</button>
       </header>
       <div className="mo-menu-body">
-        <h2>{t('Índice del recorrido')}</h2>
+        <h2>{t('Mapa del recorrido')}</h2>
         <ol className="mo-menu-list">
           {chapters.map((chapter, index) => {
             const point = index + 1;

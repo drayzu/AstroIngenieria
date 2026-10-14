@@ -317,7 +317,7 @@ const usePageTextPhysics = (disabled: boolean) => {
     const onPageTextHit = (event: Event) => {
       const detail = (event as CustomEvent<PageTextHitDetail>).detail;
       const element = detail?.element;
-      if (!element?.isConnected || element.closest('.mo-hero, .mo-marquee, .mo-halls, .mo-menu, .mo-rail')) {
+      if (!element?.isConnected || element.closest('.mo-hero, .mo-marquee, .mo-menu, .mo-rail, .mo-pill')) {
         return;
       }
       const speed = Math.hypot(detail.vx, detail.vy);
@@ -1453,10 +1453,11 @@ const Hero = memo(({
               type="button"
               className="mo-index-button mo-hero-index"
               onClick={onOpenIndex}
-              data-cursor-label={t("Índice")}
+              aria-keyshortcuts="M"
+              data-cursor-label={t("Mapa")}
             >
-              <span className="mo-hero-index-icon" aria-hidden="true" />
-              {t("Índice")}
+              <MapGlyph />
+              {t("Mapa del museo")}
             </button>
           </div>
         </div>
@@ -1737,84 +1738,17 @@ const Marquee = memo(() => {
   );
 });
 
-/* ---------------- Índice de salas ---------------- */
+/* ---------------- Mapa del museo: un mismo signo en todas sus puertas ---------------- */
 
-const HallIndex = memo(({ activeId, fillRef }: { activeId: string | null; fillRef: RefObject<HTMLElement | null> }) => {
-  const { locale, t } = useLocale();
-  const { chapters } = getCatalog(locale);
-  const navRef = useRef<HTMLElement>(null);
-  const markRef = useRef<HTMLSpanElement>(null);
-  const activeChapter = chapters.find((chapter) => chapter.id === activeId);
-  // En una sola fila puede no caber: el capítulo activo se desliza al centro
-  useEffect(() => {
-    const nav = navRef.current;
-    const chip = nav?.querySelector<HTMLElement>('.mo-hall-chip.is-active');
-    if (!nav || !chip || nav.scrollWidth <= nav.clientWidth) return;
-    nav.scrollTo({ left: chip.offsetLeft - nav.clientWidth / 2 + chip.offsetWidth / 2, behavior: 'smooth' });
-  }, [activeId]);
-  // La línea del capítulo activo viaja de un capítulo al siguiente
-  useLayoutEffect(() => {
-    const nav = navRef.current;
-    const mark = markRef.current;
-    if (!nav || !mark) return;
-    const place = () => {
-      const chip = nav.querySelector<HTMLElement>('.mo-hall-chip.is-active');
-      mark.classList.toggle('is-on', Boolean(chip));
-      if (!chip) return;
-      mark.style.transform = `translateX(${chip.offsetLeft + 7}px)`;
-      mark.style.width = `${Math.max(0, chip.offsetWidth - 14)}px`;
-    };
-    place();
-    const observer = new ResizeObserver(place);
-    observer.observe(nav);
-    return () => observer.disconnect();
-  }, [activeId, locale]);
-  return <nav ref={navRef} className="mo-halls mo-layer" aria-label={t('Capítulos de la exposición')}>
-    <span
-      ref={markRef}
-      className="mo-halls-mark"
-      style={{ '--accent': activeChapter?.color ?? '#c9a86a' } as CSSProperties}
-      aria-hidden="true"
-    >
-      <i ref={fillRef} />
-    </span>
-    {chapters.map((chapter) => (
-      <button
-        key={chapter.id}
-        type="button"
-        className={`mo-hall-chip${activeId === chapter.id ? ' is-active' : ''}`}
-        aria-current={activeId === chapter.id ? 'location' : undefined}
-        style={{ '--accent': chapter.color } as CSSProperties}
-        data-warp-target={`sala-${chapter.id}`}
-        onClick={() => scrollToId(`sala-${chapter.id}`)}
-      >
-        <b>{chapter.number}</b>
-        {chapter.title}
-      </button>
-    ))}
-    <i className="mo-halls-divider" aria-hidden="true" />
-    <button
-      type="button"
-      className={`mo-hall-chip is-extra${activeId === 'vitrina' ? ' is-active' : ''}`}
-      aria-current={activeId === 'vitrina' ? 'step' : undefined}
-      onClick={() => scrollToId('vitrina')}
-    >
-      <b>✦</b>
-      {t('Vitrina')}
-    </button>
-    <button
-      type="button"
-      className={`mo-hall-chip is-extra${activeId === 'archivo' ? ' is-active' : ''}`}
-      aria-current={activeId === 'archivo' ? 'step' : undefined}
-      onClick={() => scrollToId('archivo')}
-    >
-      <b>§</b>
-      {t('Archivo')}
-    </button>
-  </nav>
-});
+const MapGlyph = () => (
+  <svg className="mo-map-glyph" viewBox="0 0 20 20" aria-hidden="true">
+    <ellipse cx="10" cy="10" rx="8" ry="4.2" transform="rotate(-18 10 10)" />
+    <circle cx="10" cy="10" r="1.6" className="is-core" />
+    <circle cx="16.6" cy="7.6" r="1.3" className="is-moon" />
+  </svg>
+);
 
-/* ---------------- Píldora de capítulo (celular) ---------------- */
+/* ---------------- Píldora de capítulo (celular y tablet) ---------------- */
 
 const ChapterPill = memo(({
   activeId,
@@ -1839,12 +1773,12 @@ const ChapterPill = memo(({
       className={`mo-pill${title && !hidden ? ' is-on' : ''}`}
       style={{ '--accent': chapter?.color } as CSSProperties}
       onClick={onOpen}
-      aria-label={t("Abrir índice de capítulos")}
+      aria-label={t("Abrir el mapa del museo")}
       tabIndex={title && !hidden ? 0 : -1}
     >
       <span className="mo-pill-no" aria-hidden="true">{mark}</span>
       <span className="mo-pill-title">{title}</span>
-      <span className="mo-pill-icon" aria-hidden="true" />
+      <span className="mo-pill-icon" aria-hidden="true"><MapGlyph /></span>
       <span className="mo-pill-progress" aria-hidden="true"><i ref={fillRef} /></span>
     </button>
   );
@@ -2551,7 +2485,6 @@ export default function MuseoOrbital() {
   const playgroundAudioPreloaderRef = useRef<HTMLAudioElement | null>(null);
   const railFillRef = useRef<HTMLSpanElement>(null);
   const pillFillRef = useRef<HTMLElement>(null);
-  const hallFillRef = useRef<HTMLElement>(null);
   const railRef = useRef<HTMLElement>(null);
   const atmosRef = useRef<HTMLDivElement>(null);
   const museumKeyboardVelocityRef = useRef(0);
@@ -3415,9 +3348,7 @@ export default function MuseoOrbital() {
           // llena el tramo hasta el punto siguiente (el último, hasta el final)
           progress = (activeIndex + 1 + chapterFraction) / (chapters.length + 1);
           pillFillRef.current?.style.setProperty('transform', `scaleX(${chapterFraction.toFixed(4)})`);
-          hallFillRef.current?.style.setProperty('transform', `scaleX(${chapterFraction.toFixed(4)})`);
         }
-        if (activeIndex >= chapters.length) hallFillRef.current?.style.setProperty('transform', 'scaleX(1)');
         fill.style.transform = `scaleY(${progress})`;
       }
       setActiveHallId((current) => current === nextId ? current : nextId);
@@ -3612,6 +3543,24 @@ export default function MuseoOrbital() {
 
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+  // M abre el mapa desde cualquier punto del recorrido (el mapa abierto se
+  // cierra con la misma tecla, en StarMapMenu)
+  useEffect(() => {
+    if (menuOpen || active || playground || flight) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'm' && event.key !== 'M') return;
+      if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      if (playgroundEntryState !== 'idle' || heroRef.current?.classList.contains('is-intro')) return;
+      if (rootRef.current?.hasAttribute('data-finale-end')) return;
+      event.preventDefault();
+      openMenu();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [active, flight, menuOpen, openMenu, playground, playgroundEntryState]);
 
   let plateOffset = 0;
   const vitrineConcepts = getVitrineConcepts(vitrineIds, locale);
@@ -3900,7 +3849,6 @@ export default function MuseoOrbital() {
         playgroundEntryState={playgroundEntryState}
       />
       <Marquee />
-      <HallIndex activeId={activeHallId} fillRef={hallFillRef} />
 
       {chapters.map((chapter, index) => {
         const offset = plateOffset;
@@ -3997,26 +3945,23 @@ export default function MuseoOrbital() {
           type="button"
           className="mo-rail-map"
           aria-label={t("Abrir el mapa del museo")}
+          aria-keyshortcuts="M"
           onClick={(event) => {
             if (event.detail > 0) event.currentTarget.blur();
             openMenu();
           }}
         >
-          <svg viewBox="0 0 20 20" aria-hidden="true">
-            <ellipse cx="10" cy="10" rx="8" ry="4.2" transform="rotate(-18 10 10)" />
-            <circle cx="10" cy="10" r="1.6" className="is-core" />
-            <circle cx="16.6" cy="7.6" r="1.3" className="is-moon" />
-          </svg>
+          <MapGlyph />
           <span className="mo-rail-tooltip" aria-hidden="true">
             <strong>{t("Mapa del museo")}</strong>
-            <span>✧</span>
+            <span className="is-key">M</span>
           </span>
         </button>
       </nav>
 
       <ChapterPill activeId={activeHallId} fillRef={pillFillRef} onOpen={openMenu} hidden={menuOpen || Boolean(active)} />
 
-      {/* El índice vive en <body>: abrirlo no toca el árbol del museo */}
+      {/* El mapa vive en <body>: abrirlo no toca el árbol del museo */}
       <MenuOverlay open={menuOpen} activeId={activeHallId} onClose={closeMenu} onGo={goFromMenu} />
 
       <AnimatePresence>

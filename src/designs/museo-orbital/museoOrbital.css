@@ -405,57 +405,6 @@ body:has(.mo-root) {
   }
 }
 
-/* ---------- HALL INDEX ---------- */
-
-.mo-halls {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  justify-content: center;
-  padding: 10px 20px;
-  /* Casi opaco y sin backdrop-filter: el desenfoque se recalculaba en cada
-     cuadro de scroll y con 0.88 de opacidad apenas se notaba */
-  background: rgba(7, 7, 7, 0.95);
-  border-bottom: 1px solid var(--mo-line);
-}
-
-.mo-hall-chip {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-shrink: 0;
-  border: none;
-  background: none;
-  color: var(--mo-muted);
-  font-family: var(--mo-sans);
-  font-size: 11.5px;
-  letter-spacing: 0.04em;
-  padding: 8px 12px;
-  border-bottom: 1px solid transparent;
-  transition: color 0.25s ease, border-color 0.25s ease;
-  white-space: nowrap;
-}
-
-.mo-hall-chip b {
-  font-family: var(--mo-serif);
-  font-style: italic;
-  font-weight: 500;
-  font-size: 13px;
-  color: var(--accent, #c9a86a);
-}
-
-.mo-hall-chip:hover {
-  color: var(--mo-ink);
-}
-
-.mo-hall-chip.is-active {
-  color: var(--mo-ink);
-  border-bottom-color: var(--accent, #c9a86a);
-}
-
 /* ---------- SALAS ---------- */
 
 .mo-sala {
@@ -754,11 +703,14 @@ body:has(.mo-root) {
 .mo-rail::before {
   content: '';
   position: absolute;
-  top: -48px;
-  bottom: -48px;
+  top: -72px;
+  /* Hasta más allá del mapa, que cuelga bajo el riel */
+  bottom: -110px;
   right: -12px;
   width: 300px;
   background: linear-gradient(to left, rgba(7, 7, 7, 0.9), rgba(7, 7, 7, 0.62) 55%, transparent);
+  -webkit-mask-image: linear-gradient(transparent, #000 56px, #000 calc(100% - 56px), transparent);
+  mask-image: linear-gradient(transparent, #000 56px, #000 calc(100% - 56px), transparent);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease;
@@ -768,6 +720,12 @@ body:has(.mo-root) {
 .mo-rail:has(:focus-visible)::before {
   opacity: 1;
   transition-delay: 0.12s;
+}
+
+/* Desplegado, el velo también retiene el mouse: moverse en diagonal o
+   bajar hacia el mapa no lo cierra; solo salir del velo */
+.mo-rail:hover::before {
+  pointer-events: auto;
 }
 
 .mo-rail-track {
@@ -872,18 +830,27 @@ body:has(.mo-root) {
 
 /* Etiqueta: título y número a la izquierda del punto. Se ven todas al
    pasar el mouse por el riel; al entrar en un capítulo, solo la suya y
-   por un momento */
+   por un momento. Cada etiqueta ocupa todo el alto de su fila y llega
+   hasta el punto: las filas se tocan, sin huecos entre un capítulo y el
+   siguiente */
 .mo-rail-tooltip {
   position: absolute;
-  right: calc(100% + 4px);
-  top: 50%;
+  top: 0;
+  bottom: 0;
+  right: 100%;
   display: flex;
+  /* Una sola línea: wrap permite centrarla en la fila con align-content
+     sin perder la línea base común del título y el número */
+  flex-wrap: wrap;
+  align-content: center;
   align-items: baseline;
   gap: 10px;
+  width: max-content;
+  padding: 0 4px 0 28px;
   white-space: nowrap;
   color: rgba(245, 241, 232, 0.62);
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.9);
-  transform: translate(8px, -50%);
+  transform: translateX(8px);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -909,7 +876,7 @@ body:has(.mo-root) {
 .mo-rail.is-announcing button.is-eclipsed .mo-rail-tooltip {
   opacity: 1;
   visibility: visible;
-  transform: translate(0, -50%);
+  transform: none;
 }
 
 /* Intención: abre tras un instante (pasar rumbo a la barra de scroll no lo
@@ -938,7 +905,11 @@ body:has(.mo-root) {
   --accent: #c9a86a;
 }
 
-.mo-rail-map svg {
+/* El signo del mapa (órbita con su luna), igual en la portada, el riel y
+   la píldora */
+.mo-map-glyph {
+  --accent: #c9a86a;
+  flex: none;
   width: 20px;
   height: 20px;
   overflow: visible;
@@ -948,16 +919,28 @@ body:has(.mo-root) {
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), filter 0.25s ease;
 }
 
-.mo-rail-map svg .is-core,
-.mo-rail-map svg .is-moon {
+.mo-map-glyph .is-core,
+.mo-map-glyph .is-moon {
   fill: var(--accent);
   stroke: none;
 }
 
-.mo-rail-map:hover svg,
-.mo-rail-map:focus-visible svg {
+.mo-rail-map:hover .mo-map-glyph,
+.mo-rail-map:focus-visible .mo-map-glyph,
+.mo-hero-index:hover .mo-map-glyph,
+.mo-hero-index:focus-visible .mo-map-glyph,
+.mo-pill:active .mo-map-glyph {
   transform: rotate(24deg) scale(1.15);
   filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent));
+}
+
+/* La tecla del mapa, como una tecla */
+.mo-rail-tooltip span.is-key {
+  padding: 1px 5px 0;
+  border: 1px solid rgba(245, 241, 232, 0.28);
+  border-radius: 3px;
+  letter-spacing: 0;
+  color: rgba(245, 241, 232, 0.8);
 }
 
 /* ---------- SALA DE ESTUDIO ---------- */
@@ -3327,13 +3310,6 @@ body:has(.mo-root) {
 }
 
 @media (max-width: 720px) {
-  .mo-halls {
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-    overflow-x: auto;
-    scrollbar-width: thin;
-    padding: 8px 12px;
-  }
   .mo-sala {
     padding-bottom: clamp(170px, 26vh, 260px);
   }

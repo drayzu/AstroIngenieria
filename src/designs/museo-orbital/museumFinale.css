@@ -51,9 +51,8 @@
   color: rgba(245, 241, 232, 0.35);
 }
 
-/* Mientras la estrella se contrae no hay barra de capítulos, riel ni
-   píldora: la intro no los tiene, y el salto al comienzo no debe notarse */
-.mo-root[data-finale-end] .mo-halls,
+/* Mientras la estrella se contrae no hay riel ni píldora: la intro no los
+   tiene, y el salto al comienzo no debe notarse */
 .mo-root[data-finale-end] .mo-rail,
 .mo-root[data-finale-end] .mo-pill {
   opacity: 0;

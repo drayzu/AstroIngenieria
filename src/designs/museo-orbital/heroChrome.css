@@ -1,8 +1,8 @@
 /* ============ Marco del hero y navegación ============
-   Barra superior única, llamadas bajo el texto, barra de capítulos en una
-   fila y píldora flotante en celular. */
+   Barra superior única, llamadas bajo el texto y píldora flotante en
+   celular y tablet (en escritorio, el riel). */
 
-/* ---------- Barra superior: idioma e índice, a la izquierda ---------- */
+/* ---------- Barra superior: idioma y mapa, a la izquierda ---------- */
 
 .mo-hero-toolbar {
   top: 0;
@@ -59,27 +59,10 @@
   color: var(--mo-ink);
 }
 
-/* Dos trazos: el segundo se alarga al pasar */
-.mo-hero-index-icon {
-  position: relative;
-  width: 16px;
-  height: 7px;
-  border-top: 1px solid currentColor;
-}
-
-.mo-hero-index-icon::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 10px;
-  height: 1px;
-  background: currentColor;
-  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.mo-hero-index:hover .mo-hero-index-icon::after {
-  width: 16px;
+/* El mismo signo de órbita que abre el mapa desde el riel y la píldora */
+.mo-hero-index .mo-map-glyph {
+  width: 18px;
+  height: 18px;
 }
 
 /* ---------- Invitación a bajar ---------- */
@@ -197,49 +180,14 @@
   opacity: 1;
 }
 
-/* ---------- Barra de capítulos en una sola fila ---------- */
-
-.mo-halls {
-  flex-wrap: nowrap;
-  justify-content: flex-start;
-  gap: 0;
-  padding: 4px clamp(12px, 3vw, 40px);
-  overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 28px), transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 28px), transparent);
-}
-
-.mo-halls::-webkit-scrollbar {
-  display: none;
-}
-
-/* Centrada si cabe; si no, se desliza (márgenes automáticos a los lados) */
-.mo-halls > .mo-hall-chip:first-of-type {
-  margin-left: auto;
-}
-
-.mo-halls > :last-child {
-  margin-right: auto;
-}
-
-.mo-halls .mo-hall-chip {
-  gap: 6px;
-  padding: 9px 7px;
-  font-size: 10.5px;
-}
-
-/* ---------- Píldora flotante en celular ---------- */
+/* ---------- Píldora flotante en celular y tablet ---------- */
 
 .mo-pill {
   display: none;
 }
 
-@media (max-width: 720px) {
-  .mo-halls {
-    display: none;
-  }
-
+/* Mismo corte en que se oculta el riel: siempre hay uno de los dos */
+@media (max-width: 1080px) {
   .mo-pill {
     position: fixed;
     bottom: calc(16px + env(safe-area-inset-bottom, 0px));
@@ -283,14 +231,16 @@
     text-overflow: ellipsis;
   }
 
+  /* El signo del mapa: tocar la píldora abre el mapa */
   .mo-pill-icon {
-    position: relative;
+    display: flex;
     flex: none;
-    width: 14px;
-    height: 6px;
-    margin-left: 4px;
-    border-top: 1px solid rgba(245, 241, 232, 0.7);
-    border-bottom: 1px solid rgba(245, 241, 232, 0.7);
+    margin-left: 2px;
+  }
+
+  .mo-pill-icon .mo-map-glyph {
+    width: 18px;
+    height: 18px;
   }
 
   /* Avance dentro del capítulo actual */
@@ -317,8 +267,8 @@
   text-shadow: 0 1px 10px rgba(7, 7, 7, 0.85);
 }
 
-/* En celular la línea de avance de los portales sube sobre la píldora */
-@media (max-width: 720px) {
+/* Con píldora, la línea de avance de los portales sube sobre ella */
+@media (max-width: 1080px) {
   .mo-portal-hud {
     bottom: calc(78px + env(safe-area-inset-bottom, 0px));
   }
@@ -345,65 +295,6 @@
 
 .mo-hero-descend span:first-child {
   white-space: nowrap;
-}
-
-/* ---------- Barra de capítulos: color solo donde estás ---------- */
-
-.mo-halls {
-  position: sticky;
-}
-
-.mo-halls .mo-hall-chip b {
-  color: rgba(245, 241, 232, 0.34);
-  transition: color 0.3s ease;
-}
-
-.mo-halls .mo-hall-chip:hover b,
-.mo-halls .mo-hall-chip:focus-visible b,
-.mo-halls .mo-hall-chip.is-active b {
-  color: var(--accent, #c9a86a);
-}
-
-.mo-halls .mo-hall-chip.is-active {
-  border-bottom-color: transparent;
-}
-
-/* Línea que viaja al capítulo activo y se llena con lo leído */
-.mo-halls-mark {
-  position: absolute;
-  bottom: 9px;
-  left: 0;
-  height: 1px;
-  background: rgba(245, 241, 232, 0.14);
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    transform 0.6s cubic-bezier(0.65, 0, 0.35, 1),
-    width 0.6s cubic-bezier(0.65, 0, 0.35, 1),
-    opacity 0.4s ease;
-}
-
-.mo-halls-mark.is-on {
-  opacity: 1;
-}
-
-.mo-halls-mark i {
-  position: absolute;
-  inset: 0;
-  background: var(--accent);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent);
-  transform: scaleX(0);
-  transform-origin: left center;
-}
-
-/* Vitrina y Archivo no son capítulos: un trazo los separa */
-.mo-halls-divider {
-  flex: none;
-  align-self: center;
-  width: 1px;
-  height: 14px;
-  margin: 0 10px;
-  background: rgba(245, 241, 232, 0.18);
 }
 
 /* ---------- Marquee: entra y sale de la oscuridad ---------- */
