@@ -1,4 +1,5 @@
 import { drawTug } from './tileAssembly';
+import { lookView, lookWarp, readLook } from './lookAround';
 
 /* Astillero orbital: la entrada del capítulo 3. Miramos las estrellas y
    bajamos la vista: abajo asoma la Tierra de noche y, contra ella, un dique
@@ -204,6 +205,9 @@ export const yardParts = (p: number, width: number, height: number) => {
   };
 };
 
+// El lente (px): con él se sabe dónde queda la obra al girar la cabeza
+export const yardFocal = (width: number, height: number) => Math.min(width, height);
+
 // Lo que rueda la cámara: el cielo de fondo gira con ella
 export const yardRoll = (p: number) => keyed(p, [[0.02, 0.16], [0.08, -0.24], [YARD.align[1], 0]]);
 // Cuánto tapa nuestro cielo al de la página (y a las constelaciones de la
@@ -245,11 +249,20 @@ const yardFlight = (tile: (typeof YARD_TILES)[number], p: number) => seg(p, [til
 /* Recorte de la imagen: solo las teselas que ya calzaron (por filas, en
    tramos seguidos); con todas puestas, el fondo entero del dique */
 export const yardClip = (p: number, width: number, height: number) => {
-  const { window: box } = yardParts(p, width, height);
+  const { window: box, cx, cy, scale } = yardParts(p, width, height);
   const cellWidth = box.width / YARD_COLS;
   const cellHeight = box.height / YARD_ROWS;
-  const rect = (left: number, top: number, right: number, bottom: number) =>
-    `M ${left.toFixed(1)} ${top.toFixed(1)} H ${right.toFixed(1)} V ${bottom.toFixed(1)} H ${left.toFixed(1)} Z`;
+  // Con la cabeza del visitante girada, cada rectángulo es el cuadrilátero
+  // que se ve (la misma homografía con que se dibuja el dique)
+  const look = readLook();
+  const point = [0, 0, 0];
+  const corner = (x: number, y: number) => {
+    lookWarp(x, y, cx, cy, scale, point, look);
+    return `${point[0].toFixed(1)} ${point[1].toFixed(1)}`;
+  };
+  const rect = (left: number, top: number, right: number, bottom: number) => look.yaw || look.pitch
+    ? `M ${corner(left, top)} L ${corner(right, top)} L ${corner(right, bottom)} L ${corner(left, bottom)} Z`
+    : `M ${left.toFixed(1)} ${top.toFixed(1)} H ${right.toFixed(1)} V ${bottom.toFixed(1)} H ${left.toFixed(1)} Z`;
   if (p >= YARD.build[1]) return `path('${rect(box.left, box.top, box.left + box.width, box.top + box.height)}')`;
   const parts: string[] = [];
   for (let row = 0; row < YARD_ROWS; row++) {
@@ -327,9 +340,29 @@ export const drawShipyard = (context: CanvasRenderingContext2D, p: number, frame
     return [x1 * cosRoll - y2 * sinRoll, x1 * sinRoll + y2 * cosRoll, z2] as const;
   };
   const camera = -YARD_DEPTH / 2 + back;
+  // La cabeza del visitante (mirar alrededor): el dique gira de verdad en 3D
+  // y lo que se dibuja sobre la pantalla (el hueco de la obra, las teselas
+  // en vuelo) se lleva con la misma homografía
+  const look = readLook();
+  const looking = look.yaw !== 0 || look.pitch !== 0;
+  const turned = [0, 0, 0];
   const view = (x: number, y: number, z: number) => {
     const [x1, y1, z1] = turn(x, y, z);
-    return [x1, y1, camera - z1] as const;
+    if (!looking) return [x1, y1, camera - z1] as const;
+    lookView(x1, y1, camera - z1, turned, look);
+    return [turned[0], turned[1], turned[2]] as const;
+  };
+  const warp = (x: number, y: number): [number, number] => {
+    if (!looking) return [x, y];
+    lookWarp(x, y, cx, cy, scale, turned, look);
+    return [turned[0], turned[1]];
+  };
+  const quad = (path: CanvasRenderingContext2D | Path2D, left: number, top: number, right: number, bottom: number) => {
+    path.moveTo(...warp(left, top));
+    path.lineTo(...warp(right, top));
+    path.lineTo(...warp(right, bottom));
+    path.lineTo(...warp(left, bottom));
+    path.closePath();
   };
   const NEAR = 0.04;
   const screen = (point: Vec) => {
@@ -338,7 +371,11 @@ export const drawShipyard = (context: CanvasRenderingContext2D, p: number, frame
   };
   // Lo lejano (la Tierra, el sol) solo gira con la cámara
   const sky = (dir: Vec, ahead = 0.02) => {
-    const [x, y, z] = turn(dir[0], dir[1], dir[2]);
+    let [x, y, z] = turn(dir[0], dir[1], dir[2]);
+    if (looking) {
+      lookView(x, y, -z, turned, look);
+      [x, y, z] = [turned[0], turned[1], -turned[2]];
+    }
     return -z < ahead ? null : ([cx + (scale * x) / -z, cy + (scale * y) / -z] as const);
   };
 
@@ -507,7 +544,9 @@ export const drawShipyard = (context: CanvasRenderingContext2D, p: number, frame
   if (p >= YARD.build[0] - 0.02) {
     context.globalCompositeOperation = 'destination-out';
     context.fillStyle = '#000';
-    context.fillRect(box.left, box.top, box.width, box.height);
+    context.beginPath();
+    quad(context, box.left, box.top, box.left + box.width, box.top + box.height);
+    context.fill();
     context.globalCompositeOperation = 'source-over';
   }
 
@@ -871,8 +910,7 @@ export const drawShipyard = (context: CanvasRenderingContext2D, p: number, frame
     YARD_TILES.forEach((tile) => {
       const flight = yardFlight(tile, p);
       if (flight < 0.55 || flight >= 1) return;
-      const tx = box.left + (tile.col + 0.5) * cellWidth;
-      const ty = box.top + (tile.row + 0.5) * cellHeight;
+      const [tx, ty] = warp(box.left + (tile.col + 0.5) * cellWidth, box.top + (tile.row + 0.5) * cellHeight);
       const { base, up, axis, dir, deck, jib } = craneFrames[tile.crane];
       const reach = Math.max(0.1, Math.min(jib, (dot(tile.world, axis) - dot(base, axis)) / dot(dir, axis)));
       const trolley = screen(add(base, times(up, deck), times(dir, reach)));
@@ -893,7 +931,9 @@ export const drawShipyard = (context: CanvasRenderingContext2D, p: number, frame
     const empty = new Path2D();
     YARD_TILES.forEach((tile) => {
       if (yardFlight(tile, p) >= 1) return;
-      empty.rect(box.left + tile.col * cellWidth, box.top + tile.row * cellHeight, cellWidth, cellHeight);
+      const left = box.left + tile.col * cellWidth;
+      const top = box.top + tile.row * cellHeight;
+      quad(empty, left, top, left + cellWidth, top + cellHeight);
     });
     context.lineWidth = 0.6;
     context.strokeStyle = color(0.14 * building, 0.2);
@@ -926,7 +966,7 @@ export const drawShipyard = (context: CanvasRenderingContext2D, p: number, frame
         startY + (targetY - startY) * eased + Math.sin(Math.PI * t) * tile.arc * height,
       ] as const;
     };
-    const [x, y] = along(flight);
+    const [x, y] = warp(...along(flight));
     if (flight < 1) {
       const settle = easeInOut(flight);
       context.setTransform(ratio, 0, 0, ratio, x * ratio, y * ratio);
@@ -949,7 +989,7 @@ export const drawShipyard = (context: CanvasRenderingContext2D, p: number, frame
     }
     if (tile.tug < 0) return;
     // El remolcador va delante de su tesela; al soltarla sigue de largo y se apaga
-    const [aheadX, aheadY] = along(Math.min(1, flight + 0.03));
+    const [aheadX, aheadY] = warp(...along(Math.min(1, flight + 0.03)));
     let headingX = aheadX - x;
     let headingY = aheadY - y;
     if (Math.hypot(headingX, headingY) < 0.5) {
@@ -1001,8 +1041,7 @@ export const drawShipyard = (context: CanvasRenderingContext2D, p: number, frame
   YARD_TILES.forEach((tile, index) => {
     const weld = seg(p, [tile.launch + YARD_FLIGHT, tile.launch + YARD_FLIGHT + 0.014]);
     if (weld <= 0 || weld >= 1) return;
-    const x = box.left + (tile.col + 0.5) * cellWidth;
-    const y = box.top + (tile.row + 0.5) * cellHeight;
+    const [x, y] = warp(box.left + (tile.col + 0.5) * cellWidth, box.top + (tile.row + 0.5) * cellHeight);
     const glow = 1 - weld;
     const halo = context.createRadialGradient(x, y, 0, x, y, cellWidth * 0.6);
     halo.addColorStop(0, `rgba(255, 244, 220, ${(0.55 * glow).toFixed(3)})`);
@@ -1027,12 +1066,14 @@ export const drawShipyard = (context: CanvasRenderingContext2D, p: number, frame
 
   // El marco del fondo: un borde nítido con halo alrededor de la imagen
   if (yaw < 0.01) {
+    context.beginPath();
+    quad(context, box.left, box.top, box.left + box.width, box.top + box.height);
     context.strokeStyle = color(0.12, 0.2);
     context.lineWidth = 10;
-    context.strokeRect(box.left, box.top, box.width, box.height);
+    context.stroke();
     context.strokeStyle = color(0.85, 0.6);
     context.lineWidth = 1.2;
-    context.strokeRect(box.left, box.top, box.width, box.height);
+    context.stroke();
   }
   context.globalCompositeOperation = 'source-over';
 };

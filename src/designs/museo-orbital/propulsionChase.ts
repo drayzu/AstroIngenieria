@@ -1,4 +1,5 @@
 import { clamp01, smoothstep } from './roomShared';
+import { lookShift, lookTurn } from './lookAround';
 
 /* Propulsión: una cámara de persecución sigue a la nave desde que enciende
    el motor hasta acercarse a la velocidad de la luz.
@@ -337,10 +338,25 @@ const cameraAt = (p: number) => {
       down: [down[0] * cos - right[0] * sin, down[1] * cos - right[1] * sin, down[2] * cos - right[2] * sin] as Vec3,
     };
   };
-  // La nave gira con la cámara en el tonel: para ella no cuenta
-  const ship = rolled(bank - barrelRoll(p));
-  return { eye, forward, ...rolled(bank), shipRight: ship.right, shipDown: ship.down };
+  // La nave gira con la cámara en el tonel: para ella no cuenta. La cabeza
+  // del visitante (mirar alrededor) va encima de las dos, en los ejes de la
+  // pantalla, así la nave y el mundo se corren juntos
+  const world = lookTurn({ forward, ...rolled(bank) });
+  const ship = lookTurn({ forward, ...rolled(bank - barrelRoll(p)) });
+  return {
+    eye,
+    forward: world.forward as Vec3,
+    right: world.right as Vec3,
+    down: world.down as Vec3,
+    shipForward: ship.forward as Vec3,
+    shipRight: ship.right as Vec3,
+    shipDown: ship.down as Vec3,
+  };
 };
+
+// El lente (px): con él se sabe dónde queda la ventana al girar la cabeza
+export const chaseFocal = (p: number, width: number, height: number) =>
+  CAMERA.focal * lensAt(p)[0] * Math.min(width, height);
 
 // Cuánto se adelanta la nave a la cámara
 const shipAhead = (p: number) =>
@@ -854,8 +870,10 @@ export const drawChase = (
 ) => {
   const tint = (alpha: number, white: number) =>
     `rgba(${Math.round(r + (255 - r) * white)}, ${Math.round(g + (255 - g) * white)}, ${Math.round(b + (255 - b) * white)}, ${alpha.toFixed(3)})`;
-  const { eye, forward, right, down, shipRight, shipDown } = cameraAt(p);
+  const { eye, forward, right, down, shipForward, shipRight, shipDown } = cameraAt(p);
   const focal = CAMERA.focal * lensAt(p)[0] * Math.min(width, height);
+  // La ventana se abre donde mira la cámara, corrida por la cabeza del visitante
+  const [windowX, windowY] = lookShift(focal);
   const [shakeX, shakeY] = shakeAt(p);
   const cx = width / 2 + shakeX;
   const cy = height / 2 + shakeY;
@@ -887,10 +905,10 @@ export const drawChase = (
     // Con la ventana abierta el cielo se corre hacia afuera: el anillo la
     // rodea sin cruzarla
     if (opening > 0) {
-      const radial = Math.hypot(sx, sy) || 1;
+      const radial = Math.hypot(sx - windowX, sy - windowY) || 1;
       const grow = (radial + opening) / radial;
-      sx *= grow;
-      sy *= grow;
+      sx = windowX + (sx - windowX) * grow;
+      sy = windowY + (sy - windowY) * grow;
     }
     out[0] = cx + sx;
     out[1] = cy + sy;
@@ -935,7 +953,7 @@ export const drawChase = (
     const vz = z + ahead - eye[2];
     out[0] = vx * shipRight[0] + vy * shipRight[1] + vz * shipRight[2];
     out[1] = vx * shipDown[0] + vy * shipDown[1] + vz * shipDown[2];
-    out[2] = vx * forward[0] + vy * forward[1] + vz * forward[2];
+    out[2] = vx * shipForward[0] + vy * shipForward[1] + vz * shipForward[2];
   };
   const line = (path: Path2D, from: Vec3, to: Vec3) => {
     view(from, a);
@@ -1066,13 +1084,13 @@ export const drawChase = (
   const flash = bump(seg(p, [CHASE.leap[1] - 0.02, CHASE.open[0] + 0.045]));
   if (flash > 0) {
     const radius = Math.min(width, height) * (0.08 + 0.2 * flash);
-    const burst = context.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, radius);
+    const burst = context.createRadialGradient(width / 2 + windowX, height / 2 + windowY, 0, width / 2 + windowX, height / 2 + windowY, radius);
     burst.addColorStop(0, `rgba(255, 255, 255, ${(0.9 * flash).toFixed(3)})`);
     burst.addColorStop(0.25, tint(0.45 * flash, 0.5));
     burst.addColorStop(1, tint(0, 0.2));
     context.fillStyle = burst;
     context.beginPath();
-    context.arc(width / 2, height / 2, radius, 0, Math.PI * 2);
+    context.arc(width / 2 + windowX, height / 2 + windowY, radius, 0, Math.PI * 2);
     context.fill();
   }
 
@@ -1080,7 +1098,7 @@ export const drawChase = (
   const ring = 1 - seg(p, [0.42, 0.52]);
   if (opening > 0.5 && ring > 0) {
     context.beginPath();
-    context.arc(width / 2, height / 2, opening, 0, Math.PI * 2);
+    context.arc(width / 2 + windowX, height / 2 + windowY, opening, 0, Math.PI * 2);
     context.strokeStyle = tint(0.14 * ring, 0.2);
     context.lineWidth = 10;
     context.stroke();

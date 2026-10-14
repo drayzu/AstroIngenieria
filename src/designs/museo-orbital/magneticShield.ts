@@ -1,4 +1,5 @@
 import { clamp01, smoothstep } from './roomShared';
+import { lookShift, lookTurn } from './lookAround';
 
 /* Ingeniería planetaria: un escudo magnético para Marte.
 
@@ -395,8 +396,12 @@ const cameraAt = (p: number) => {
   const roll = spin - 0.3 * (1 - easeInOut(seg(p, [0.02, 0.075])));
   const up: Vec3 = [0, 1, 2].map((axis) => up0[axis] * Math.cos(roll) + side[axis] * Math.sin(roll)) as Vec3;
   const right = cross(up, forward);
-  return { s, eye, forward, right, down: [-up[0], -up[1], -up[2]] as Vec3 };
+  // Y encima, la cabeza del visitante (mirar alrededor)
+  return lookTurn({ s, eye, forward, right, down: [-up[0], -up[1], -up[2]] as Vec3 });
 };
+
+// El lente (px): con él se sabe dónde queda la ventana al girar la cabeza
+export const shieldFocal = (width: number, height: number) => FOCAL * Math.min(width, height);
 
 // Temblor: el golpe del choque y un rumor mientras vamos en la línea
 const shakeAt = (p: number): [number, number] => {
@@ -883,12 +888,14 @@ export const drawShield = (
     context.fillRect(0, 0, width, height);
   }
 
-  // La ventana se recorta al final, borrando lo que quedó encima
+  // La ventana se recorta al final, borrando lo que quedó encima. Está en
+  // Marte, donde mira la cámara: la cabeza del visitante la corre
+  const [windowX, windowY] = lookShift(focal);
   context.globalCompositeOperation = 'source-over';
   if (opening > 0.5) {
     context.globalCompositeOperation = 'destination-out';
     context.beginPath();
-    context.arc(width / 2, height / 2, opening, 0, Math.PI * 2);
+    context.arc(width / 2 + windowX, height / 2 + windowY, opening, 0, Math.PI * 2);
     context.fill();
     context.globalCompositeOperation = 'source-over';
   }
@@ -897,7 +904,7 @@ export const drawShield = (
   if (opening > 0.5 && ring > 0) {
     context.globalCompositeOperation = 'lighter';
     context.beginPath();
-    context.arc(width / 2, height / 2, opening, 0, Math.PI * 2);
+    context.arc(width / 2 + windowX, height / 2 + windowY, opening, 0, Math.PI * 2);
     context.strokeStyle = `rgba(150, 214, 255, ${(0.2 * ring).toFixed(3)})`;
     context.lineWidth = 12;
     context.stroke();

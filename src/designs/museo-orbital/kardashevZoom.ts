@@ -1,4 +1,5 @@
 import { clamp01 } from './roomShared';
+import { lookShift, lookWarp, readLook } from './lookAround';
 
 /* Civilizaciones cósmicas: la escala de Kardashev en una sola toma.
 
@@ -535,10 +536,14 @@ const camera = (p: number): Camera => {
 const projector = (cam: Camera, width: number, height: number) => {
   const cx = width / 2;
   const cy = height / 2;
-  const focal = Math.min(width, height);
+  const focal = kardashevFocal(width, height);
   const cos = Math.cos(cam.turn);
   const sin = Math.sin(cam.turn);
   const lean = cam.cosPitch * cam.persp;
+  // La cabeza del visitante (mirar alrededor): girar la cámara sobre su
+  // centro es una homografía de la imagen, la misma para todo lo que se ve
+  const look = readLook();
+  const looking = look.yaw !== 0 || look.pitch !== 0;
   return (x: number, y: number, out: number[]) => {
     const u = x * cos - y * sin;
     const v = x * sin + y * cos;
@@ -547,9 +552,13 @@ const projector = (cam: Camera, width: number, height: number) => {
     const scale = focal / depth;
     out[0] = cx + scale * u;
     out[1] = cy + scale * v * cam.sinPitch;
+    if (looking) lookWarp(out[0], out[1], cx, cy, focal, out, look);
     return scale;
   };
 };
+
+// El lente (px): con él se sabe dónde queda la ventana al girar la cabeza
+export const kardashevFocal = (width: number, height: number) => Math.min(width, height);
 
 /* ---------------- Pinceles ---------------- */
 
@@ -621,38 +630,53 @@ const gasSprite = (gas: HTMLCanvasElement, core: HTMLCanvasElement, gasAlpha: nu
 
 /* El planeta de noche, pintado una vez: océanos y continentes en violeta
    tenue, como bajo la luna (los mismos continentes sobre los que se
-   encienden las luces). El lado de día no se pinta: es un borde de luz */
+   encienden las luces). El lado de día no se pinta: es un borde de luz.
+   Se pinta por tramos de filas: de una vez se llevaba un cuadro entero */
+const PLANET_SIZE = 384;
 const planetSprite = () => {
-  const size = 384;
+  const size = PLANET_SIZE;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext('2d');
-  if (!context) return canvas;
-  const image = context.createImageData(size, size);
-  for (let row = 0; row < size; row += 1) {
-    for (let column = 0; column < size; column += 1) {
-      const x = ((column + 0.5) / size) * 2 - 1;
-      const y = ((row + 0.5) / size) * 2 - 1;
-      const r2 = x * x + y * y;
-      if (r2 > 1) continue;
-      const z = Math.sqrt(1 - r2);
-      const land = clamp01((continent(x, y, z) - 0.1) * 7 + 0.5);
-      // Luz de luna: violeta tenue, más oscuro hacia el borde
-      const moon = 0.5 + 0.5 * z;
-      const at = (row * size + column) * 4;
-      image.data[at] = (8 + 16 * land) * moon;
-      image.data[at + 1] = (9 + 13 * land) * moon;
-      image.data[at + 2] = (30 + 20 * land) * moon;
-      // Borde suave
-      image.data[at + 3] = 255 * clamp01((1 - Math.sqrt(r2)) * size * 0.5);
-    }
+  const image = context?.createImageData(size, size) ?? null;
+  let row = 0;
+  return {
+    canvas,
+    // Pinta filas hasta la hora `until` (ms); true cuando está entero
+    step(until: number) {
+      if (!context || !image) return true;
+      while (row < size) {
+        paintPlanetRow(image, row);
+        row += 1;
+        if ((row & 7) === 0 && row < size && performance.now() > until) return false;
+      }
+      context.putImageData(image, 0, 0);
+      return true;
+    },
+  };
+};
+const paintPlanetRow = (image: ImageData, row: number) => {
+  const size = PLANET_SIZE;
+  for (let column = 0; column < size; column += 1) {
+    const x = ((column + 0.5) / size) * 2 - 1;
+    const y = ((row + 0.5) / size) * 2 - 1;
+    const r2 = x * x + y * y;
+    if (r2 > 1) continue;
+    const z = Math.sqrt(1 - r2);
+    const land = clamp01((continent(x, y, z) - 0.1) * 7 + 0.5);
+    // Luz de luna: violeta tenue, más oscuro hacia el borde
+    const moon = 0.5 + 0.5 * z;
+    const at = (row * size + column) * 4;
+    image.data[at] = (8 + 16 * land) * moon;
+    image.data[at + 1] = (9 + 13 * land) * moon;
+    image.data[at + 2] = (30 + 20 * land) * moon;
+    // Borde suave
+    image.data[at + 3] = 255 * clamp01((1 - Math.sqrt(r2)) * size * 0.5);
   }
-  context.putImageData(image, 0, 0);
-  return canvas;
 };
 
-let sprites: {
+interface Art {
   tint: string;
   warm: HTMLCanvasElement;
   white: HTMLCanvasElement;
@@ -662,23 +686,82 @@ let sprites: {
   lit: HTMLCanvasElement;
   mix: HTMLCanvasElement;
   planet: HTMLCanvasElement;
+}
+let sprites: Art | null = null;
+
+/* Los dibujos de la toma se arman por partes (resplandores, cada gas y el
+   planeta por filas) hasta la hora `until`; true cuando están todos. Así
+   se preparan en ratos libres antes de llegar al portal y el primer cuadro
+   del viaje no paga por ellos */
+let job: {
+  key: string;
+  next: number;
+  art: Partial<Art>;
+  core: HTMLCanvasElement | null;
+  planet: ReturnType<typeof planetSprite> | null;
 } | null = null;
-const spritesFor = (tint: number[]) => {
+const buildSprites = (tint: number[], until: number) => {
   const key = tint.join(',');
-  if (sprites?.tint === key) return sprites;
-  const core = glowSprite([255, 226, 190]);
-  sprites = {
-    tint: key,
-    warm: glowSprite([255, 170, 90]),
-    white: glowSprite([255, 244, 222]),
-    red: glowSprite([255, 86, 56]),
-    accent: glowSprite(tint),
-    wild: gasSprite(glowSprite([120, 140, 200]), core, 0.05, 0.5),
-    lit: gasSprite(glowSprite(tint), core, 0.08, 0.8),
-    mix: Object.assign(document.createElement('canvas'), { width: 512, height: 512 }),
-    planet: planetSprite(),
+  if (sprites?.tint === key) return true;
+  if (job?.key !== key) job = { key, next: 0, art: { tint: key }, core: null, planet: null };
+  const { art } = job;
+  while (job.next < 4) {
+    if (job.next === 0) {
+      job.core = glowSprite([255, 226, 190]);
+      art.warm = glowSprite([255, 170, 90]);
+      art.white = glowSprite([255, 244, 222]);
+      art.red = glowSprite([255, 86, 56]);
+      art.accent = glowSprite(tint);
+    } else if (job.next === 1) {
+      art.wild = gasSprite(glowSprite([120, 140, 200]), job.core!, 0.05, 0.5);
+    } else if (job.next === 2) {
+      art.lit = gasSprite(glowSprite(tint), job.core!, 0.08, 0.8);
+      art.mix = Object.assign(document.createElement('canvas'), { width: 512, height: 512 });
+    } else {
+      job.planet ??= planetSprite();
+      if (!job.planet.step(until)) return false;
+      art.planet = job.planet.canvas;
+    }
+    job.next += 1;
+    if (job.next < 4 && performance.now() > until) return false;
+  }
+  sprites = art as Art;
+  job = null;
+  return true;
+};
+const spritesFor = (tint: number[]) => {
+  buildSprites(tint, Infinity);
+  return sprites!;
+};
+
+/* Prepara los dibujos de la toma en ratos libres, de a pocos milisegundos.
+   Ya armados, los manda a la GPU (createImageBitmap obliga a pintarlos):
+   la primera vez que el viaje los usa ya están subidos. Devuelve cómo
+   cancelarlo */
+export const prepareKardashev = (tint: number[]) => {
+  let handle = 0;
+  let cancelled = false;
+  const idle = (callback: (deadline?: IdleDeadline) => void) =>
+    window.requestIdleCallback ? window.requestIdleCallback(callback, { timeout: 4000 }) : window.setTimeout(callback, 120);
+  const step = (deadline?: IdleDeadline) => {
+    if (cancelled) return;
+    const slice = deadline && !deadline.didTimeout ? Math.min(8, Math.max(2, deadline.timeRemaining() - 1)) : 6;
+    if (!buildSprites(tint, performance.now() + slice)) {
+      handle = idle(step);
+      return;
+    }
+    const art = sprites;
+    if (!art || typeof createImageBitmap !== 'function') return;
+    [art.warm, art.white, art.red, art.accent, art.wild, art.lit, art.planet].forEach((canvas) => {
+      createImageBitmap(canvas).then((bitmap) => bitmap.close(), () => {});
+    });
   };
-  return sprites;
+  handle = idle(step);
+  return () => {
+    cancelled = true;
+    if (window.cancelIdleCallback) window.cancelIdleCallback(handle);
+    else window.clearTimeout(handle);
+  };
 };
 
 /* ---------------- La toma ---------------- */
@@ -730,14 +813,10 @@ export const drawKardashev = (
     point[0] > -margin && point[0] < width + margin && point[1] > -margin && point[1] < height + margin;
   const lit = `rgb(${Math.round(r + (255 - r) * 0.35)}, ${Math.round(g + (255 - g) * 0.35)}, ${Math.round(b + (255 - b) * 0.35)})`;
 
+  // La ventana se abre en el núcleo, donde mira la cámara: la cabeza del
+  // visitante la corre
+  const [windowX, windowY] = lookShift(kardashevFocal(width, height));
   context.save();
-  // La ventana: nada se dibuja sobre ella
-  if (opening > 0.5) {
-    context.beginPath();
-    context.rect(-width, -height, width * 3, height * 3);
-    context.arc(width / 2, height / 2, opening, 0, Math.PI * 2);
-    context.clip('evenodd');
-  }
 
   /* El suelo y el planeta */
   const planetScale = project(cam.planet[0], cam.planet[1], point);
@@ -1053,7 +1132,13 @@ export const drawKardashev = (
     const unit = GAS_EXTENT / 256;
     const ox = cam.core[0] - GAS_EXTENT;
     const oy = cam.core[1] - GAS_EXTENT;
+    // La cabeza del visitante también corre el gas: basta moverlo lo que se
+    // mueve su centro (es una nube suave)
+    const gasX = width / 2 + m00 * cam.core[0] + m01 * cam.core[1];
+    const gasY = height / 2 + m10 * cam.core[0] + m11 * cam.core[1];
+    lookWarp(gasX, gasY, width / 2, height / 2, kardashevFocal(width, height), point);
     context.save();
+    context.translate(point[0] - gasX, point[1] - gasY);
     context.transform(
       m00 * unit,
       m10 * unit,
@@ -1138,6 +1223,15 @@ export const drawKardashev = (
     context.stroke();
   }
 
+  // La ventana: nada queda dibujado sobre ella. Se borra al final en vez de
+  // recortar todo el lienzo con un camino par-impar, que en la GPU es caro
+  if (opening > 0.5) {
+    context.globalCompositeOperation = 'destination-out';
+    context.globalAlpha = 1;
+    context.beginPath();
+    context.arc(width / 2 + windowX, height / 2 + windowY, opening, 0, Math.PI * 2);
+    context.fill();
+  }
   context.restore();
 
   // El borde de la ventana, un hilo de luz
@@ -1146,7 +1240,7 @@ export const drawKardashev = (
     context.strokeStyle = lit;
     context.lineWidth = 1.2;
     context.beginPath();
-    context.arc(width / 2, height / 2, opening, 0, Math.PI * 2);
+    context.arc(width / 2 + windowX, height / 2 + windowY, opening, 0, Math.PI * 2);
     context.stroke();
     context.globalAlpha = 1;
   }

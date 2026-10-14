@@ -59,6 +59,9 @@ import { DistortOverlay } from './DistortOverlay';
 import { SalaPortal } from './SalaPortal';
 import { flyIntoObra, flyOutOfObra, obraFlightSupported, panStudio, prewarmObraFlight } from './obraFlight';
 import { prewarmChapterWarp, warpTo } from './chapterWarp';
+import { skyCovers } from './roomShared';
+import { MenuOverlay } from './StarMapMenu';
+import { startLookAround } from './lookAround';
 import { GalleryCorridor, type CorridorGroup } from './GalleryCorridor';
 import { OrbitRoom } from './OrbitRoom';
 import { VerticalRoom } from './VerticalRoom';
@@ -74,6 +77,9 @@ import './living/livingHero.css';
 
 // Hero de estrella viva: la escena WebGL se descarga aparte, solo cuando se usa
 const LivingStar = lazy(() => import('./living/LivingStar'));
+
+const MENU_COVER_EVENT = 'mo-menu-cover';
+const MENU_COVER = {};
 const LIVING_TITLE_BREAK = 5;
 /* Origen del portal de la primera sala: la entrada del museo, con el color
    de la estrella de la portada */
@@ -408,6 +414,13 @@ const Hero = memo(({
   const [heroPosition, setHeroPosition] = useState(0);
   const [heroVisible, setHeroVisible] = useState(true);
   const [pageVisible, setPageVisible] = useState(!document.hidden);
+  // Con el índice ya abierto encima, la estrella de la portada no se ve
+  const [menuCovering, setMenuCovering] = useState(false);
+  useEffect(() => {
+    const onCover = (event: Event) => setMenuCovering(Boolean((event as CustomEvent<boolean>).detail));
+    window.addEventListener(MENU_COVER_EVENT, onCover);
+    return () => window.removeEventListener(MENU_COVER_EVENT, onCover);
+  }, []);
   const imageLoadsRef = useRef(new Map<number, Promise<boolean>>());
   const imageRequestRef = useRef(0);
   const activeHeroIndex = heroOrder[heroPosition];
@@ -1451,7 +1464,7 @@ const Hero = memo(({
       {living ? (
         <div className="mo-living-stage">
           <Suspense fallback={null}>
-            <LivingStar heroRef={heroRef} paused={!heroVisible || !pageVisible} />
+            <LivingStar heroRef={heroRef} paused={!heroVisible || !pageVisible || menuCovering} />
           </Suspense>
           <LivingGrab heroRef={heroRef} />
           <DysonPlate heroRef={heroRef} />
@@ -2475,115 +2488,7 @@ const Archivo = memo(({ sources }: { sources: SourceRef[] }) => {
   );
 });
 
-/* ---------------- Menú persistente ---------------- */
-
-const MenuOverlay = memo(({
-  open,
-  onClose,
-  onGo,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onGo: (targetId: string) => void;
-}) => {
-  const { locale, t } = useLocale();
-  const { chapters } = getCatalog(locale);
-  const closeRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    closeRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
-
-  useScrollLock(open);
-
-  if (!open) return null;
-
-  return (
-    <motion.div
-      className="mo-menu"
-      role="dialog"
-      aria-modal="true"
-      aria-label={t("Índice del museo")}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      <div className="mo-menu-panel">
-        <header className="mo-menu-head">
-          <p className="mo-kicker">{t("Museo Orbital")}</p>
-          <LanguageSwitch />
-          <button
-            ref={closeRef}
-            type="button"
-            className="mo-menu-close"
-            onClick={onClose}
-            data-cursor-label={t("Cerrar")}
-          >{t("✕ Cerrar índice")}</button>
-        </header>
-        <h2>{t("Índice del recorrido")}</h2>
-        <ol className="mo-menu-list">
-          {chapters.map((chapter, index) => (
-            <motion.li
-              key={chapter.id}
-              initial={{ opacity: 0, x: -26 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.08 + index * 0.04, duration: 0.5, ease: EASE_OUT }}
-            >
-              <button
-                type="button"
-                style={{ '--accent': chapter.color } as CSSProperties}
-                data-warp-target={`sala-${chapter.id}`}
-                onClick={() => onGo(`sala-${chapter.id}`)}
-                data-cursor-label={t("Capítulo {0}", chapter.number.padStart(2, '0'))}
-              >
-                <b>{chapter.number}</b>
-                <span>{chapter.title}</span>
-                <i>{chapter.concepts.length}</i>
-              </button>
-            </motion.li>
-          ))}
-          <motion.li
-            initial={{ opacity: 0, x: -26 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.08 + chapters.length * 0.04, duration: 0.5, ease: EASE_OUT }}
-          >
-            <button
-              type="button"
-              className="is-extra"
-              onClick={() => onGo('vitrina')}
-              data-cursor-label={t("Comparar")}
-            >
-              <b>✦</b>
-              <span>{t("Vitrina de contrastes")}</span>
-            </button>
-          </motion.li>
-          <motion.li
-            initial={{ opacity: 0, x: -26 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.12 + chapters.length * 0.04, duration: 0.5, ease: EASE_OUT }}
-          >
-            <button
-              type="button"
-              className="is-extra"
-              onClick={() => onGo('archivo')}
-              data-cursor-label={t("Fuentes")}
-            >
-              <b>§</b>
-              <span>{t("Sala archivo")}</span>
-            </button>
-          </motion.li>
-        </ol>
-      </div>
-    </motion.div>
-  );
-});
+/* El menú persistente (índice) es el mapa estelar: StarMapMenu.tsx */
 
 /* ---------------- Principal ---------------- */
 
@@ -3604,6 +3509,26 @@ export default function MuseoOrbital() {
   // El salto entre capítulos se prepara en un momento ocioso
   useEffect(() => prewarmChapterWarp(), []);
 
+  // Cuando el índice termina de abrirse tapa toda la página: el cielo y la
+  // estrella de la portada descansan hasta que se cierre
+  useEffect(() => {
+    if (!menuOpen) return;
+    const timer = window.setTimeout(() => {
+      skyCovers.add(MENU_COVER);
+      window.dispatchEvent(new CustomEvent(MENU_COVER_EVENT, { detail: true }));
+    }, 900);
+    return () => {
+      window.clearTimeout(timer);
+      skyCovers.delete(MENU_COVER);
+      window.dispatchEvent(new CustomEvent(MENU_COVER_EVENT, { detail: false }));
+    };
+  }, [menuOpen]);
+
+  // Mirar alrededor: la vista gira un poco con el puntero o el teléfono, y
+  // queda al frente con el estudio, el menú o el juego abiertos
+  const lookHeld = Boolean(active) || menuOpen || playground || flight;
+  useEffect(() => startLookAround(lookHeld), [lookHeld]);
+
   // Las obras bajo el cursor dejan sus imágenes listas para entrar en el cuadro
   useEffect(() => prewarmObraFlight(), []);
 
@@ -4066,15 +3991,33 @@ export default function MuseoOrbital() {
             <span>✦</span>
           </span>
         </button>
+        {/* Bajo el riel, aparte del recorrido: el mapa del museo, desde
+            cualquier capítulo */}
+        <button
+          type="button"
+          className="mo-rail-map"
+          aria-label={t("Abrir el mapa del museo")}
+          onClick={(event) => {
+            if (event.detail > 0) event.currentTarget.blur();
+            openMenu();
+          }}
+        >
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <ellipse cx="10" cy="10" rx="8" ry="4.2" transform="rotate(-18 10 10)" />
+            <circle cx="10" cy="10" r="1.6" className="is-core" />
+            <circle cx="16.6" cy="7.6" r="1.3" className="is-moon" />
+          </svg>
+          <span className="mo-rail-tooltip" aria-hidden="true">
+            <strong>{t("Mapa del museo")}</strong>
+            <span>✧</span>
+          </span>
+        </button>
       </nav>
 
       <ChapterPill activeId={activeHallId} fillRef={pillFillRef} onOpen={openMenu} hidden={menuOpen || Boolean(active)} />
 
-      <AnimatePresence>
-        {menuOpen && (
-          <MenuOverlay open={menuOpen} onClose={closeMenu} onGo={goFromMenu} />
-        )}
-      </AnimatePresence>
+      {/* El índice vive en <body>: abrirlo no toca el árbol del museo */}
+      <MenuOverlay open={menuOpen} activeId={activeHallId} onClose={closeMenu} onGo={goFromMenu} />
 
       <AnimatePresence>
         {flight && (

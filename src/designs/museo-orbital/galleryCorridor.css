@@ -28,6 +28,8 @@
   height: 100svh;
   padding: clamp(104px, 13vh, 128px) 0 clamp(22px, 4vh, 40px);
   overflow: clip;
+  /* Mirar alrededor lo ladea (useRoomLook): capa propia, siempre la misma */
+  will-change: transform;
 }
 
 /* Bordes que se funden con el cielo: la pared aparece y se va en penumbra */

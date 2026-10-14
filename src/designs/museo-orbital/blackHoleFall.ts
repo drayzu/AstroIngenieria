@@ -1,4 +1,5 @@
 import { clamp01 } from './roomShared';
+import { lookShift, lookTurn } from './lookAround';
 
 /* Ingeniería estelar: caemos a un agujero negro, trazado de verdad.
 
@@ -149,6 +150,8 @@ const FOCAL = track([
   [0.29, 1.25],
 ]);
 const focalPx = (p: number, width: number, height: number) => FOCAL(p) * Math.min(width, height);
+// El lente (px): con él se sabe dónde queda la ventana al girar la cabeza
+export const holeFocal = focalPx;
 
 // Radio angular de la sombra para quien está quieto a distancia `distance`
 // (en radios del horizonte): sin α = (3√3/2)·√(1 − 1/r)/r
@@ -226,7 +229,16 @@ const cameraAt = (p: number, width: number, height: number, time: number, radius
   const roll = holeRoll(p);
   const right = add(scale(level, Math.cos(roll)), scale(lift, Math.sin(roll)));
   const up = add(scale(lift, Math.cos(roll)), scale(level, -Math.sin(roll)));
-  return { eye, right, up, forward, focal };
+  // Y encima, la cabeza del visitante (mirar alrededor): el shader traza
+  // los rayos con esta base, así la escena gira de verdad
+  const looked = lookTurn({ forward, right, down: scale(up, -1) });
+  return {
+    eye,
+    right: looked.right as Vec3,
+    up: scale(looked.down as Vec3, -1),
+    forward: looked.forward as Vec3,
+    focal,
+  };
 };
 
 /* Dónde cae el agujero en pantalla (px desde el centro), para girar el
@@ -269,7 +281,9 @@ uniform float u_time;
 uniform float u_disk;
 // Exposición: baja cuando el disco llena el cuadro, para que no se queme
 uniform float u_exposure;
-// La ventana (px CSS desde el centro) y el anillo que la bordea
+// La ventana (px CSS desde su centro) y el anillo que la bordea. El centro
+// de la ventana se corre cuando el visitante gira la cabeza
+uniform vec2 u_center;
 uniform float u_window;
 uniform float u_ring;
 uniform float u_ringLight;
@@ -395,7 +409,7 @@ vec3 sky(vec3 dir, float footprint) {
 }
 
 void main() {
-  float from = length(v_px);
+  float from = length(v_px - u_center);
   // Dentro de la ventana no hay nada: ahí está el otro lado
   float open = u_window > 0.0 ? smoothstep(u_window - 0.8, u_window + 0.8, from) : 1.0;
 
@@ -463,7 +477,7 @@ void main() {
   vec3 kept = min(vec3(1.0), color * (1.0 - exp(-light * u_exposure)) / max(light, 0.0001));
   color = mix(kept, vec3(1.0) - exp(-color * u_exposure), 0.4);
   // Como tras un visor: los bordes del cuadro, un poco más oscuros
-  color *= 1.0 - 0.3 * smoothstep(0.3, 1.0, from / length(u_view * 0.5));
+  color *= 1.0 - 0.3 * smoothstep(0.3, 1.0, length(v_px) / length(u_view * 0.5));
   alpha = max(alpha, max(color.r, max(color.g, color.b)));
   gl_FragColor = vec4(color, alpha) * open;
 }
@@ -506,7 +520,7 @@ const mount = (canvas: HTMLCanvasElement): Mount | null => {
   const position = gl.getAttribLocation(program, 'a_pos');
   gl.enableVertexAttribArray(position);
   gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
-  const names = ['view', 'focal', 'eye', 'right', 'up', 'forward', 'spread', 'escape', 'time', 'disk', 'exposure', 'window', 'ring', 'ringLight'];
+  const names = ['view', 'focal', 'eye', 'right', 'up', 'forward', 'spread', 'escape', 'time', 'disk', 'exposure', 'center', 'window', 'ring', 'ringLight'];
   const uniforms = Object.fromEntries(names.map((name) => [name, gl.getUniformLocation(program, `u_${name}`)]));
   return { gl, uniforms };
 };
@@ -563,6 +577,8 @@ export const paintHole = (canvas: HTMLCanvasElement, frame: HoleFrame) => {
   gl.uniform1f(u.time, (time % 600) + p * 60);
   gl.uniform1f(u.disk, seg(p, [0.02, 0.045]));
   gl.uniform1f(u.exposure, EXPOSURE(p));
+  const [centerX, centerY] = lookShift(camera.focal);
+  gl.uniform2f(u.center, centerX, centerY);
   gl.uniform1f(u.window, opening);
   gl.uniform1f(u.ring, p > HOLE.open[0] - 0.01 ? radius * 1.005 : 0);
   gl.uniform1f(u.ringLight, seg(p, [HOLE.open[0] - 0.01, HOLE.open[0] + 0.015]));

@@ -1,3 +1,5 @@
+import { lookRolled, lookTurn } from './lookAround';
+
 /* Radiotelescopio: la entrada del capítulo 9 en primera persona. Miramos
    la Vía Láctea y bajamos la vista a un observatorio: llegamos a ras de
    suelo por unos rieles que vienen de un costado, con el arreglo de perfil,
@@ -327,6 +329,9 @@ interface Ink {
 }
 
 /* Dibuja la escena; nada fuera del tramo de entrada */
+// El lente (px): con él se sabe dónde queda el plato al girar la cabeza
+export const dishFocal = (width: number, height: number) => 0.9 * Math.min(width, height);
+
 export const drawDish = (
   context: CanvasRenderingContext2D,
   p: number,
@@ -337,10 +342,16 @@ export const drawDish = (
 ): DishLayers => {
   const layers: DishLayers = { band: null, haze: null };
   if (p < 0.02 || p > DISH.handoff[1]) return layers;
-  const focal = 0.9 * Math.min(width, height);
-  const { position, forward, roll, vertex } = dishCamera(p, focal, rimRadius);
-  const right = unit(cross(UP, forward));
-  const up = cross(forward, right);
+  const focal = dishFocal(width, height);
+  const { position, forward: gaze, roll, vertex } = dishCamera(p, focal, rimRadius);
+  const level = unit(cross(UP, gaze));
+  // Y encima, la cabeza del visitante (mirar alrededor). La cámara rueda la
+  // imagen después de proyectar: el giro de cabeza va en los ejes de la
+  // pantalla ya rodada
+  const looked = lookTurn({ forward: gaze, right: level, down: scale(cross(gaze, level), -1) }, lookRolled(roll));
+  const forward = looked.forward as Vec;
+  const right = looked.right as Vec;
+  const up = scale(looked.down as Vec, -1);
   const cx = width / 2;
   const cy = height / 2;
   const cosRoll = Math.cos(roll);

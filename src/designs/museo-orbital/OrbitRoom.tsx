@@ -4,7 +4,7 @@ import { smoothScrollTo } from '../shared/smoothScroll';
 import type { AstroConcept } from '../../types';
 import type { CorridorGroup } from './GalleryCorridor';
 import { RoomHud, RoomProgress } from './RoomHud';
-import { clamp, clamp01, smoothstep, useRoomLoop } from './roomShared';
+import { clamp, clamp01, smoothstep, useRoomLook, useRoomLoop } from './roomShared';
 import './orbitRoom.css';
 
 /* Energía estelar: las obras orbitan una estrella. El scroll hace girar la
@@ -198,6 +198,8 @@ export const OrbitRoom = memo(({
   }, []);
 
   const refresh = useRoomLoop(sectionRef, scrollRef, (frame) => paint(frame.offset, frame.viewport));
+  // Mirar alrededor: el escenario se ladea hacia donde mira el visitante
+  useRoomLook(sectionRef, stageRef);
 
   useLayoutEffect(() => {
     const section = sectionRef.current;

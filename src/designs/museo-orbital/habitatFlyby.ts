@@ -1,4 +1,5 @@
 import { clamp01, smoothstep } from './roomShared';
+import { lookShift, lookTurn } from './lookAround';
 
 /* Hábitats espaciales: sobrevuelo y atraque en una rueda que gira.
 
@@ -138,13 +139,17 @@ const cameraAt = (p: number) => {
   const roll = habitatRoll(p) + 0.32 * (1 - ease(swing));
   const cos = Math.cos(roll);
   const sin = Math.sin(roll);
-  return {
+  // Y encima, la cabeza del visitante (mirar alrededor)
+  return lookTurn({
     eye,
     forward,
     right: [right0[0] * cos + below[0] * sin, right0[1] * cos + below[1] * sin, right0[2] * cos + below[2] * sin] as Vec3,
     down: [below[0] * cos - right0[0] * sin, below[1] * cos - right0[1] * sin, below[2] * cos - right0[2] * sin] as Vec3,
-  };
+  });
 };
+
+// El lente (px): con él se sabe dónde queda la ventana al girar la cabeza
+export const habitatFocal = (width: number, height: number) => FOCAL * Math.min(width, height);
 
 /* Radio de la ventana en píxeles: es el fondo del túnel, visto desde donde
    va la cámara. Se enciende como una luz al final del túnel */
@@ -223,11 +228,14 @@ export const drawHabitat = (
     path.lineTo(cx + (focal * c[0]) / c[2], cy + (focal * c[1]) / c[2]);
   };
 
+  // La ventana está en el fondo del túnel: donde mira la cámara del guion,
+  // corrida por la cabeza del visitante
+  const [windowX, windowY] = lookShift(focal);
   context.save();
   if (opening > 0.5) {
     context.beginPath();
     context.rect(-width, -height, width * 3, height * 3);
-    context.arc(cx, cy, opening, 0, Math.PI * 2);
+    context.arc(cx + windowX, cy + windowY, opening, 0, Math.PI * 2);
     context.clip('evenodd');
   }
 
@@ -799,7 +807,7 @@ export const drawHabitat = (
     context.strokeStyle = tint(0.8 * (1 - seg(p, [0.34, 0.45])), 0.6);
     context.lineWidth = 1.3;
     context.beginPath();
-    context.arc(cx, cy, opening, 0, Math.PI * 2);
+    context.arc(cx + windowX, cy + windowY, opening, 0, Math.PI * 2);
     context.stroke();
   }
   context.globalCompositeOperation = 'source-over';

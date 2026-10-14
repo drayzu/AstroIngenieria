@@ -4,6 +4,8 @@
 
 .mo-room {
   position: relative;
+  /* Mirar alrededor la ladea (useRoomLook): capa propia, siempre la misma */
+  will-change: transform;
 }
 
 .mo-room-sky {

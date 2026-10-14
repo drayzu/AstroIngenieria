@@ -1,8 +1,9 @@
-import { useRef, type CSSProperties, type RefObject } from 'react';
+import { useEffect, useRef, type CSSProperties, type RefObject } from 'react';
 import {
   cubicBezier,
   motion,
   useInView,
+  useMotionValue,
   useMotionValueEvent,
   useScroll,
   useSpring,
@@ -18,14 +19,17 @@ import {
   journeyClip,
   journeyExtra,
   journeyFor,
+  journeyShift,
   journeyTime,
   journeyWarp,
   type JourneyKind,
 } from './portalJourneys';
 import { isScrollWarping } from './chapterWarp';
+import { onLook } from './lookAround';
 import './salaPortal.css';
 
 const EASE_OUT = cubicBezier(0.16, 1, 0.3, 1);
+const seg = (p: number, [from, to]: [number, number]) => Math.min(1, Math.max(0, (p - from) / (to - from)));
 const EASE_IN_OUT = cubicBezier(0.65, 0, 0.35, 1);
 
 /* Guion del salto sobre el progreso del tramo fijo (0 = el escenario se
@@ -156,8 +160,22 @@ export const SalaPortal = ({
     }
   });
 
-  // Ventana del capítulo: se abre y luego cubre la pantalla, con la forma del viaje
-  const clipPath = useTransform(progress, (p) => journeyClip(journey, p));
+  // Mirar alrededor: mientras el portal está en pantalla, cada cambio de la
+  // mirada vuelve a ubicar la ventana, la imagen y el número
+  const looked = useMotionValue(0);
+  useEffect(() => onLook(() => {
+    const p = progress.get();
+    if (p > 0 && p < 1) looked.set(looked.get() + 1);
+  }), [progress, looked]);
+
+  // Ventana del capítulo: se abre y luego cubre la pantalla, con la forma del
+  // viaje, en lo que mira su cámara
+  const clipPath = useTransform([progress, looked], ([p]: number[]) => journeyClip(journey, p));
+  // La imagen y el número van con la ventana; al cubrir la pantalla la imagen
+  // ya es el fondo de la sala y deja de correrse (no asoman sus bordes)
+  const lookWeight = (p: number) => 1 - seg(p, T.irisCover);
+  const lookX = useTransform([progress, looked], ([p]: number[]) => journeyShift(journey, p)[0] * lookWeight(p));
+  const lookY = useTransform([progress, looked], ([p]: number[]) => journeyShift(journey, p)[1] * lookWeight(p));
   const glowOpacity = useTransform(progress, [0, T.irisOpen[1], T.irisCover[1]], [0, 0.75, 0]);
 
   const imageScale = useTransform(
@@ -228,6 +246,8 @@ export const SalaPortal = ({
           <motion.div
             className="mo-portal-image"
             style={{
+              x: lookX,
+              y: lookY,
               scale: imageScale,
               backgroundImage: near && image ? `url(${image})` : undefined,
             }}
@@ -240,7 +260,7 @@ export const SalaPortal = ({
 
         <motion.span
           className="mo-portal-no"
-          style={{ scale: numberScale, opacity: numberOpacity }}
+          style={{ x: lookX, y: lookY, scale: numberScale, opacity: numberOpacity }}
         >
           <span className="mo-portal-no-outline">{to.number}</span>
           <motion.span className="mo-portal-no-fill" style={{ clipPath: numberClip }}>

@@ -24,7 +24,7 @@ scope.onmessage = (event: MessageEvent) => {
       const renderer = createWarpRenderer(message.canvas);
       if (!renderer) throw new Error('webgl');
       loop = createWarpLoop(renderer, schedule, message);
-      scope.postMessage({ type: 'ready' });
+      scope.postMessage({ type: 'ready', map: renderer.hasMap });
     } catch {
       scope.postMessage({ type: 'failed' });
     }

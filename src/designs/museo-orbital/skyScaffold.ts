@@ -1,4 +1,5 @@
 import { clamp01, smoothstep } from './roomShared';
+import { lookTurn } from './lookAround';
 
 /* Introducción: la constelación era un andamio.
 
@@ -347,18 +348,20 @@ const LEVEL = (() => {
 export const scaffoldRoll = (p: number) =>
   keyed(p, [[0.085, 0], [0.13, 0.09], [0.2, -0.13], [0.245, 0.07], [SCAFFOLD.glide[1], LEVEL]]);
 
+// La cámara del guion, con la cabeza del visitante girada encima (la
+// ventana se calcula con esta misma cámara: siempre calza con el dibujo)
 const cameraAt = (p: number) => {
   const { eye, forward, up } = placeAt(p);
   const { right: right0, down: down0 } = basis(forward, up);
   const roll = scaffoldRoll(p);
   const cos = Math.cos(roll);
   const sin = Math.sin(roll);
-  return {
+  return lookTurn({
     eye,
     forward,
     right: [right0[0] * cos + down0[0] * sin, right0[1] * cos + down0[1] * sin, right0[2] * cos + down0[2] * sin] as Vec,
     down: [down0[0] * cos - right0[0] * sin, down0[1] * cos - right0[1] * sin, down0[2] * cos - right0[2] * sin] as Vec,
-  };
+  });
 };
 type Camera = ReturnType<typeof cameraAt>;
 

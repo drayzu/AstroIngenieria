@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { motion, useMotionValueEvent, useTransform, type MotionValue } from 'framer-motion';
-import { HOLE, holeCenter, holeRadius, holeRoll, holeSkyHidden, paintHole, prepareHole } from './blackHoleFall';
-import { SWARM, drawSwarm, prepareSwarm, starRadius, swarmRoll, swarmSkyHidden } from './dysonSwarm';
-import { drawHabitat, habitatRoll, habitatSkyHidden, habitatWindow } from './habitatFlyby';
-import { CHASE, CHASE_HOLDS, chaseBank, chaseSkyHidden, drawChase } from './propulsionChase';
-import { KARDASHEV, drawKardashev, kardashevGround, kardashevSkyDim, kardashevTurn } from './kardashevZoom';
-import { DISH, dishRoll, dishSkyCover, drawDish } from './radioDish';
-import { SHIELD, drawShield, marsRadius, shieldSkyHidden } from './magneticShield';
-import { skyDrift } from './roomShared';
-import { drawShipyard, yardClip, yardRoll, yardSkyHidden } from './orbitalShipyard';
+import { cancelFrame, frame, motion, useTransform, type MotionValue } from 'framer-motion';
+import { HOLE, holeCenter, holeFocal, holeRadius, holeRoll, holeSkyHidden, paintHole, prepareHole } from './blackHoleFall';
+import { SWARM, drawSwarm, prepareSwarm, starRadius, swarmFocal, swarmRoll, swarmSkyHidden } from './dysonSwarm';
+import { drawHabitat, habitatFocal, habitatRoll, habitatSkyHidden, habitatWindow } from './habitatFlyby';
+import { CHASE, CHASE_HOLDS, chaseBank, chaseFocal, chaseSkyHidden, drawChase } from './propulsionChase';
+import { KARDASHEV, drawKardashev, kardashevFocal, kardashevGround, kardashevSkyDim, kardashevTurn, prepareKardashev } from './kardashevZoom';
+import { DISH, dishFocal, dishRoll, dishSkyCover, drawDish } from './radioDish';
+import { SHIELD, drawShield, marsRadius, shieldFocal, shieldSkyHidden } from './magneticShield';
+import { skyCovers, skyDrift } from './roomShared';
+import { lookMoving, lookShift, onLook } from './lookAround';
+import { drawShipyard, yardClip, yardFocal, yardRoll, yardSkyHidden } from './orbitalShipyard';
 import { drawScaffold, scaffoldRoll, scaffoldSkyHidden, scaffoldWindow } from './skyScaffold';
 
 /* Viajes de los portales: cada capítulo abre su ventana de una forma
@@ -70,7 +71,7 @@ const JOURNEY_HOLDS: Partial<Record<JourneyKind, JourneyHold[]>> = {
   dyson: [
     { range: [0.02, 0.085], extra: 50 },
     { range: [0.085, 0.128], extra: 70 },
-    { range: [0.128, 0.205], extra: 120 },
+    { range: [0.128, 0.205], extra: 210 },
     { range: [0.205, 0.27], extra: 30 },
   ],
   // La caída: llegar al agujero negro y volar rasante sobre su disco (el
@@ -135,6 +136,13 @@ const seeded = (seed: number) => {
   return x - Math.floor(x);
 };
 
+/* Mientras el lienzo opaco del viaje cubre la pantalla entera (ya encendido
+   y antes de que la ventana cubra), el cielo de la página descansa */
+const coverSky = (key: object, p: number) => {
+  if (p > JOURNEY_OPEN[0] + 0.03 && p < JOURNEY_COVER[0]) skyCovers.add(key);
+  else skyCovers.delete(key);
+};
+
 /* Radio del iris en dos tramos: ventana en vmin y luego cubrir en vmax */
 interface RadiusParts { min: number; max: number }
 const irisParts = (p: number, windowSize = 30): RadiusParts => ({
@@ -181,6 +189,48 @@ const marsParts = (p: number, width: number, height: number) => {
   return opening > 0 ? opening + toPx({ min: 0, max: 76 * easeInOut(seg(p, JOURNEY_COVER)) }) : 0;
 };
 
+/* Lente de cada viaje (px): con ella se sabe dónde queda su ventana cuando
+   el visitante gira la cabeza. La ventana se abre en lo que la cámara mira */
+const journeyFocal = (kind: JourneyKind, p: number, width: number, height: number) => {
+  switch (kind) {
+    case 'torus':
+      return habitatFocal(width, height);
+    case 'horizon':
+      return shieldFocal(width, height);
+    case 'dyson':
+      return swarmFocal(p, width, height);
+    case 'starburst':
+      return holeFocal(p, width, height);
+    case 'tunnel':
+      return chaseFocal(p, width, height);
+    case 'galaxy':
+      return kardashevFocal(width, height);
+    case 'signal':
+      return dishFocal(width, height);
+    case 'blueprint':
+      return yardFocal(width, height);
+    default:
+      // El andamio y el iris: el lente de la página
+      return 0.62 * Math.min(width, height);
+  }
+};
+
+// Cuánto se corre la ventana del viaje con la mirada (px desde el centro)
+export const journeyShift = (kind: JourneyKind, p: number) =>
+  lookShift(journeyFocal(kind, p, window.innerWidth, window.innerHeight));
+
+// Un recorte circular centrado en la pantalla, corrido por la mirada. Aún
+// cerrado no se mueve: así no cambia de estilo en cada cuadro por nada
+const circleAt = (kind: JourneyKind, p: number, radius: string, open: boolean) => {
+  const [x, y] = open ? journeyShift(kind, p) : [0, 0];
+  const center = !x && !y ? '50% 50%' : `calc(50% + ${x.toFixed(1)}px) calc(50% + ${y.toFixed(1)}px)`;
+  return `circle(${radius} at ${center})`;
+};
+const pxCircle = (kind: JourneyKind, p: number, radius: number) =>
+  circleAt(kind, p, `${radius.toFixed(1)}px`, radius > 0);
+const partsCircle = (kind: JourneyKind, p: number, parts: RadiusParts) =>
+  circleAt(kind, p, cssRadius(parts), parts.min + parts.max > 0);
+
 /* Recorte de la imagen del capítulo según el viaje */
 export const journeyClip = (kind: JourneyKind, p: number): string => {
   switch (kind) {
@@ -188,14 +238,14 @@ export const journeyClip = (kind: JourneyKind, p: number): string => {
       // La ventana es el fondo del túnel del cubo, al centro
       const opening = habitatWindow(p, window.innerWidth, window.innerHeight);
       const cover = toPx({ min: 0, max: 76 * easeInOut(seg(p, JOURNEY_COVER)) });
-      return `circle(${(opening > 0 ? opening + cover : 0).toFixed(1)}px at 50% 50%)`;
+      return pxCircle(kind, p, opening > 0 ? opening + cover : 0);
     }
     case 'blueprint':
       return yardClip(p, window.innerWidth, window.innerHeight);
     case 'horizon':
-      return `circle(${marsParts(p, window.innerWidth, window.innerHeight).toFixed(1)}px at 50% 50%)`;
+      return pxCircle(kind, p, marsParts(p, window.innerWidth, window.innerHeight));
     case 'galaxy':
-      return `circle(${cssRadius(kardashevParts(p))} at 50% 50%)`;
+      return partsCircle(kind, p, kardashevParts(p));
     case 'scaffold': {
       // La ventana es la primera celda del armazón
       const cover = toPx({ min: 0, max: 76 * easeInOut(seg(p, JOURNEY_COVER)) });
@@ -206,13 +256,13 @@ export const journeyClip = (kind: JourneyKind, p: number): string => {
       return `polygon(${points.join(', ')})`;
     }
     case 'dyson':
-      return `circle(${sunParts(p, window.innerWidth, window.innerHeight).toFixed(1)}px at 50% 50%)`;
+      return pxCircle(kind, p, sunParts(p, window.innerWidth, window.innerHeight));
     case 'starburst':
-      return `circle(${holeParts(p, window.innerWidth, window.innerHeight).opening.toFixed(1)}px at 50% 50%)`;
+      return pxCircle(kind, p, holeParts(p, window.innerWidth, window.innerHeight).opening);
     case 'tunnel':
-      return `circle(${cssRadius(chaseParts(p))} at 50% 50%)`;
+      return partsCircle(kind, p, chaseParts(p));
     case 'signal':
-      return `circle(${cssRadius(signalParts(p))} at 50% 50%)`;
+      return partsCircle(kind, p, signalParts(p));
     default:
       return `circle(${irisRadius(p)} at 50% 50%)`;
   }
@@ -229,13 +279,67 @@ const useOverlayOpacity = (progress: MotionValue<number>, fadeAfter = 0.13) =>
     [0, 1, 1, 0],
   );
 
+/* Dibuja el viaje como mucho una vez por cuadro, en el paso de pintura de
+   framer: si en el mismo cuadro cambian el scroll y la mirada, sale un solo
+   dibujo con los dos al día. Con el scroll quieto, mirar alrededor también
+   lo vuelve a dibujar, pero solo al portal que está en pantalla y solo
+   mientras la mirada se mueve */
+export const journeyOnStage = (p: number) => p > JOURNEY_OPEN[0] && p < JOURNEY_COVER[1];
+const useJourneyDraw = (progress: MotionValue<number>, draw: (p: number) => void) => {
+  useEffect(() => {
+    let queued = false;
+    let drawnAt = Number.NaN;
+    const run = () => {
+      queued = false;
+      drawnAt = progress.get();
+      draw(drawnAt);
+    };
+    const queue = () => {
+      if (queued) return;
+      queued = true;
+      frame.render(run);
+    };
+    const offProgress = progress.on('change', queue);
+    // Si con el scroll quieto los cuadros llegan tarde (la GPU no da abasto
+    // con este viaje), lo que se redibuja solo por la mirada pasa a uno de
+    // cada dos cuadros hasta que la mirada se detiene
+    let lastTick = 0;
+    let late = 0;
+    let half = false;
+    let beat = 0;
+    const offLook = onLook(() => {
+      const p = progress.get();
+      if (!journeyOnStage(p)) return;
+      if (!lookMoving()) {
+        // Quieta: el último cuadro siempre se dibuja
+        lastTick = 0;
+        late = 0;
+        half = false;
+        queue();
+        return;
+      }
+      const now = performance.now();
+      if (lastTick) late = now - lastTick > 24 ? late + 1 : Math.max(0, late - 0.25);
+      lastTick = now;
+      if (late >= 3) half = true;
+      if (half && p === drawnAt && beat++ % 2) return;
+      queue();
+    });
+    return () => {
+      offProgress();
+      offLook();
+      cancelFrame(run);
+    };
+  }, [progress, draw]);
+};
+
 /* Lienzo SVG del tamaño del escenario con el origen en el centro: los
    viajes dibujan en píxeles reales para coincidir con el recorte */
 const useStageSvg = (progress: MotionValue<number>, draw: (p: number, width: number, height: number) => void) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const size = useRef({ width: 1, height: 1 });
   const run = useCallback((p: number) => draw(p, size.current.width, size.current.height), [draw]);
-  useMotionValueEvent(progress, 'change', run);
+  useJourneyDraw(progress, run);
   useEffect(() => {
     const svg = svgRef.current;
     if (!svg) return;
@@ -314,7 +418,7 @@ const HabitatDock = ({ progress }: { progress: MotionValue<number> }) => {
     drawHabitat(context, p, width, height, tint.current, opening > 0 ? opening + cover : 0);
   }, []);
 
-  useMotionValueEvent(progress, 'change', draw);
+  useJourneyDraw(progress, draw);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -379,6 +483,7 @@ const SkyScaffold = ({ progress }: { progress: MotionValue<number> }) => {
       fx.style.opacity = hidden > 0 ? (1 - hidden).toFixed(3) : '';
     });
 
+    coverSky(canvasRef, p);
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
     if (p > JOURNEY_COVER[0] + 0.18 || p < JOURNEY_OPEN[0]) return;
@@ -387,7 +492,10 @@ const SkyScaffold = ({ progress }: { progress: MotionValue<number> }) => {
     drawScaffold(context, p, width, height, tint.current, scaffoldWindow(p, width, height, cover));
   }, []);
 
-  useMotionValueEvent(progress, 'change', draw);
+  useJourneyDraw(progress, draw);
+  useEffect(() => () => {
+    skyCovers.delete(canvasRef);
+  }, []);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -468,6 +576,7 @@ const Shipyard = ({ progress, image }: { progress: MotionValue<number>; image?: 
       fx.style.opacity = hidden > 0 ? (1 - hidden).toFixed(3) : '';
     }
 
+    coverSky(canvasRef, p);
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
     if (p > JOURNEY_COVER[0] + 0.16 || p < JOURNEY_OPEN[0]) return;
@@ -475,7 +584,10 @@ const Shipyard = ({ progress, image }: { progress: MotionValue<number>; image?: 
     drawShipyard(context, p, { width, height, ratio, tint: tint.current, photo: picture.current, zoom: portalImageScale(p) });
   }, []);
 
-  useMotionValueEvent(progress, 'change', draw);
+  useJourneyDraw(progress, draw);
+  useEffect(() => () => {
+    skyCovers.delete(canvasRef);
+  }, []);
   useEffect(() => {
     if (!image) return;
     const photo = new Image();
@@ -540,6 +652,7 @@ const MagneticShield = ({ progress }: { progress: MotionValue<number> }) => {
       fx.style.opacity = hidden > 0 ? (1 - hidden).toFixed(3) : '';
     }
 
+    coverSky(canvasRef, p);
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
     if (p > JOURNEY_COVER[0] + 0.18 || p < JOURNEY_OPEN[0]) return;
@@ -547,7 +660,10 @@ const MagneticShield = ({ progress }: { progress: MotionValue<number> }) => {
     drawShield(context, p, width, height, tint.current, marsParts(p, width, height));
   }, []);
 
-  useMotionValueEvent(progress, 'change', draw);
+  useJourneyDraw(progress, draw);
+  useEffect(() => () => {
+    skyCovers.delete(canvasRef);
+  }, []);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -623,7 +739,8 @@ const BlackHole = ({ progress }: { progress: MotionValue<number> }) => {
         return;
       }
       frame = requestAnimationFrame(tick);
-      if (p !== lastP) lastMove = now;
+      // Mirar alrededor también es moverse: el agujero sigue a cuadro entero
+      if (p !== lastP || lookMoving()) lastMove = now;
       lastP = p;
       if (now - lastMove > 1200 && beat++ % 2) return;
 
@@ -716,6 +833,7 @@ const DysonSwarm = ({ progress }: { progress: MotionValue<number> }) => {
       fx.style.opacity = hidden > 0 ? (1 - hidden).toFixed(3) : '';
     }
 
+    coverSky(canvasRef, p);
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
     if (p > JOURNEY_COVER[0] + 0.18 || p < JOURNEY_OPEN[0]) return;
@@ -723,7 +841,10 @@ const DysonSwarm = ({ progress }: { progress: MotionValue<number> }) => {
     drawSwarm(context, p, width, height, sunParts(p, width, height));
   }, []);
 
-  useMotionValueEvent(progress, 'change', draw);
+  useJourneyDraw(progress, draw);
+  useEffect(() => () => {
+    skyCovers.delete(canvasRef);
+  }, []);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -801,7 +922,7 @@ const PropulsionChase = ({ progress }: { progress: MotionValue<number> }) => {
     drawChase(context, p, width, height, tint.current, opening);
   }, []);
 
-  useMotionValueEvent(progress, 'change', draw);
+  useJourneyDraw(progress, draw);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -1060,6 +1181,7 @@ const SignalSearch = ({ progress, label }: { progress: MotionValue<number>; labe
   const windowRef = useRef<SVGCircleElement>(null);
   const [glyph, setGlyph] = useState<PixelGlyph | null>(null);
   const glyphRef = useRef<PixelGlyph | null>(null);
+  const lookOffset = useRef('');
 
   const sweep = useTransform(progress, sweepAngle);
   const scale = useTransform(progress, scopeScale);
@@ -1079,6 +1201,15 @@ const SignalSearch = ({ progress, label }: { progress: MotionValue<number>; labe
   }, []);
 
   const draw = useCallback((p: number, width: number, height: number) => {
+    // La cabeza del visitante (mirar alrededor) corre el radar y el mensaje
+    // junto con el plato que reemplazan
+    const [lookX, lookY] = journeyShift('signal', p);
+    const offset = `${lookX.toFixed(1)}px ${lookY.toFixed(1)}px`;
+    if (offset !== lookOffset.current) {
+      lookOffset.current = offset;
+      scopeRef.current?.style.setProperty('translate', `calc(-50% + ${lookX.toFixed(1)}px) calc(-50% + ${lookY.toFixed(1)}px)`);
+      ringRefs.current[0]?.ownerSVGElement?.style.setProperty('translate', offset);
+    }
     const angle = sweepAngle(p);
     // La estela de fósforo sigue al barrido
     scopeRef.current?.style.setProperty('--trail', `${(angle - AFTERGLOW).toFixed(2)}deg`);
@@ -1387,7 +1518,7 @@ const KardashevZoom = ({ progress }: { progress: MotionValue<number> }) => {
     drawKardashev(context, p, width, height, tint.current, opening);
   }, []);
 
-  useMotionValueEvent(progress, 'change', draw);
+  useJourneyDraw(progress, draw);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -1405,7 +1536,11 @@ const KardashevZoom = ({ progress }: { progress: MotionValue<number> }) => {
     };
     measure();
     window.addEventListener('resize', measure);
+    // El planeta, los gases y los resplandores se pintan en ratos libres,
+    // mucho antes de llegar: el primer cuadro del viaje no paga por ellos
+    const cancelPrepare = prepareKardashev(tint.current);
     return () => {
+      cancelPrepare();
       window.removeEventListener('resize', measure);
       const fx = document.querySelector<HTMLElement>('.mo-starfx');
       if (fx) fx.style.opacity = '';

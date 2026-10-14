@@ -6,7 +6,7 @@ import type { CorridorGroup } from './GalleryCorridor';
 import { TopicHeading } from './TopicHeading';
 import { selectedStudyImages } from '../../data/selectedStudyImages';
 import { ASSEMBLY_MAX, assemblyEnd, assemblySides, drawAssembly, endAssembly, startAssembly, type Assembly, type Box } from './tileAssembly';
-import { clamp, clamp01, offsetWithin, skyDrift, smoothstep, useRoomLoop } from './roomShared';
+import { clamp, clamp01, offsetWithin, skyDrift, smoothstep, useRoomLook, useRoomLoop } from './roomShared';
 import { drawWheel, sizeWheel, wheelRadius, wheelSpokes, wheelStops, type Wheel, type WheelStop } from './wheelHabitat';
 import './verticalRooms.css';
 
@@ -128,6 +128,8 @@ export const VerticalRoom = memo(({
     assembling: false,
     // Hábitats: el punto de la sala en el centro de la pantalla en el último cuadro
     wheelCenter: Number.NaN,
+    // Mirar alrededor: la sala gira alrededor del centro de la pantalla
+    pivot: Number.NaN,
   });
   const radar = useRef<Animation | null>(null);
 
@@ -145,6 +147,8 @@ export const VerticalRoom = memo(({
   const paint = (offset: number, viewport: number, now: number) => {
     const { width, bodyHeight, items: placed } = geometry.current;
     const state = live.current;
+    state.pivot = offset + viewport / 2;
+    relook();
     let sweep = 0;
     const dt = state.lastNow ? clamp(now - state.lastNow, 0, 100) : 16;
     state.lastNow = now;
@@ -357,6 +361,9 @@ export const VerticalRoom = memo(({
   const forgetWheel = () => {
     live.current.wheelCenter = Number.NaN;
   };
+  // Mirar alrededor: la sala se ladea hacia donde mira el visitante, con el
+  // giro en el centro de la pantalla (la sala es más alta que ella)
+  const relook = useRoomLook(bodyRef, bodyRef, () => live.current.pivot);
   const refresh = useRoomLoop(bodyRef, scrollRef, (frame) => paint(frame.offset, frame.viewport, frame.now), {
     continuous: kind === 'silence',
     busy: kind === 'blueprint' ? () => live.current.assembling : undefined,

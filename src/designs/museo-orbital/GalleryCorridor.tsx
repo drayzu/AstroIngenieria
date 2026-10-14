@@ -6,7 +6,7 @@ import type { CorridorKind } from './salaRooms';
 import { RoomHud, RoomProgress } from './RoomHud';
 import { CorridorScene, type SceneParts } from './corridorScenes';
 import { paintMarsGround } from './marsGround';
-import { clamp, clamp01, offsetWithin, skyDrift, smoothstep, toRoman, useRoomLoop, wallGain } from './roomShared';
+import { clamp, clamp01, offsetWithin, skyDrift, smoothstep, toRoman, useRoomLook, useRoomLoop, wallGain } from './roomShared';
 import './galleryCorridor.css';
 
 /* Pasillo de galería: el escenario queda fijo (sticky) y el scroll vertical
@@ -352,6 +352,8 @@ export const GalleryCorridor = memo(({
   };
 
   const refresh = useRoomLoop(sectionRef, scrollRef, (frame) => paint(frame.offset), { onIdle: settle });
+  // Mirar alrededor: el escenario se ladea hacia donde mira el visitante
+  useRoomLook(sectionRef, stageRef);
 
   useLayoutEffect(() => {
     const section = sectionRef.current;

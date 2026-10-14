@@ -1,4 +1,5 @@
 import { clamp01, smoothstep } from './roomShared';
+import { lookShift, lookTurn } from './lookAround';
 
 /* Energía estelar: cruzamos un enjambre de Dyson hasta su estrella.
 
@@ -80,13 +81,15 @@ const DISTANCE = keyed([
   [0.245, Math.log(2.3)],
   [0.34, Math.log(2.05)],
 ]);
-// Ángulo recorrido sobre el anillo A: quietos al acercarnos, después lo seguimos
+// Ángulo recorrido sobre el anillo A: quietos al acercarnos, después lo
+// seguimos a ritmo parejo, cabalgando la ola que lo despliega
 const ORBIT = keyed([
   [0.118, 0],
   [0.14, 0.07],
-  [0.205, 0.95],
-  [0.245, 1.12],
-  [0.34, 1.2],
+  [0.17, 0.75],
+  [0.205, 1.55],
+  [0.245, 1.72],
+  [0.34, 1.8],
 ]);
 // Altura sobre el plano del anillo A (ángulo visto desde la estrella)
 const ELEVATION = keyed([
@@ -120,7 +123,8 @@ const BANK = keyed([
   [0.1, -0.04],
   [0.118, 0],
   [0.145, -0.42],
-  [0.18, -0.26],
+  [0.165, -0.24],
+  [0.188, -0.4],
   [0.205, -0.3],
   [0.245, 0],
 ]);
@@ -156,7 +160,7 @@ const cameraAt = (p: number, width: number, height: number): Camera => {
   const horizontal = Math.hypot(toStar[0], toStar[2]) || 1;
   // En pantallas angostas giramos menos, para no perder la estrella de vista
   const across = (width / 2) / (LENS(p) * short);
-  const turn = TURN(p) * Math.min(1, Math.atan(0.62 * across) / Math.atan(0.62 * 1.82));
+  const turn = TURN(p) * Math.max(0.9, Math.min(1, Math.atan(0.62 * across) / Math.atan(0.62 * 1.82)));
   const yaw = Math.atan2(toStar[0], toStar[2]) - turn;
   const shake = Math.exp(-(((p - 0.119) / 0.006) ** 2)) + 0.35 * seg(p, [0.135, 0.15]) * (1 - seg(p, [0.2, 0.225]));
   const pitch = Math.atan2(toStar[1], horizontal) + NOD(p) + shake * 0.008 * Math.sin(p * 1300 + 1.3);
@@ -179,8 +183,19 @@ const cameraAt = (p: number, width: number, height: number): Camera => {
     flatUp[1] * cos - flatRight[1] * sin,
     flatUp[2] * cos - flatRight[2] * sin,
   ];
-  return { position, right, up, forward, focal: LENS(p) * short };
+  // Y encima, la cabeza del visitante (mirar alrededor)
+  const looked = lookTurn({ forward, right, down: [-up[0], -up[1], -up[2]] });
+  return {
+    position,
+    right: looked.right as Vec3,
+    up: [-looked.down[0], -looked.down[1], -looked.down[2]],
+    forward: looked.forward as Vec3,
+    focal: LENS(p) * short,
+  };
 };
+
+// El lente (px): con él se sabe dónde queda la ventana al girar la cabeza
+export const swarmFocal = (p: number, width: number, height: number) => LENS(p) * Math.min(width, height);
 
 const normalize = ([x, y, z]: Vec3): Vec3 => {
   const length = Math.hypot(x, y, z) || 1;
@@ -278,16 +293,18 @@ const DUST = Array.from({ length: 7 }, (_, ring) => {
   };
 });
 
-// La ola despliega el anillo A: por delante del cruce está plegado y la ola
-// lo recorre hasta cerrarse por detrás
+// La ola despliega el anillo A: por delante del cruce está plegado. La ola
+// nos alcanza, avanza un rato justo delante nuestro (las placas se abren y
+// destellan a nuestro paso) y luego se adelanta y cierra el cinturón
 const FOLD_FROM = 0.2;
 const FOLD_TO = Math.PI * 2 - 0.35;
 const WAVE_WIDTH = 0.3;
 const waveFront = keyed([
   [0.148, FOLD_FROM - WAVE_WIDTH],
-  [0.172, 0.82],
-  [0.192, 2.6],
-  [0.212, FOLD_TO + WAVE_WIDTH],
+  [0.16, 0.9],
+  [0.188, 1.62],
+  [0.2, 3.4],
+  [0.214, FOLD_TO + WAVE_WIDTH],
 ]);
 
 /* ---------------- El cielo y la estrella ---------------- */
@@ -889,11 +906,13 @@ export const drawSwarm = (
   drawLayer(smallFront);
   while (index < plates.length) drawPlate(plates[index++]);
 
-  // La ventana se recorta al final, borrando lo que quedó encima
+  // La ventana se recorta al final, borrando lo que quedó encima. Está en
+  // la estrella, donde mira la cámara: la cabeza del visitante la corre
+  const [windowX, windowY] = lookShift(focal);
   if (opening > 0.5) {
     context.globalCompositeOperation = 'destination-out';
     context.beginPath();
-    context.arc(cx, cy, opening, 0, Math.PI * 2);
+    context.arc(cx + windowX, cy + windowY, opening, 0, Math.PI * 2);
     context.fill();
     context.globalCompositeOperation = 'source-over';
   }
@@ -903,7 +922,7 @@ export const drawSwarm = (
   if (opening > 0.5 && ring > 0) {
     context.globalCompositeOperation = 'lighter';
     context.beginPath();
-    context.arc(cx, cy, opening, 0, Math.PI * 2);
+    context.arc(cx + windowX, cy + windowY, opening, 0, Math.PI * 2);
     context.strokeStyle = `rgba(255, 190, 110, ${(0.18 * ring).toFixed(3)})`;
     context.lineWidth = 12;
     context.stroke();

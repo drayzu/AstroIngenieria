@@ -4,7 +4,8 @@ import { translate } from '../../i18n/messages';
 import { CosmicLab, LAB_TOOLS, holeAcceleration, type LabState, type LabCommand } from './CosmicLab';
 import { CosmicLabPanel } from './CosmicLabPanel';
 import { CursorConstellationLayer } from './CursorConstellationLayer';
-import { skyDrift } from './roomShared';
+import { skyCovers, skyDrift } from './roomShared';
+import { lookShift, lookWarp, readLook } from './lookAround';
 import {
   PlaygroundArcade, PLAYGROUND_WORD, PLAYGROUND_LETTER_HP, PLAYGROUND_RAPID_LETTER_HP,
   PLAYGROUND_BASE_DAMAGE, PLAYGROUND_RAPID_DAMAGE, PLAYGROUND_RAPID_FIRE_INTERVAL,
@@ -302,6 +303,11 @@ const TINTS = [
   [201, 168, 106],
   [143, 208, 255],
 ];
+
+/* Mirar alrededor: el lente del cielo (respecto al lado corto, el mismo de
+   casi todos los viajes) y cuánto más se corre una estrella cercana */
+const SKY_FOCAL = 0.62;
+const NEAR_PARALLAX = 0.3;
 
 type RGB = [number, number, number];
 
@@ -655,6 +661,8 @@ export const StarfieldCanvas = ({
     let labFps = 60;
     let lastFrameNow = 0;
     let raf = 0;
+    // Un viaje opaco tapa todo el cielo: se deja de dibujar hasta que se retire
+    let skyResting = false;
     let time = 0;
     // Paso de simulación real (limitado): en equipos lentos los relojes y
     // fases avanzan a tiempo real en vez de ir a camara lenta.
@@ -791,6 +799,8 @@ export const StarfieldCanvas = ({
     const trailCtx = trailRef.current?.getContext('2d') ?? null;
 
     const mouse = { x: -9999, y: -9999, sx: -9999, sy: -9999 };
+    // Punto girado por la mirada, reutilizado en cada estrella
+    const lookPoint = [0, 0, 0];
 
     const notifyPlaygroundProgress = () => {
       nextProgressAt = performance.now() + 100;
@@ -2452,6 +2462,21 @@ export const StarfieldCanvas = ({
 
     const frame = () => {
       if (!running) return;
+      // Bajo el lienzo opaco de un viaje nadie ve el cielo: no se dibuja, y
+      // su raster deja la GPU libre para el viaje. Al volver, sin dt gigante
+      if (skyCovers.size && !sandboxActive) {
+        if (!skyResting) {
+          skyResting = true;
+          fxCtx?.clearRect(0, 0, width, height);
+          trailCtx?.clearRect(0, 0, width, height);
+        }
+        scrollVel *= 0.92;
+        warpBoost *= 0.93;
+        lastFrameNow = 0;
+        raf = requestAnimationFrame(frame);
+        return;
+      }
+      skyResting = false;
       rectCache.clear();
       const nowMs = performance.now();
       const cursorDt = lastFrameNow > 0 ? Math.max(0, (nowMs - lastFrameNow) / 1000) : 1 / 60;
@@ -2535,14 +2560,22 @@ export const StarfieldCanvas = ({
 
       mouse.sx += (mouse.x - mouse.sx) * 0.055;
       mouse.sy += (mouse.y - mouse.sy) * 0.055;
-      const parX = mouse.sx > -999 ? (mouse.sx / width - 0.5) * 2 : 0;
-      const parY = mouse.sy > -999 ? (mouse.sy / height - 0.5) * 2 : 0;
 
       const isPlayground = playgroundSceneRef.current === 'active';
       const isArriving = playgroundSceneRef.current === 'arriving';
       const isDeparting = playgroundSceneRef.current === 'departing';
       const isSceneTransition = isArriving || isDeparting;
       const hasPlaygroundScene = isPlayground || isSceneTransition;
+      // En el juego las estrellas siguen un poco al puntero; en el museo manda
+      // la mirada del visitante (lookAround), que gira el cielo como una cámara
+      const parX = hasPlaygroundScene && mouse.sx > -999 ? (mouse.sx / width - 0.5) * 2 : 0;
+      const parY = hasPlaygroundScene && mouse.sy > -999 ? (mouse.sy / height - 0.5) * 2 : 0;
+      const look = readLook();
+      const looking = look.yaw !== 0 || look.pitch !== 0;
+      // El mismo lente que los viajes de los portales: su cielo y el de la
+      // página giran juntos
+      const skyFocal = SKY_FOCAL * Math.min(width, height);
+      const [lookX, lookY] = lookShift(skyFocal, look);
       const sceneProgress = isArriving
         ? smoothstep(
             (scriptedElapsedMs - PLAYGROUND_ARRIVAL_START_MS) /
@@ -2749,8 +2782,16 @@ export const StarfieldCanvas = ({
           star.y += sx * sin + sy * cos - sy;
         }
 
-        const bx = wrapSpan(star.x - camX, spanW) - 80;
-        const by = wrapSpan(star.y - camY, spanH) - 80;
+        let bx = wrapSpan(star.x - camX, spanW) - 80;
+        let by = wrapSpan(star.y - camY, spanH) - 80;
+        // Mirar alrededor: el cielo lejano gira como en una cámara real (los
+        // bordes se mueven más que el centro) y las estrellas cercanas se
+        // corren un poco más, porque el ojo va por delante del cuello
+        if (looking) {
+          lookWarp(bx, by, width / 2, height / 2, skyFocal, lookPoint, look);
+          bx = lookPoint[0] + lookX * star.z * NEAR_PARALLAX;
+          by = lookPoint[1] + lookY * star.z * NEAR_PARALLAX;
+        }
 
         // Gravedad sutil del cursor: las estrellas cercanas se inclinan hacia él.
         // Usa la posición REAL del puntero (sin suavizar) para que el halo
@@ -2997,7 +3038,9 @@ export const StarfieldCanvas = ({
         while (ambient.length < wantedAmbient) {
           spawnAmbient(width + 60 + Math.random() * 120);
         }
-        const heroBottom = heroH - (scrollRef.current?.scrollTop ?? 0);
+        // El scroll de su último evento: leer scrollTop en cada cuadro obligaba
+        // a recalcular estilos a mitad del cuadro
+        const heroBottom = heroH - lastScroll;
         // Parallax profundo: las ambientales siguen la cámara al 35% (cielo
         // lejano), cada una dibujada desde su instancia envuelta más cercana
         // al centro para que la costura toroidal nunca parta una figura
@@ -3014,8 +3057,13 @@ export const StarfieldCanvas = ({
             : Math.max(0, Math.min(1, (c.y - heroBottom) / 140));
           const fade = Math.min(1, age / 2.2) * Math.min(1, (c.dur - age) / 2.6) * heroFade;
           if (fade <= 0.01) continue;
-          const rawAnchorX = wrapNearest(c.x - camFX, ambSpanW, width / 2);
-          const rawAnchorY = wrapNearest(c.y - camFY, ambSpanH, height / 2);
+          let rawAnchorX = wrapNearest(c.x - camFX, ambSpanW, width / 2);
+          let rawAnchorY = wrapNearest(c.y - camFY, ambSpanH, height / 2);
+          if (looking) {
+            lookWarp(rawAnchorX, rawAnchorY, width / 2, height / 2, skyFocal, lookPoint, look);
+            rawAnchorX = lookPoint[0];
+            rawAnchorY = lookPoint[1];
+          }
           const anchorX = width / 2 + (rawAnchorX - width / 2) * sceneDepthScale;
           const anchorY = height / 2 + (rawAnchorY - height / 2) * sceneDepthScale;
           // Eco magnético: el cursor aviva ligeramente la constelación cercana

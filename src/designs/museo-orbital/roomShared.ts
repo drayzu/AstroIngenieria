@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
+import { onLook, readLook } from './lookAround';
 
 /* Piezas comunes de las salas: cada capítulo se recorre a su manera, pero
    todas comparten el mismo bucle (solo corre con la sala a la vista y
@@ -31,6 +32,10 @@ export const toRoman = (value: number) => {
    mueve suma el ángulo (rad, horario) y el cielo lo consume en su cuadro.
    depth 0 gira todo igual (la cámara rueda); 1, lo lejano gira menos */
 export const skyDrift = { lateral: 0, gain: 1, spin: { x: 0, y: 0, angle: 0, depth: 0 } };
+// Viajes cuyo lienzo opaco tapa ahora toda la pantalla: mientras haya alguno,
+// el cielo de la página no se dibuja (nadie lo ve y su raster compite con el
+// del viaje)
+export const skyCovers = new Set<object>();
 export const wallGain = new WeakMap<Element, number>();
 
 export interface RoomFrame {
@@ -159,6 +164,74 @@ export const useRoomLoop = (
 
   // Para volver a dibujar tras medir de nuevo (cambio de tamaño)
   return useCallback(() => refreshRef.current(), []);
+};
+
+/* Mirar alrededor en una sala: el escenario se ladea un poco hacia donde
+   mira el visitante, como la pared que uno tiene enfrente cuando gira la
+   cabeza (el cielo de atrás se corre más). Solo una transformación, en el
+   compositor, y solo mientras la sala está a la vista y la mirada se mueve.
+   El escenario lleva will-change: transform en su CSS: así no cambia de
+   capa al empezar o terminar de mirar.
+
+   `pivot` da el punto de giro dentro del escenario (px desde su borde de
+   arriba) para las salas que no están fijas en pantalla: el centro de la
+   pantalla. Devuelve con qué volver a ubicar el giro cuando cambia el
+   scroll (lo llama el bucle de la sala) */
+// Qué parte del giro de cabeza se ve en la sala y su perspectiva
+const ROOM_TURN = 0.5;
+const ROOM_PERSPECTIVE = 1400;
+
+export const useRoomLook = (
+  sectionRef: RefObject<HTMLElement | null>,
+  stageRef: RefObject<HTMLElement | null>,
+  pivot?: () => number,
+) => {
+  const pivotRef = useRef(pivot);
+  const applyRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    pivotRef.current = pivot;
+  });
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    const stage = stageRef.current;
+    if (!section || !stage) return;
+    let inView = false;
+    let last = '';
+    const apply = () => {
+      const { yaw, pitch } = readLook();
+      let value = '';
+      if (inView && (yaw || pitch)) {
+        const turn = `perspective(${ROOM_PERSPECTIVE}px) rotateX(${((pitch * ROOM_TURN * 180) / Math.PI).toFixed(3)}deg) rotateY(${((yaw * ROOM_TURN * 180) / Math.PI).toFixed(3)}deg)`;
+        const at = pivotRef.current?.();
+        // Aún sin medir el centro de la pantalla en la sala: espera al bucle
+        if (at !== undefined && Number.isNaN(at)) return;
+        value = at === undefined ? turn : `translate3d(0, ${at.toFixed(1)}px, 0) ${turn} translate3d(0, ${(-at).toFixed(1)}px, 0)`;
+      }
+      if (value === last) return;
+      last = value;
+      stage.style.transform = value;
+    };
+    applyRef.current = apply;
+    // Con un punto de giro propio, las transformaciones parten del borde de
+    // arriba del escenario (no de su centro, que puede quedar muy lejos)
+    if (pivotRef.current) stage.style.transformOrigin = '50% 0';
+    const observer = new IntersectionObserver(([entry]) => {
+      inView = Boolean(entry?.isIntersecting);
+      apply();
+    });
+    observer.observe(section);
+    const off = onLook(apply);
+    return () => {
+      off();
+      observer.disconnect();
+      applyRef.current = () => {};
+      stage.style.transform = '';
+      stage.style.transformOrigin = '';
+    };
+  }, [sectionRef, stageRef]);
+
+  return useCallback(() => applyRef.current(), []);
 };
 
 /* Posición de un elemento dentro de otro sin contar transformaciones */

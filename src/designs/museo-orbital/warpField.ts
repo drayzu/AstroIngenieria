@@ -3,7 +3,12 @@
    de un worker (OffscreenCanvas) que en el hilo principal. El worker es la
    vía normal: así el hiperespacio sigue fluido aunque la página se atasque
    al saltar (medir salas, montar el portal de destino, decodificar
-   imágenes). */
+   imágenes). Con el índice abierto, el mismo lienzo dibuja el mapa
+   estelar: elegir un capítulo es zambullirse en su estrella y seguir de
+   largo en el hiperespacio, sin corte. */
+
+import { createMapScene, type MapFrame, type MapMessage } from './starMap';
+import { createMapRenderer, type GlProgram, type MapLabel, type MapRenderer } from './starMapRender';
 
 export type Rgb = [number, number, number];
 
@@ -15,6 +20,9 @@ export type WarpPlan = {
   direction: 1 | -1;
   from: Rgb;
   to: Rgb;
+  // Desde el mapa estelar: índice de la estrella en la que se zambulle la
+  // cámara (el velo ya está cerrado y el túnel nace de esa estrella)
+  map?: number;
 };
 
 export type WarpFrame = {
@@ -28,6 +36,8 @@ export type WarpFrame = {
   glow: number;
   flash: number;
   flashRadius: number;
+  // Punto de fuga (px CSS desde el centro, y hacia abajo): la estrella elegida
+  center: [number, number];
 };
 
 export const epochNow = () => performance.timeOrigin + performance.now();
@@ -74,15 +84,17 @@ export const createWarpClock = () => {
     const t = now - plan.t0;
     const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
     last = now;
+    const fromMap = (plan.map ?? -1) >= 0;
 
     // Partida: primero puntos, luego estelas que se alargan; los bordes se
     // oscurecen antes que el centro y el velo termina de cerrarse justo
-    // antes del salto real
+    // antes del salto real. Desde el mapa el velo ya está cerrado: las
+    // estelas asoman cuando la cámara ya va lanzada hacia la estrella
     let speed = VMAX * easeIn(span(t, 0, departMs));
-    let stars = smooth(span(t, 0, 160));
-    let veil = easeIn(span(t, 40, departMs - 30));
-    let vignette = smooth(span(t, 0, 300));
-    let glow = 0.75 * easeOut(span(t, 180, 700));
+    let stars = fromMap ? smooth(span(t, departMs * 0.28, departMs * 0.9)) : smooth(span(t, 0, 160));
+    let veil = fromMap ? 1 : easeIn(span(t, 40, departMs - 30));
+    let vignette = fromMap ? 1 : smooth(span(t, 0, 300));
+    let glow = 0.75 * easeOut(fromMap ? span(t, departMs * 0.42, departMs + 320) : span(t, 180, 700));
     let flash = 0;
     let flashRadius = 0.35;
 
@@ -126,6 +138,7 @@ export const createWarpClock = () => {
       glow,
       flash,
       flashRadius,
+      center: [0, 0],
     };
   };
 
@@ -135,7 +148,8 @@ export const createWarpClock = () => {
 /* ---------------- Render ---------------- */
 
 /* Fondo de pantalla completa: el velo (con alfa, tapa la página), la visión
-   de túnel en los bordes y, sumando luz, el brillo del destino y el destello */
+   de túnel en los bordes y, sumando luz, el brillo del destino y el destello.
+   Con el mapa abierto suma además un resplandor tenue detrás de la galaxia */
 const SKY_VERTEX = /* glsl */ `
 attribute vec2 aCorner;
 void main() {
@@ -146,14 +160,18 @@ void main() {
 const SKY_FRAGMENT = /* glsl */ `
 precision mediump float;
 uniform vec2 uViewport;
+uniform vec2 uCenter;
 uniform vec3 uTint;
 uniform float uVeil;
 uniform float uVignette;
 uniform float uGlow;
 uniform float uFlash;
 uniform float uFlashRadius;
+uniform float uHaze;
+uniform vec2 uHazeCenter;
+uniform vec3 uHazeColor;
 void main() {
-  vec2 p = (gl_FragCoord.xy - 0.5 * uViewport) / uViewport.y;
+  vec2 p = (gl_FragCoord.xy - 0.5 * uViewport - uCenter) / uViewport.y;
   float r2 = dot(p, p);
   vec2 q = gl_FragCoord.xy / uViewport * 2.0 - 1.0;
   float edge = smoothstep(0.3, 1.3, length(q));
@@ -162,6 +180,9 @@ void main() {
   color += uTint * (exp(-r2 / 0.03) * 0.5 + exp(-r2 / 0.2) * 0.16) * uGlow;
   float f2 = r2 / (uFlashRadius * uFlashRadius);
   color += mix(uTint, vec3(1.0, 0.98, 0.94), exp(-f2 * 26.0)) * exp(-f2 * 4.0) * uFlash;
+  vec2 h = (gl_FragCoord.xy - 0.5 * uViewport - uHazeCenter) / uViewport.y;
+  float h2 = dot(h, h);
+  color += uHazeColor * (exp(-h2 / 0.045) * 0.055 + exp(-h2 / 0.3) * 0.04) * uHaze;
   // Tramado para que los degradados no formen escalones
   float noise = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
   color += (noise - 0.5) / 255.0;
@@ -183,6 +204,7 @@ uniform float uRoll;
 uniform float uStars;
 uniform float uFocal;
 uniform vec2 uViewport;
+uniform vec2 uCenter;
 uniform float uDpr;
 uniform vec3 uTint;
 varying vec2 vLocal;
@@ -222,11 +244,12 @@ void main() {
   float near = smoothstep(NEAR, NEAR + 0.35, z);
   vec3 base = mix(vec3(0.62, 0.74, 1.0), vec3(1.0, 0.86, 0.72), aLook.x);
   vColor = mix(base, uTint, aLook.y) * aStar.w * far * near * uStars * 1.8;
-  gl_Position = vec4(p / (0.5 * uViewport), 0.0, 1.0);
+  // El túnel nace del punto de fuga: el centro, o la estrella elegida del mapa
+  gl_Position = vec4((p + uCenter) / (0.5 * uViewport), 0.0, 1.0);
 }
 `;
 
-const STAR_FRAGMENT = /* glsl */ `
+export const STAR_FRAGMENT = /* glsl */ `
 precision mediump float;
 varying vec2 vLocal;
 varying float vLen;
@@ -292,7 +315,7 @@ export const createWarpRenderer = (canvas: Canvas) => {
   }) as WebGLRenderingContext | null;
   if (!gl) return null;
 
-  const link = (vertex: string, fragment: string) => {
+  const link = (vertex: string, fragment: string): GlProgram => {
     const compile = (type: number, source: string) => {
       const shader = gl.createShader(type)!;
       gl.shaderSource(shader, source);
@@ -322,6 +345,14 @@ export const createWarpRenderer = (canvas: Canvas) => {
 
   const sky = link(SKY_VERTEX, SKY_FRAGMENT);
   const star = link(STAR_VERTEX, STAR_FRAGMENT);
+  // El mapa estelar del índice comparte lienzo: de él nace el salto. Si sus
+  // shaders fallan, el salto sigue igual y el índice queda sin mapa
+  let map: MapRenderer | null = null;
+  try {
+    map = createMapRenderer(gl, link, STAR_FRAGMENT);
+  } catch {
+    map = null;
+  }
 
   // Un triángulo que cubre la pantalla
   const skyBuffer = gl.createBuffer();
@@ -369,33 +400,55 @@ export const createWarpRenderer = (canvas: Canvas) => {
     }
   };
 
-  const draw = (frame: WarpFrame) => {
-    const [r, g, b] = frame.tint.map((value) => value / 255);
+  /* Un cuadro del salto, del mapa o de los dos a la vez (la zambullida).
+     Las posiciones llegan en px CSS con y hacia abajo; el lienzo usa sus
+     propios px con y hacia arriba */
+  const draw = (frame: WarpFrame | null, mapFrame: MapFrame | null = null) => {
+    const tint = frame?.tint ?? mapFrame?.hazeColor ?? [255, 255, 255];
+    const [r, g, b] = tint.map((value) => value / 255);
+    const center = frame?.center ?? [0, 0];
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     gl.useProgram(sky.program);
     gl.bindBuffer(gl.ARRAY_BUFFER, skyBuffer);
     for (const [location] of starAttributes) gl.disableVertexAttribArray(location);
+    map?.release();
     gl.enableVertexAttribArray(skyCorner);
     gl.vertexAttribPointer(skyCorner, 2, gl.FLOAT, false, 0, 0);
     gl.uniform2f(sky.uniform('uViewport'), viewport[0], viewport[1]);
+    gl.uniform2f(sky.uniform('uCenter'), center[0] * dpr, -center[1] * dpr);
     gl.uniform3f(sky.uniform('uTint'), r, g, b);
-    gl.uniform1f(sky.uniform('uVeil'), frame.veil);
-    gl.uniform1f(sky.uniform('uVignette'), frame.vignette);
-    gl.uniform1f(sky.uniform('uGlow'), frame.glow);
-    gl.uniform1f(sky.uniform('uFlash'), frame.flash);
-    gl.uniform1f(sky.uniform('uFlashRadius'), frame.flashRadius);
+    gl.uniform1f(sky.uniform('uVeil'), Math.max(frame?.veil ?? 0, mapFrame?.veil ?? 0));
+    gl.uniform1f(sky.uniform('uVignette'), frame?.vignette ?? 0);
+    gl.uniform1f(sky.uniform('uGlow'), frame?.glow ?? 0);
+    gl.uniform1f(sky.uniform('uFlash'), frame?.flash ?? 0);
+    gl.uniform1f(sky.uniform('uFlashRadius'), frame?.flashRadius ?? 1);
+    if (mapFrame) {
+      const [hr, hg, hb] = mapFrame.hazeColor.map((value) => value / 255);
+      gl.uniform1f(sky.uniform('uHaze'), mapFrame.haze);
+      gl.uniform2f(sky.uniform('uHazeCenter'), mapFrame.hazeCenter[0] * dpr, -mapFrame.hazeCenter[1] * dpr);
+      gl.uniform3f(sky.uniform('uHazeColor'), hr, hg, hb);
+    } else {
+      gl.uniform1f(sky.uniform('uHaze'), 0);
+    }
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.disableVertexAttribArray(skyCorner);
 
-    if (frame.stars <= 0.001) return;
+    // El mapa queda detrás de las estelas: el túnel lo atraviesa
+    if (mapFrame && map) {
+      map.draw(mapFrame, viewport, dpr);
+      map.release();
+    }
+
+    if (!frame || frame.stars <= 0.001) return;
     gl.useProgram(star.program);
     gl.bindBuffer(gl.ARRAY_BUFFER, starBuffer);
-    gl.disableVertexAttribArray(skyCorner);
     for (const [location, size, offset] of starAttributes) {
       gl.enableVertexAttribArray(location);
       gl.vertexAttribPointer(location, size, gl.FLOAT, false, FLOATS * 4, offset * 4);
     }
     gl.uniform2f(star.uniform('uViewport'), viewport[0], viewport[1]);
+    gl.uniform2f(star.uniform('uCenter'), center[0] * dpr, -center[1] * dpr);
     gl.uniform1f(star.uniform('uDpr'), dpr);
     gl.uniform3f(star.uniform('uTint'), r, g, b);
     gl.uniform1f(star.uniform('uDist'), frame.dist);
@@ -407,7 +460,12 @@ export const createWarpRenderer = (canvas: Canvas) => {
 
   const clear = () => gl.clear(gl.COLOR_BUFFER_BIT);
 
-  return { resize, draw, clear };
+  const setAtlas: MapRenderer['setAtlas'] = (image, labels, width, height) => {
+    if (map) map.setAtlas(image, labels, width, height);
+    else image?.close();
+  };
+
+  return { resize, draw, clear, setAtlas, hasMap: Boolean(map) };
 };
 
 export type WarpRenderer = NonNullable<ReturnType<typeof createWarpRenderer>>;
@@ -416,14 +474,25 @@ export type WarpRenderer = NonNullable<ReturnType<typeof createWarpRenderer>>;
 
 export type WarpSize = { width: number; height: number; dpr: number };
 
+// Atlas de los rótulos del mapa: lo dibuja el hilo principal con las fuentes del museo
+export type MapLabelsMessage = {
+  type: 'map-labels';
+  image: ImageBitmap | null;
+  labels: MapLabel[];
+  width: number;
+  height: number;
+};
+
 /* Mensajes del hilo principal al dibujante (worker o no) */
 export type WarpMessage =
   | ({ type: 'start'; plan: WarpPlan } & WarpSize)
-  | { type: 'arrive'; at: number };
+  | { type: 'arrive'; at: number }
+  | MapMessage
+  | MapLabelsMessage;
 
 const IDLE_FRAME: WarpFrame = {
   dist: 0, expo: 0, roll: 0, stars: 1, tint: [255, 255, 255],
-  veil: 0, vignette: 0, glow: 0, flash: 0, flashRadius: 1,
+  veil: 0, vignette: 0, glow: 0, flash: 0, flashRadius: 1, center: [0, 0],
 };
 
 export const createWarpLoop = (
@@ -432,37 +501,84 @@ export const createWarpLoop = (
   size: WarpSize,
 ) => {
   const clock = createWarpClock();
+  const scene = createMapScene();
   let running = false;
 
   // Un cuadro de prueba al preparar: el driver compila de verdad los
-  // shaders en el primer dibujo, y eso no debe caer en el primer salto
+  // shaders en el primer dibujo, y eso no debe caer en el primer salto ni en
+  // la primera apertura del mapa (rótulos incluidos, con un atlas de 1 px)
   renderer.resize(size.width, size.height, size.dpr);
   renderer.draw({ ...IDLE_FRAME, stars: 0.0001 });
   renderer.draw(IDLE_FRAME);
+  const warm = createMapScene();
+  warm.handle({
+    type: 'map-open',
+    at: 0,
+    colors: Array.from({ length: 11 }, (): Rgb => [255, 255, 255]),
+    here: 1,
+    reduced: true,
+    view: { ...size, region: { x: 0, y: 0, w: size.width, h: size.height } },
+  });
+  const warmFrame = warm.sample(1000);
+  if (warmFrame) {
+    renderer.setAtlas(null, [{ index: 1, kind: 0, ox: 0, oy: 0, w: 1, h: 1, u: 0, v: 0, extent: 1 }], 1, 1);
+    renderer.draw({ ...IDLE_FRAME, stars: 0.0001 }, {
+      ...warmFrame, alpha: 0.003, lines: 0.003, rings: 0.003, dust: 0.003, labels: 0.003, veil: 0, haze: 0,
+    });
+    renderer.setAtlas(null, [], 1, 1);
+  }
   renderer.clear();
 
   const tick = () => {
-    const frame = clock.sample(epochNow());
-    if (!frame) {
+    const now = epochNow();
+    const frame = clock.sample(now);
+    const mapFrame = scene.sample(now);
+    if (!frame && !mapFrame) {
       running = false;
       renderer.clear();
       return;
     }
-    renderer.draw(frame);
+    // La zambullida lleva el punto de fuga del túnel desde la estrella al centro
+    if (frame && mapFrame?.vanish) frame.center = mapFrame.vanish;
+    renderer.draw(frame, mapFrame);
+    // Con movimiento reducido el mapa queda quieto: el último cuadro se queda en pantalla
+    if (!frame && scene.isStill(now)) {
+      running = false;
+      return;
+    }
     schedule(tick);
   };
 
+  const wake = () => {
+    if (running) return;
+    running = true;
+    tick();
+  };
+
   const handle = (message: WarpMessage) => {
-    if (message.type === 'start') {
-      renderer.resize(message.width, message.height, message.dpr);
-      clock.start(message.plan);
-      if (!running) {
-        running = true;
-        tick();
+    switch (message.type) {
+      case 'start': {
+        const { plan } = message;
+        renderer.resize(message.width, message.height, message.dpr);
+        clock.start(plan);
+        if (plan.map !== undefined && plan.map >= 0) scene.dive(plan.map, plan.t0, plan.departMs);
+        break;
       }
-    } else {
-      clock.arrive(message.at);
+      case 'arrive':
+        clock.arrive(message.at);
+        return;
+      case 'map-labels':
+        renderer.setAtlas(message.image, message.labels, message.width, message.height);
+        break;
+      case 'map-open':
+      case 'map-view':
+        renderer.resize(message.view.width, message.view.height, message.view.dpr);
+        scene.handle(message);
+        break;
+      default:
+        scene.handle(message);
     }
+    wake();
   };
 
   return { handle };

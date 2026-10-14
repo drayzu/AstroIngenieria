@@ -8,6 +8,8 @@ import {
   type WarpMessage,
   type WarpSize,
 } from './warpField';
+import { MAP_CLOSE_MS, createMapScene, type MapMessage, type MapRegion } from './starMap';
+import { drawMapLabels, type MapLabelEntry } from './starMapLabels';
 import './chapterWarp.css';
 
 /* Salto al hiperespacio entre capítulos. Toda la navegación del museo (riel,
@@ -20,9 +22,14 @@ import './chapterWarp.css';
    rótulo de llegada son animaciones de opacidad y transformación que corren
    en el compositor. Así el salto no se traba aunque montar el capítulo de
    destino cueste. La capa vive fuera de .mo-root y sus nodos se reutilizan:
-   los observadores del museo (cielo, constelaciones) no se enteran. */
+   los observadores del museo (cielo, constelaciones) no se enteran.
+
+   El índice usa el mismo lienzo como mapa estelar: al elegir un capítulo la
+   cámara se zambulle en su estrella y el salto sigue desde ahí. */
 
 const DEPART_MS = 440;
+// Desde el mapa la partida es la zambullida: un poco más larga
+const MAP_DEPART_MS = 580;
 // Cada capítulo que cruzamos alarga un poco el tránsito
 const cruiseFor = (crossed: number) => Math.min(950, 330 + 85 * crossed);
 // Por debajo de esta distancia (en pantallas) basta el desplazamiento suave
@@ -49,9 +56,12 @@ type Overlay = {
   arrival: HTMLDivElement;
   kicker: HTMLSpanElement;
   title: HTMLElement;
-  // El dibujante está listo (worker o hilo principal)
+  // El dibujante está listo (worker o hilo principal) y sabe dibujar el mapa
   ready: boolean;
-  send: (message: WarpMessage) => void;
+  map: boolean;
+  send: (message: WarpMessage, transfer?: Transferable[]) => void;
+  // Quienes esperan a que el dibujante esté listo
+  waiting: Set<() => void>;
 };
 
 let overlay: Overlay | null = null;
@@ -111,7 +121,19 @@ const createOverlay = (): Overlay => {
   const title = make('strong', 'mo-warp-title', arrival);
   document.body.appendChild(root);
 
-  const state: Overlay = { root, veil, markers, arrival, kicker, title, ready: false, send: () => {} };
+  const state: Overlay = {
+    root, veil, markers, arrival, kicker, title, ready: false, map: false, send: () => {}, waiting: new Set(),
+  };
+  const becameReady = () => {
+    state.ready = true;
+    if (pendingLabels && state.map) {
+      syncLabels(state, pendingLabels);
+      pendingLabels = null;
+    }
+    const waiting = [...state.waiting];
+    state.waiting.clear();
+    waiting.forEach((callback) => callback());
+  };
 
   // Respaldo sin worker: el mismo dibujante en el hilo principal
   const onMainThread = () => {
@@ -125,7 +147,8 @@ const createOverlay = (): Overlay => {
       if (!renderer) return;
       const loop = createWarpLoop(renderer, (callback) => requestAnimationFrame(callback), viewportSize());
       state.send = loop.handle;
-      state.ready = true;
+      state.map = renderer.hasMap;
+      becameReady();
     } catch {
       // Sin WebGL queda el velo del DOM
     }
@@ -142,10 +165,11 @@ const createOverlay = (): Overlay => {
       };
       worker.onerror = fail;
       worker.onmessage = (event: MessageEvent) => {
-        const type = (event.data as { type?: string })?.type;
+        const { type, map } = (event.data ?? {}) as { type?: string; map?: boolean };
         if (type === 'ready') {
-          state.ready = true;
-          state.send = (message) => worker.postMessage(message);
+          state.send = (message, transfer) => worker.postMessage(message, transfer ?? []);
+          state.map = Boolean(map);
+          becameReady();
         } else if (type === 'failed') {
           fail();
         }
@@ -176,10 +200,17 @@ const prefetch = (url: string | undefined, priority: 'high' | 'low') => {
   image.src = url;
 };
 
+// Última posición conocida del puntero: el cursor del índice nace ahí
+export const lastPointer = { x: -1, y: -1 };
+
 /* Quien apunta a un capítulo en la navegación (riel, índice, menú) está
    por saltar allí: su imagen se pide ya. Solo esa: pedirlas todas a la vez
    compite con el propio salto */
 const onIntent = (event: Event) => {
+  if (event instanceof PointerEvent && event.pointerType === 'mouse') {
+    lastPointer.x = event.clientX;
+    lastPointer.y = event.clientY;
+  }
   if (!(event.target instanceof Element)) return;
   const id = event.target.closest<HTMLElement>('[data-warp-target]')?.dataset.warpTarget;
   if (id) prefetch(document.getElementById(id)?.dataset.warpImage, 'high');
@@ -206,6 +237,152 @@ export const prewarmChapterWarp = () => {
     window.clearTimeout(id);
     removeIntent();
   };
+};
+
+/* ---------------- Mapa estelar del índice ---------------- */
+
+export type StarMapPoint = MapLabelEntry & { color: string };
+export type StarMapSetup = {
+  // Portada, capítulos y, al final, vitrina y archivo
+  points: StarMapPoint[];
+  here: number;
+  hereLabel: string;
+  region: MapRegion;
+};
+
+// Copia de la escena en este hilo: dice dónde está cada estrella bajo el puntero
+const mapScene = createMapScene();
+// Abierto y atendiendo al puntero / todavía en pantalla (abierto, cerrándose o en la zambullida)
+let mapOpen = false;
+let mapShown = false;
+let mapGeneration = 0;
+// Cuándo se abrió o empezó a cerrarse (reabrir a mitad del cierre retoma el velo)
+let mapChangedAt = 0;
+let labelsKey = '';
+// Rótulos pedidos antes de que el dibujante estuviera listo
+let pendingLabels: { points: MapLabelEntry[]; hereLabel: string } | null = null;
+
+const sendMap = (state: Overlay, message: MapMessage) => {
+  mapScene.handle(message);
+  state.send(message);
+};
+
+const mapViewFor = (region: MapRegion) => ({ ...viewportSize(), region });
+
+/* Los rótulos se dibujan solo cuando cambian (idioma, títulos, densidad) */
+const syncLabels = (state: Overlay, setup: { points: MapLabelEntry[]; hereLabel: string }) => {
+  const { dpr } = viewportSize();
+  const key = JSON.stringify([setup.points.map((point) => [point.number, point.title]), setup.hereLabel, dpr]);
+  if (key === labelsKey) return;
+  labelsKey = key;
+  void drawMapLabels(setup.points, setup.hereLabel, dpr).then((atlas) => {
+    if (!atlas || key !== labelsKey || overlay !== state) {
+      atlas?.image.close();
+      return;
+    }
+    state.send({ type: 'map-labels', ...atlas }, [atlas.image]);
+  }).catch(() => {
+    labelsKey = '';
+  });
+};
+
+/* Prepara los rótulos en un momento ocioso (cuando el dibujante exista):
+   la primera apertura no paga por dibujar texto */
+export const prepareStarMapLabels = (points: MapLabelEntry[], hereLabel: string) => {
+  if (reducedMotion()) return;
+  pendingLabels = { points, hereLabel };
+  if (overlay?.ready && overlay.map) {
+    syncLabels(overlay, pendingLabels);
+    pendingLabels = null;
+  }
+};
+
+/* Avisa cuando el dibujante esté listo (la primera apertura puede llegar
+   antes del momento ocioso que lo prepara) */
+export const whenStarMapReady = (callback: () => void) => {
+  const state = ensureOverlay();
+  if (state.ready) {
+    callback();
+    return () => {};
+  }
+  state.waiting.add(callback);
+  return () => state.waiting.delete(callback);
+};
+
+/* Abre el mapa detrás del índice; false si todavía no puede dibujarse */
+export const openStarMap = (setup: StarMapSetup) => {
+  if (warping) return false;
+  const state = ensureOverlay();
+  if (!state.ready || !state.map) return false;
+  const now = epochNow();
+  // Si aún se estaba cerrando, la apertura retoma desde donde iba el velo
+  const reopening = mapShown && !mapOpen ? Math.max(0, MAP_CLOSE_MS - (now - mapChangedAt)) : 0;
+  // El rótulo de llegada de un salto reciente se retira con un fundido
+  if (!mapShown) retireArrival(state);
+  mapOpen = true;
+  mapShown = true;
+  mapGeneration += 1;
+  mapChangedAt = now - Math.min(380, reopening);
+  state.root.hidden = false;
+  syncLabels(state, setup);
+  sendMap(state, {
+    type: 'map-open',
+    at: mapChangedAt,
+    colors: setup.points.map((point) => toRgb(point.color)),
+    here: setup.here,
+    reduced: reducedMotion(),
+    view: mapViewFor(setup.region),
+  });
+  return true;
+};
+
+/* La región cambió (ventana redimensionada) o cambiaron los rótulos */
+export const updateStarMap = (setup: StarMapSetup) => {
+  if (!mapOpen || !overlay) return;
+  syncLabels(overlay, setup);
+  sendMap(overlay, { type: 'map-view', view: mapViewFor(setup.region) });
+};
+
+/* Señala una estrella (o ninguna con -1); la imagen de su capítulo se pide ya */
+export const focusStarMap = (index: number, targetId?: string) => {
+  if (!mapOpen || !overlay) return;
+  sendMap(overlay, { type: 'map-focus', index, at: epochNow() });
+  if (targetId) prefetch(document.getElementById(targetId)?.dataset.warpImage, 'high');
+};
+
+/* La estrella más cercana al punto (px CSS) dentro del radio, o -1. La ya
+   señalada se suelta recién a un radio mayor: el borde no parpadea */
+export const hitStarMap = (x: number, y: number, radius: number, current = -1) => {
+  if (!mapOpen) return -1;
+  const now = epochNow();
+  let best = -1;
+  let bestDistance = radius;
+  // La portada no se elige: es solo el punto de partida
+  for (let index = 1; index < mapScene.count; index++) {
+    const at = mapScene.locate(index, now);
+    if (!at) continue;
+    const distance = Math.hypot(at.x - x, at.y - y) * (index === current ? 0.6 : 1);
+    if (distance < bestDistance) {
+      best = index;
+      bestDistance = distance;
+    }
+  }
+  return best;
+};
+
+/* Cierra el mapa sin elegir: la cámara se aleja y el velo se levanta */
+export const closeStarMap = () => {
+  if (!mapOpen || !overlay) return;
+  const state = overlay;
+  mapOpen = false;
+  mapChangedAt = epochNow();
+  const generation = ++mapGeneration;
+  sendMap(state, { type: 'map-close', at: mapChangedAt });
+  window.setTimeout(() => {
+    if (generation !== mapGeneration) return;
+    mapShown = false;
+    if (!warping) state.root.hidden = true;
+  }, MAP_CLOSE_MS + 80);
 };
 
 /* ---------------- Datos del recorrido ---------------- */
@@ -239,13 +416,13 @@ const cancelAll = (state: Overlay) => {
 
 /* Los números de los capítulos que cruzamos pasan como hitos del camino:
    nacen en el punto de fuga y se abren hacia los bordes con perspectiva */
-const launchMarkers = (state: Overlay, crossed: Stop[], direction: 1 | -1, cruiseMs: number) => {
+const launchMarkers = (state: Overlay, crossed: Stop[], direction: 1 | -1, departMs: number, cruiseMs: number) => {
   const shown = crossed.slice(-MARKER_POOL);
   if (!shown.length) return;
   const width = window.innerWidth;
   const height = window.innerHeight;
-  const first = DEPART_MS - 200;
-  const last = Math.max(first, DEPART_MS + cruiseMs - MARKER_MS + 60);
+  const first = departMs - 200;
+  const last = Math.max(first, departMs + cruiseMs - MARKER_MS + 60);
   const spacing = shown.length > 1 ? (last - first) / (shown.length - 1) : 0;
   const far = 7;
   const near = 0.55;
@@ -273,6 +450,16 @@ const launchMarkers = (state: Overlay, crossed: Stop[], direction: 1 | -1, cruis
     if (direction === -1) frames.reverse().forEach((frame, i) => { frame.offset = i / samples; });
     play(marker, frames, { duration: MARKER_MS, delay: first + spacing * index, easing: 'linear' });
   });
+};
+
+const retireArrival = (state: Overlay) => {
+  const opacity = Number(getComputedStyle(state.arrival).opacity) || 0;
+  state.arrival.getAnimations().forEach((animation) => animation.cancel());
+  if (opacity <= 0.01) return;
+  play(state.arrival, [
+    { opacity, transform: 'translate(-50%, -50%) scale(1)' },
+    { opacity: 0, transform: 'translate(-50%, -50%) scale(1.03)' },
+  ], { duration: 260, easing: 'ease-out' });
 };
 
 const showArrival = (state: Overlay, delay: number) => {
@@ -315,19 +502,28 @@ const nextFrames = (count: number, callback: () => void) => {
   else requestAnimationFrame(() => nextFrames(count - 1, callback));
 };
 
-/* Viaja hasta una sección (o hasta la portada con 0) */
-export const warpTo = (target: HTMLElement | 0) => {
+export type WarpOptions = {
+  // Índice de la estrella del mapa estelar desde la que parte el salto
+  fromMap?: number;
+};
+
+/* Viaja hasta una sección (o hasta la portada con 0). Devuelve false si lo
+   ignora porque ya hay un salto en curso */
+export const warpTo = (target: HTMLElement | 0, options: WarpOptions = {}) => {
   const root = document.querySelector<HTMLElement>('.mo-root');
-  if (!root || warping) return;
+  if (!root || warping) return false;
   const top = target === 0 ? 0 : offsetIn(root, target);
   const from = root.scrollTop;
   if (reducedMotion()) {
     jumpScroll(root, top);
-    return;
+    return true;
   }
-  if (Math.abs(top - from) < root.clientHeight * MIN_SCREENS) {
+  // Desde el mapa siempre hay zambullida, aunque el destino quede cerca
+  const mapIndex = options.fromMap ?? -1;
+  const dive = mapIndex >= 0 && mapOpen && Boolean(overlay?.ready);
+  if (!dive && Math.abs(top - from) < root.clientHeight * MIN_SCREENS) {
     smoothTo(root, target);
-    return;
+    return true;
   }
 
   if (target !== 0) prefetch(target.dataset.warpImage, 'high');
@@ -340,6 +536,7 @@ export const warpTo = (target: HTMLElement | 0) => {
     ? stops.filter((stop) => stop.top > from + 1 && stop.top < top - 1)
     : stops.filter((stop) => stop.top < from + 1 && stop.top > top + 1).reverse();
   const cruiseMs = cruiseFor(crossed.length);
+  const departMs = dive ? MAP_DEPART_MS : DEPART_MS;
   const toColor = toRgb(target === 0 ? HERO_COLOR : destination?.color ?? NEUTRAL_COLOR);
   const drawn = state.ready;
 
@@ -353,25 +550,35 @@ export const warpTo = (target: HTMLElement | 0) => {
   state.root.classList.add('is-active');
 
   const t0 = epochNow();
+  if (dive) {
+    // El mapa deja de atender al puntero; su estrella pasa a ser el punto de fuga
+    mapOpen = false;
+    mapGeneration += 1;
+    mapScene.dive(mapIndex, t0, departMs);
+  }
   if (drawn) {
     state.send({
       type: 'start',
       plan: {
         t0,
-        departMs: DEPART_MS,
+        departMs,
         cruiseMs,
         direction,
-        from: toRgb(colorAt(stops, from + root.clientHeight * 0.5)),
+        // Nos zambullimos en el destino: el túnel ya tiene su color
+        from: dive ? toColor : toRgb(colorAt(stops, from + root.clientHeight * 0.5)),
         to: toColor,
+        ...(dive ? { map: mapIndex } : {}),
       },
       ...viewportSize(),
     });
   } else {
     fallbackVeil(state, null);
   }
-  launchMarkers(state, crossed, direction, cruiseMs);
+  launchMarkers(state, crossed, direction, departMs, cruiseMs);
 
   window.setTimeout(() => {
+    // La zambullida terminó: el mapa ya no está en pantalla
+    if (dive) mapShown = false;
     // Con el velo cerrado: el salto real
     snapping = true;
     jumpScroll(root, top);
@@ -405,12 +612,13 @@ export const warpTo = (target: HTMLElement | 0) => {
         window.setTimeout(() => {
           root.removeEventListener('wheel', dismiss);
           root.removeEventListener('touchmove', dismiss);
-          if (!warping) {
+          if (!warping && !mapShown) {
             state.root.hidden = true;
             cancelAll(state);
           }
         }, Math.max(DROP_MS, ARRIVAL_MS + 200));
       }, delay);
     });
-  }, DEPART_MS);
+  }, departMs);
+  return true;
 };
