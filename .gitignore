@@ -32,3 +32,7 @@ deliverables/
 
 # ZCode session artifacts
 .zcode/
+
+# Local scratch scripts and TypeScript build info
+zz-*.mjs
+tsconfig.tsbuildinfo
