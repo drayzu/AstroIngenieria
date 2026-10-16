@@ -4,6 +4,9 @@ import {
   MAP_PLANE,
   MAP_RINGS,
   buildMapLayout,
+  trailPlan,
+  workOrbit,
+  type MapConstellation,
   type MapFrame,
   type Vec3,
 } from './starMap';
@@ -173,14 +176,17 @@ uniform mediump float uAlpha;
 uniform float uCount;
 uniform vec3 uColors[${MAX}];
 uniform vec4 uPoints[${MAX}];
+uniform vec2 uProgress[${MAX}];
 varying vec2 vLocal;
 varying vec4 vState;
 varying vec3 vColor;
 varying float vKind;
 varying float vGrow;
+varying vec2 vProgress;
 void main() {
   int i = int(aPoint.w + 0.5);
   vec4 state = uPoints[i];
+  vProgress = uProgress[i];
   vec4 c = uViewProj * vec4(aPoint.xyz, 1.0);
   if (c.w < 0.06 || state.x * state.w * uAlpha <= 0.002) {
     ${OFF}
@@ -207,6 +213,7 @@ varying vec4 vState;
 varying vec3 vColor;
 varying float vKind;
 varying float vGrow;
+varying vec2 vProgress;
 float stroke(float d, float r) {
   return clamp(1.0 - abs(d - r) / 0.85, 0.0, 1.0);
 }
@@ -229,6 +236,27 @@ void main() {
     // Al florecer el halo se atenúa: llega al brillo del túnel sin pasarlo
     light = exp(-d * d / (2.0 * sigma * sigma)) * (0.3 + 0.32 * focus) / (1.0 + 0.035 * (vGrow - 1.0));
     light += stroke(real, (9.5 + 4.5 * focus) * vGrow) * (0.4 + 0.5 * focus) * min(vGrow, 1.6);
+    // Lo leído del capítulo: un arco que se cierra en sentido horario desde
+    // arriba, sobre una pista apenas visible. Completo, el anillo entero
+    // brilla y al cerrarse suelta una onda
+    float read = vProgress.x;
+    float radius = 15.5 + 3.0 * focus;
+    float ring = stroke(d, radius);
+    float turn = atan(vLocal.x, vLocal.y) / 6.2831853;
+    turn = turn < 0.0 ? turn + 1.0 : turn;
+    // Borde suave del arco: un píxel de largo de arco
+    float edge = 1.0 / (6.2831853 * radius);
+    float arc = read >= 0.999 ? 1.0 : smoothstep(read + edge, read - edge, turn) * step(0.0005, read);
+    float done = smoothstep(0.995, 1.0, read);
+    light += ring * (0.07 + 0.05 * focus) * (1.0 - arc);
+    light += ring * arc * (0.62 + 0.25 * focus + 0.2 * done);
+    light += done * exp(-pow(d - radius, 2.0) / 18.0) * 0.16;
+    float burst = vProgress.y;
+    if (burst > 0.001) {
+      float p = 1.0 - burst;
+      light += stroke(d, radius + 34.0 * p) * burst * burst * 0.9;
+      light += exp(-d * d / 60.0) * burst * 0.5;
+    }
   }
   // Estás aquí: cuatro arcos que giran despacio y un pulso que se abre
   if (here > 0.001) {
@@ -303,6 +331,260 @@ void main() {
   gl_Position = vec4(p / (0.5 * uViewport), 0.0, 1.0);
 }
 `;
+
+/* ---------------- Constelación del visitante ---------------- */
+
+/* Posición de una obra: su capítulo más su lugar en el cúmulo, que gira
+   despacio (más rápido cerca del centro) sobre un disco inclinado */
+const ORBIT = /* glsl */ `
+vec3 orbitPosition(vec4 center, vec4 orbit, float time) {
+  float r = orbit.x;
+  float angle = orbit.y + time * 0.05 * pow(0.12 / r, 1.5);
+  vec3 local = vec3(cos(angle) * r, orbit.z, sin(angle) * r);
+  float c = cos(orbit.w);
+  float s = sin(orbit.w);
+  local = vec3(local.x, local.y * c - local.z * s, local.y * s + local.z * c);
+  return center.xyz + local;
+}
+`;
+
+const WORK_VERTEX = /* glsl */ `
+precision highp float;
+attribute vec2 aCorner;
+attribute vec4 aCenter;
+attribute vec4 aOrbit;
+attribute vec4 aLook;
+uniform mat4 uViewProj;
+uniform vec2 uViewport;
+uniform float uDpr;
+uniform float uAlpha;
+uniform float uTime;
+uniform float uTrail;
+uniform float uTrailClock;
+uniform vec3 uColors[${MAX}];
+uniform vec4 uPoints[${MAX}];
+varying vec2 vLocal;
+varying vec3 vColor;
+varying float vLit;
+varying float vFlash;
+varying float vAge;
+varying float vSpark;
+varying float vFocus;
+${ORBIT}
+void main() {
+  int i = int(aCenter.w + 0.5);
+  vec4 state = uPoints[i];
+  float order = aLook.x;
+  // Encendida cuando el trazo pasa por ella; las no leídas quedan como polvo
+  float lit = order < -0.5 ? 0.0 : clamp((uTrail - order + 0.12) / 0.3, 0.0, 1.0);
+  float age = aLook.z < 0.0 ? -1.0 : uTrailClock - aLook.z;
+  float flash = age >= 0.0 && age < 2000.0 ? 1.0 - age / 2000.0 : 0.0;
+  float fade = state.x * state.w * uAlpha;
+  vec4 c = uViewProj * vec4(orbitPosition(aCenter, aOrbit, uTime), 1.0);
+  if (c.w < 0.06 || fade <= 0.002) {
+    ${OFF}
+  }
+  // Lo lejano se apaga un poco, como el resto del mapa
+  fade *= mix(1.15, 0.5, smoothstep(5.0, 11.5, c.w));
+  float reach = lit > 0.0 ? (flash > 0.0 ? 46.0 : 13.0) : 3.5;
+  vec2 s = c.xy / c.w * 0.5 * uViewport;
+  vLocal = aCorner * reach;
+  gl_Position = vec4((s + aCorner * reach * uDpr) / (0.5 * uViewport), 0.0, 1.0);
+  // Centelleo lento y desfasado: la constelación respira
+  float twinkle = 0.86 + 0.14 * sin(uTime * 1.6 + aLook.y);
+  vColor = uColors[i] * fade;
+  vLit = lit * twinkle;
+  vFlash = flash;
+  vAge = age;
+  vSpark = aLook.w;
+  vFocus = state.y;
+}
+`;
+
+const WORK_FRAGMENT = /* glsl */ `
+precision mediump float;
+varying vec2 vLocal;
+varying vec3 vColor;
+varying float vLit;
+varying float vFlash;
+varying float vAge;
+varying float vSpark;
+varying float vFocus;
+float stroke(float d, float r) {
+  return clamp(1.0 - abs(d - r) / 0.9, 0.0, 1.0);
+}
+void main() {
+  float d = length(vLocal);
+  vec3 tint = vColor;
+  // Polvo: el lugar de una obra aún no leída, más visible al señalar su capítulo
+  float dust = exp(-d * d / 1.5) * (0.42 + 0.55 * vFocus) * (1.0 - vLit);
+  vec3 color = mix(vec3(0.7, 0.75, 0.86) * length(tint) * 0.58, tint, 0.45) * dust;
+  if (vLit > 0.001) {
+    float core = exp(-d * d / 2.6);
+    float halo = exp(-d * d / 48.0) * (0.5 + 0.35 * vFocus);
+    // Cuatro rayos finos, apenas más largos en las estrellas recientes
+    float len = 4.5 + 3.0 * vSpark + 2.5 * vFocus + 10.0 * vFlash;
+    vec2 a = abs(vLocal);
+    float spikes = (exp(-a.y * 1.6) * exp(-a.x / len) + exp(-a.x * 1.6) * exp(-a.y / len)) * 0.42;
+    color += (mix(tint, vec3(length(tint) * 0.58), 0.6) * core * 1.45 + tint * (halo + spikes)) * vLit;
+  }
+  if (vFlash > 0.001) {
+    // Nacimiento: un destello, un anillo que se abre y el halo que se calma
+    float p = clamp(vAge / 1300.0, 0.0, 1.0);
+    float ring = stroke(d, 5.0 + 36.0 * (1.0 - (1.0 - p) * (1.0 - p))) * (1.0 - p) * (1.0 - p);
+    float bloom = exp(-d * d / (30.0 + 150.0 * vFlash)) * vFlash * vFlash * 1.05;
+    color += (tint * (ring * 0.9 + bloom) + vec3(length(tint) * 0.58) * exp(-d * d / 6.0) * vFlash) * step(0.0, vAge);
+  }
+  if (dot(color, color) < 1e-6) discard;
+  gl_FragColor = vec4(color, 0.0);
+}
+`;
+
+const TRAIL_VERTEX = /* glsl */ `
+precision highp float;
+attribute vec2 aCorner;
+attribute vec4 aCenterA;
+attribute vec4 aOrbitA;
+attribute vec4 aCenterB;
+attribute vec4 aOrbitB;
+attribute float aSegment;
+uniform mat4 uViewProj;
+uniform vec2 uViewport;
+uniform float uDpr;
+uniform float uAlpha;
+uniform float uTime;
+uniform vec3 uColors[${MAX}];
+uniform vec4 uPoints[${MAX}];
+varying float vSide;
+varying float vAlong;
+varying float vLen;
+varying vec3 vColorA;
+varying vec3 vColorB;
+varying float vSegment;
+${ORBIT}
+void main() {
+  int ia = int(aCenterA.w + 0.5);
+  int ib = int(aCenterB.w + 0.5);
+  vec4 sa_ = uPoints[ia];
+  vec4 sb_ = uPoints[ib];
+  float fade = min(sa_.x, sb_.x) * min(sa_.w, sb_.w) * uAlpha;
+  vec4 ca = uViewProj * vec4(orbitPosition(aCenterA, aOrbitA, uTime), 1.0);
+  vec4 cb = uViewProj * vec4(orbitPosition(aCenterB, aOrbitB, uTime), 1.0);
+  if (min(ca.w, cb.w) < 0.12 || fade <= 0.002) {
+    ${OFF}
+  }
+  vec2 pa = ca.xy / ca.w * 0.5 * uViewport;
+  vec2 pb = cb.xy / cb.w * 0.5 * uViewport;
+  vec2 d = pb - pa;
+  float len = length(d);
+  vec2 dir = len > 1e-4 ? d / len : vec2(1.0, 0.0);
+  vec2 n = vec2(-dir.y, dir.x);
+  // Ancho para el brillo de la punta; la línea en sí es un hilo
+  float reach = 7.0 * uDpr;
+  // Las puntas se acortan para no tapar las estrellas que une
+  float gap = min(5.0 * uDpr, len * 0.3);
+  vec2 p = mix(pa + dir * gap, pb - dir * gap, aCorner.x) + n * aCorner.y * reach;
+  gl_Position = vec4(p / (0.5 * uViewport), 0.0, 1.0);
+  float depth = mix(ca.w, cb.w, aCorner.x);
+  fade *= mix(1.1, 0.5, smoothstep(5.0, 11.5, depth));
+  vSide = aCorner.y * reach / uDpr;
+  vAlong = aCorner.x;
+  vLen = max(1.0, len / uDpr - 2.0 * gap / uDpr);
+  vColorA = uColors[ia] * fade;
+  vColorB = uColors[ib] * fade;
+  vSegment = aSegment;
+}
+`;
+
+const TRAIL_FRAGMENT = /* glsl */ `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform float uTrail;
+uniform float uTrailCount;
+uniform float uTime;
+uniform float uDpr;
+varying float vSide;
+varying float vAlong;
+varying float vLen;
+varying vec3 vColorA;
+varying vec3 vColorB;
+varying float vSegment;
+void main() {
+  // El tramo k va de la estrella k a la k + 1: se dibuja hasta donde llegó el trazo
+  float drawn = clamp(uTrail - vSegment, 0.0, 1.0);
+  if (vAlong > drawn) discard;
+  float side = abs(vSide);
+  float line = clamp(0.55 + 0.5 / uDpr - side, 0.0, 1.0);
+  vec3 tint = mix(vColorA, vColorB, vAlong);
+  vec3 light = mix(tint, vec3(length(tint) * 0.58), 0.25) * line * 0.38;
+  // La punta del trazo, mientras avanza: una brasa con su resplandor
+  if (drawn < 1.0) {
+    float behind = (drawn - vAlong) * vLen;
+    float tip = exp(-behind * behind / 70.0) * exp(-side * side / 5.0);
+    light += (tint + vec3(length(tint) * 0.4)) * tip * 1.3;
+    light += tint * line * exp(-behind / 26.0) * 0.6;
+  }
+  // Ya trazada, una luz recorre la constelación de la primera a la última
+  float done = smoothstep(uTrailCount - 1.0, uTrailCount - 0.7, uTrail);
+  if (done > 0.0 && uTrailCount > 1.5) {
+    float period = clamp(3.0 + 0.45 * uTrailCount, 4.0, 14.0);
+    float head = fract(uTime / period) * (uTrailCount + 1.0) - 1.0;
+    float gap = (vSegment + vAlong) - head;
+    float pulse = exp(-gap * gap / 0.05) * done;
+    light += mix(tint, vec3(length(tint) * 0.58), 0.4) * (line * 1.3 + exp(-side * side / 6.0) * 0.35) * pulse;
+  }
+  if (dot(light, light) < 1e-6) discard;
+  gl_FragColor = vec4(light, 0.0);
+}
+`;
+
+const WORK_FLOATS = 14;
+const TRAIL_FLOATS = 19;
+
+const buildConstellation = (points: Vec3[], constellation: MapConstellation) => {
+  const { counts, path, fresh } = constellation;
+  // Con movimiento reducido el reloj del trazo ya pasó todos los destellos
+  const plan = trailPlan(path.length, fresh);
+  const order = new Map<string, number>();
+  path.forEach(([point, slot], k) => order.set(`${point}:${slot}`, k));
+  const work: number[] = [];
+  counts.forEach((count, point) => {
+    const center = points[point];
+    if (!center) return;
+    for (let slot = 0; slot < count; slot++) {
+      const orbit = workOrbit(point, slot, count);
+      const k = order.get(`${point}:${slot}`) ?? -1;
+      const ignite = k >= plan.nOld ? plan.igniteAt(k) : -1;
+      // Las más recientes llevan los rayos un poco más largos
+      const spark = k >= 0 ? Math.max(0, 1 - (path.length - 1 - k) / 6) : 0;
+      for (const [cx, cy] of BOX) {
+        work.push(cx, cy, center[0], center[1], center[2], point, orbit.r, orbit.angle, orbit.y, orbit.tilt, k, orbit.twinkle, ignite, spark);
+      }
+    }
+  });
+  const trail: number[] = [];
+  for (let k = 0; k < path.length - 1; k++) {
+    const [pa, sa] = path[k];
+    const [pb, sb] = path[k + 1];
+    const a = points[pa];
+    const b = points[pb];
+    if (!a || !b) continue;
+    const oa = workOrbit(pa, sa, counts[pa] ?? 1);
+    const ob = workOrbit(pb, sb, counts[pb] ?? 1);
+    for (const [cx, cy] of QUAD) {
+      trail.push(
+        cx, cy,
+        a[0], a[1], a[2], pa, oa.r, oa.angle, oa.y, oa.tilt,
+        b[0], b[1], b[2], pb, ob.r, ob.angle, ob.y, ob.tilt,
+        k,
+      );
+    }
+  }
+  return { work: new Float32Array(work), trail: new Float32Array(trail) };
+};
 
 /* ---------------- Rótulos ---------------- */
 
@@ -519,11 +801,15 @@ export const createMapRenderer = (
   const sprite = link(SPRITE_VERTEX, SPRITE_FRAGMENT);
   const point = link(POINT_VERTEX, pointFragment);
   const label = link(LABEL_VERTEX, LABEL_FRAGMENT);
+  const work = link(WORK_VERTEX, WORK_FRAGMENT);
+  const trail = link(TRAIL_VERTEX, TRAIL_FRAGMENT);
 
   const lineBuffer = gl.createBuffer();
   const pointBuffer = gl.createBuffer();
   const spriteBuffer = gl.createBuffer();
   const labelBuffer = gl.createBuffer();
+  const workBuffer = gl.createBuffer();
+  const trailBuffer = gl.createBuffer();
   const atlas = gl.createTexture();
 
   const attributes = (program: GlProgram, names: [string, number][]): Attribute[] => {
@@ -538,7 +824,11 @@ export const createMapRenderer = (
   const spriteAttributes = attributes(sprite, [['aCorner', 2], ['aPoint', 4]]);
   const pointAttributes = attributes(point, [['aCorner', 2], ['aPos', 4], ['aLook', 3]]);
   const labelAttributes = attributes(label, [['aCorner', 2], ['aAnchor', 4], ['aRect', 4], ['aUv', 4], ['aKind', 2]]);
-  const all = [lineAttributes, spriteAttributes, pointAttributes, labelAttributes].flat();
+  const workAttributes = attributes(work, [['aCorner', 2], ['aCenter', 4], ['aOrbit', 4], ['aLook', 4]]);
+  const trailAttributes = attributes(trail, [
+    ['aCorner', 2], ['aCenterA', 4], ['aOrbitA', 4], ['aCenterB', 4], ['aOrbitB', 4], ['aSegment', 1],
+  ]);
+  const all = [lineAttributes, spriteAttributes, pointAttributes, labelAttributes, workAttributes, trailAttributes].flat();
 
   let count = 0;
   let lineVertices = 0;
@@ -548,6 +838,30 @@ export const createMapRenderer = (
   let dustCount = 0;
   let points: Vec3[] = [];
   let labelSource: { labels: MapLabel[]; width: number; height: number } | null = null;
+  let constellation: MapConstellation | null = null;
+  let constellationPoints: Vec3[] = [];
+  let workVertices = 0;
+  let trailVertices = 0;
+
+  /* La constelación cambia solo al abrir el mapa: sus estrellas y tramos
+     se suben una vez y el giro de los cúmulos lo hace el shader */
+  const prepareConstellation = (next: MapConstellation | null) => {
+    if (next === constellation && constellationPoints === points) return;
+    constellation = next;
+    constellationPoints = points;
+    if (!next) {
+      workVertices = 0;
+      trailVertices = 0;
+      return;
+    }
+    const built = buildConstellation(points, next);
+    gl.bindBuffer(gl.ARRAY_BUFFER, workBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, built.work, gl.STATIC_DRAW);
+    workVertices = built.work.length / WORK_FLOATS;
+    gl.bindBuffer(gl.ARRAY_BUFFER, trailBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, built.trail, gl.STATIC_DRAW);
+    trailVertices = built.trail.length / TRAIL_FLOATS;
+  };
 
   const upload = (buffer: WebGLBuffer | null, data: Float32Array) => {
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -616,6 +930,14 @@ export const createMapRenderer = (
     gl.uniform1f(program.uniform('uCount'), frame.count);
   };
 
+  const trailUniforms = (program: GlProgram, frame: MapFrame) => {
+    gl.uniform1f(program.uniform('uAlpha'), frame.alpha);
+    gl.uniform1f(program.uniform('uTime'), frame.time);
+    gl.uniform1f(program.uniform('uTrail'), frame.trail);
+    gl.uniform1f(program.uniform('uTrailClock'), frame.trailClock);
+    gl.uniform1f(program.uniform('uTrailCount'), frame.trailCount);
+  };
+
   /* Antes de las estelas del salto: el mapa queda detrás del hiperespacio */
   const draw = (frame: MapFrame, viewport: [number, number], dpr: number) => {
     const dust = Math.round(Math.min(950, Math.max(420, (viewport[0] * viewport[1]) / (dpr * dpr * 1150))));
@@ -633,9 +955,20 @@ export const createMapRenderer = (
       gl.drawArrays(gl.TRIANGLES, 0, lineVertices);
     }
 
+    prepareConstellation(frame.constellation);
+
+    // La línea del recorrido del visitante, bajo las estrellas
+    if (trailVertices && frame.alpha > 0.002) {
+      common(trail, frame, viewport, dpr);
+      bind(trailBuffer, trailAttributes, TRAIL_FLOATS);
+      trailUniforms(trail, frame);
+      gl.drawArrays(gl.TRIANGLES, 0, trailVertices);
+    }
+
     if (frame.alpha > 0.002) {
       common(sprite, frame, viewport, dpr);
       bind(spriteBuffer, spriteAttributes, 6);
+      gl.uniform2fv(sprite.uniform('uProgress'), frame.progress);
       gl.uniform1f(sprite.uniform('uFocal'), frame.focal);
       gl.uniform1f(sprite.uniform('uAlpha'), frame.alpha);
       gl.uniform1f(sprite.uniform('uTime'), frame.time);
@@ -650,6 +983,14 @@ export const createMapRenderer = (
       gl.uniform1f(point.uniform('uDust'), frame.dust);
       gl.uniform1f(point.uniform('uAlpha'), frame.alpha);
       gl.drawArrays(gl.TRIANGLES, 0, pointVertices);
+    }
+
+    // Las obras: polvo las no leídas, estrellas las leídas
+    if (workVertices && frame.alpha > 0.002) {
+      common(work, frame, viewport, dpr);
+      bind(workBuffer, workAttributes, WORK_FLOATS);
+      trailUniforms(work, frame);
+      gl.drawArrays(gl.TRIANGLES, 0, workVertices);
     }
 
     if (labelVertices && frame.labels > 0.002) {

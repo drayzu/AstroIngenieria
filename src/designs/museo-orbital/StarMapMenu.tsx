@@ -29,7 +29,8 @@ import {
   type StarMapPoint,
   type StarMapSetup,
 } from './chapterWarp';
-import type { MapRegion } from './starMap';
+import { markConstellationSeen, unseenCount, useReadLog } from './readingLog';
+import type { MapConstellation, MapRegion } from './starMap';
 import './starMap.css';
 
 /* Índice del museo como mapa estelar. La lista sigue siendo la de siempre
@@ -68,6 +69,24 @@ const useMapPoints = () => {
   return { points, chapters, t, hereLabel: t('Estás aquí') };
 };
 
+type Chapters = ReturnType<typeof getCatalog>['chapters'];
+
+/* Las obras leídas como estrellas: cada una en el cúmulo de su capítulo
+   (punto = capítulo + 1, después de la portada), en el orden en que se leyeron */
+const buildConstellation = (chapters: Chapters, log: readonly string[], fresh: number): MapConstellation => {
+  const place = new Map<string, [number, number]>();
+  chapters.forEach((chapter, index) => chapter.concepts.forEach((concept, slot) => place.set(concept.id, [index + 1, slot])));
+  const path = log.flatMap((id) => {
+    const at = place.get(id);
+    return at ? [at] : [];
+  });
+  return {
+    counts: [0, ...chapters.map((chapter) => chapter.concepts.length)],
+    path,
+    fresh: Math.min(fresh, path.length),
+  };
+};
+
 /* La región del mapa se lee de un IntersectionObserver: llega ya medida
    después del diseño del cuadro, sin forzarlo a mitad del clic */
 const measureRegion = (element: Element | null, then: (region: MapRegion | null) => void) => {
@@ -98,6 +117,15 @@ const MenuPanel = ({ open, activeId, onClose, onGo, onExited }: Props & { onExit
   // Quien abrió el índice recupera el foco si se cierra sin viajar
   const [opener] = useState(() => document.activeElement);
   const [cursor] = useState(() => window.matchMedia('(pointer: fine)').matches && !reducedMotion());
+  // Lo leído desde la última vez que se abrió el mapa se enciende con ceremonia
+  const [fresh] = useState(unseenCount);
+  const log = useReadLog();
+  const constellation = useMemo(() => buildConstellation(chapters, log, fresh), [chapters, log, fresh]);
+  const readIn = useMemo(() => {
+    const read = new Set(log);
+    return chapters.map((chapter) => chapter.concepts.filter((concept) => read.has(concept.id)).length);
+  }, [chapters, log]);
+  const totalWorks = chapters.reduce((sum, chapter) => sum + chapter.concepts.length, 0);
 
   useScrollLock(true);
 
@@ -107,8 +135,8 @@ const MenuPanel = ({ open, activeId, onClose, onGo, onExited }: Props & { onExit
 
   const setup = useCallback((): StarMapSetup | null => {
     const region = regionRef.current;
-    return region ? { points, here, hereLabel, region } : null;
-  }, [points, here, hereLabel]);
+    return region ? { points, here, hereLabel, region, constellation } : null;
+  }, [points, here, hereLabel, constellation]);
   const setupRef = useRef(setup);
   useLayoutEffect(() => {
     setupRef.current = setup;
@@ -142,6 +170,7 @@ const MenuPanel = ({ open, activeId, onClose, onGo, onExited }: Props & { onExit
       if (leaving.current) return;
       const first = setupRef.current();
       if (first && openStarMap(first)) {
+        markConstellationSeen();
         setMapped(true);
         return;
       }
@@ -152,7 +181,10 @@ const MenuPanel = ({ open, activeId, onClose, onGo, onExited }: Props & { onExit
       stopWaiting = whenStarMapReady(() => {
         if (leaving.current) return;
         const next = setupRef.current();
-        if (next && openStarMap(next)) setMapped(true);
+        if (next && openStarMap(next)) {
+          markConstellationSeen();
+          setMapped(true);
+        }
       });
     });
     return () => {
@@ -366,6 +398,11 @@ const MenuPanel = ({ open, activeId, onClose, onGo, onExited }: Props & { onExit
       </header>
       <div className="mo-menu-body">
         <h2>{t('Mapa del recorrido')}</h2>
+        <p className={`mo-menu-constellation${constellation.path.length ? '' : ' is-empty'}`}>
+          {constellation.path.length
+            ? <><b>{constellation.path.length}</b><span>{t('de {0} estrellas en tu constelación', totalWorks)}</span></>
+            : t('Lee una obra hasta el final para encender tu primera estrella')}
+        </p>
         <ol className="mo-menu-list">
           {chapters.map((chapter, index) => {
             const point = index + 1;
@@ -388,7 +425,9 @@ const MenuPanel = ({ open, activeId, onClose, onGo, onExited }: Props & { onExit
                     {chapter.title}
                     {isHere && <em className="mo-menu-here">{hereLabel}</em>}
                   </span>
-                  <i>{chapter.concepts.length}</i>
+                  <i className={readIn[index] ? 'has-read' : undefined}>
+                    {readIn[index] ? <><em>{readIn[index]}</em>/{chapter.concepts.length}</> : chapter.concepts.length}
+                  </i>
                 </button>
               </li>
             );

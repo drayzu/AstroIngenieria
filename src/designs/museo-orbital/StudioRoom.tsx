@@ -17,6 +17,7 @@ import { getReadingConnections, type ReadingContext } from '../../data/readingJo
 import { ArticleReader } from '../shared/ArticleReader';
 import { ImageLightbox, type ImageLightboxImage } from '../shared/ImageLightbox';
 import { StudyDiagram } from './StudyDiagrams';
+import { ReadingSeal } from './ReadingSeal';
 import { isObraFlightRunning, OBRA_LANDED_EVENT, obraFlightSupported } from './obraFlight';
 import './museoOrbital.css';
 
@@ -445,6 +446,7 @@ export const StudioRoom = ({
               concept={concept}
               onContentReady={restoreLanguagePosition}
               onLightboxOpenChange={handleArticleLightboxOpenChange}
+              ending={<ReadingSeal conceptId={concept.id} />}
             />}
             <button
               type="button"

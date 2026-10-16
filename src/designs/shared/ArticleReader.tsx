@@ -12,9 +12,11 @@ interface ArticleReaderProps {
   concept: AstroConcept;
   onLightboxOpenChange?: (open: boolean) => void;
   onContentReady?: () => void;
+  // Lo que cierra la lectura, antes de las fuentes
+  ending?: ReactNode;
 }
 
-export function ArticleReader({ concept, onLightboxOpenChange, onContentReady }: ArticleReaderProps) {
+export function ArticleReader({ concept, onLightboxOpenChange, onContentReady, ending }: ArticleReaderProps) {
   const { locale, t } = useLocale();
   const [loaded, setLoaded] = useState<{ article: ConceptArticle; locale: Locale } | null>(null);
   const content = loaded?.locale === locale && loaded.article.id === concept.id ? loaded.article : null;
@@ -98,6 +100,7 @@ export function ArticleReader({ concept, onLightboxOpenChange, onContentReady }:
           </figure>
         ) : null;
       })}
+      {ending}
       <footer className="ar-sources">
         <h4>{t("Fuentes y caminos para seguir")}</h4>
         <ol>{content.sources.map((source, index) => <li key={source.url} id={`${prefix}-source-${index + 1}`} tabIndex={-1}><a href={source.url} target="_blank" rel="noreferrer">{source.title} ↗</a><span>{source.publisher}</span></li>)}</ol>

@@ -782,6 +782,22 @@ body:has(.mo-root) {
   transform: scale(1.3);
 }
 
+/* Lo leído del capítulo: un arco fino alrededor del punto que se cierra en
+   sentido horario desde arriba, como el anillo de su estrella en el mapa */
+.mo-rail button.has-read .mo-rail-disc::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: conic-gradient(
+    color-mix(in srgb, var(--accent, #c9a86a) 85%, #ffffff) calc(var(--read, 0) * 1turn),
+    color-mix(in srgb, var(--accent, #c9a86a) 16%, transparent) 0
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 1.6px), #000 calc(100% - 1.1px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 1.6px), #000 calc(100% - 1.1px));
+  pointer-events: none;
+}
+
 /* Extremos del recorrido (portada y final): un rombo pequeño y dorado
    para que se lean como bordes del riel y no como un capítulo más */
 .mo-rail button.is-terminal {

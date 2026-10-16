@@ -15,8 +15,25 @@ export type Vec3 = [number, number, number];
 export type MapRegion = { x: number; y: number; w: number; h: number };
 export type MapView = { width: number; height: number; dpr: number; region: MapRegion };
 
+/* La constelación del visitante: cuántas obras tiene cada punto del mapa
+   (índice de punto: 0 portada, luego capítulos), las obras leídas en orden
+   como [punto, lugar dentro del capítulo] y cuántas del final son nuevas */
+export type MapConstellation = {
+  counts: number[];
+  path: [number, number][];
+  fresh: number;
+};
+
 export type MapMessage =
-  | { type: 'map-open'; at: number; colors: Rgb[]; here: number; reduced: boolean; view: MapView }
+  | {
+    type: 'map-open';
+    at: number;
+    colors: Rgb[];
+    here: number;
+    reduced: boolean;
+    view: MapView;
+    constellation?: MapConstellation;
+  }
   | { type: 'map-view'; view: MapView }
   | { type: 'map-focus'; index: number; at: number }
   | { type: 'map-close'; at: number };
@@ -74,6 +91,85 @@ export const buildMapLayout = (count: number) => {
     route.push({ p: spiral(uAt(s)), s });
   }
   return { points, route, length: total };
+};
+
+/* ---------------- Cúmulos de obras ---------------- */
+
+/* Cada capítulo lleva sus obras en un disco pequeño a su alrededor, en
+   filotaxis (el ángulo áureo de un girasol): se reparten parejas sea cual
+   sea su número. El disco se inclina un poco distinto en cada capítulo y gira
+   despacio, las de adentro más rápido, como un cúmulo de verdad. */
+const GOLDEN = Math.PI * (3 - Math.sqrt(5));
+
+export const clusterRadius = (count: number) => 0.17 + 0.048 * Math.sqrt(Math.max(1, count));
+
+export type WorkOrbit = { r: number; angle: number; y: number; tilt: number; twinkle: number };
+
+export const workOrbit = (point: number, slot: number, count: number): WorkOrbit => {
+  // Fuera del anillo de lectura de su estrella
+  const inner = 0.165;
+  const outer = clusterRadius(count);
+  const r = count <= 1 ? 0.2 : inner + (outer - inner) * Math.sqrt((slot + 0.5) / count);
+  // Cada capítulo empieza su espiral en otro ángulo
+  const angle = slot * GOLDEN + point * 2.17;
+  const hash = Math.sin((point * 97 + slot * 13) * 12.9898) * 43758.5453;
+  const jitter = hash - Math.floor(hash);
+  return {
+    r,
+    angle,
+    y: (jitter - 0.5) * 0.045,
+    tilt: Math.sin(point * 1.9) * 0.32,
+    twinkle: jitter * Math.PI * 2,
+  };
+};
+
+/* ---------------- Guion de la constelación ---------------- */
+
+/* La línea del recorrido se traza después de que el mapa llega: lo ya visto
+   de una pasada, y lo nuevo estrella por estrella, más despacio, con un
+   destello en cada una. La posición del trazo va de -0.35 (nada) a N − 1 +
+   0.35 (todo): la estrella k se enciende cuando el trazo pasa por k. */
+export const TRAIL_START_MS = 640;
+const TRAIL_TAIL_MS = 320;
+
+export const trailPlan = (total: number, fresh: number) => {
+  const nNew = Math.min(Math.max(0, fresh), total);
+  const nOld = total - nNew;
+  const oldMs = nOld > 0 ? Math.min(1500, Math.max(440, 280 + 75 * nOld)) : 0;
+  const pause = nOld > 0 && nNew > 0 ? 280 : 0;
+  const stepMs = Math.max(420, 780 - 70 * Math.max(0, nNew - 1));
+  const newStart = TRAIL_START_MS + oldMs + pause;
+  return {
+    total,
+    nOld,
+    nNew,
+    oldMs,
+    stepMs,
+    newStart,
+    end: newStart + nNew * stepMs + TRAIL_TAIL_MS,
+    // Cuándo (ms desde la apertura) se enciende la estrella nueva k
+    igniteAt: (k: number) => newStart + (k - nOld + 1) * stepMs,
+  };
+};
+
+export type TrailPlan = ReturnType<typeof trailPlan>;
+
+const trailAt = (plan: TrailPlan, t: number) => {
+  const { total, nOld, nNew, oldMs, stepMs, newStart } = plan;
+  const none = -0.35;
+  const full = total - 1 + 0.35;
+  if (total === 0) return none;
+  const u = t - TRAIL_START_MS;
+  if (u < 0) return none;
+  if (u < oldMs) return none + (nOld - 1 - none) * easeInOut(u / oldMs);
+  const v = t - newStart;
+  if (nNew === 0) return nOld - 1 + 0.35 * smooth(clamp01((u - oldMs) / TRAIL_TAIL_MS));
+  if (v < 0) return nOld > 0 ? nOld - 1 : none;
+  const step = Math.floor(v / stepMs);
+  if (step >= nNew) return total - 1 + (full - (total - 1)) * smooth(clamp01((v - nNew * stepMs) / TRAIL_TAIL_MS));
+  const to = nOld + step;
+  const from = to === 0 ? none : to - 1;
+  return from + (to - from) * easeInOut((v - step * stepMs) / stepMs);
 };
 
 /* ---------------- Matrices (columna mayor, como las pide WebGL) ---------------- */
@@ -172,6 +268,10 @@ type SceneState = {
   leanTo: Vec3;
   leanToK: number;
   leanAt: number;
+  constellation: MapConstellation | null;
+  trail: TrailPlan;
+  // Por punto: la estrella nueva que lo completa (su orden en el trazo), o -1
+  completes: number[];
 };
 
 export type MapFrame = {
@@ -199,6 +299,13 @@ export type MapFrame = {
   // Durante la zambullida: punto de fuga (px CSS desde el centro, y hacia abajo)
   vanish: [number, number] | null;
   dive: number;
+  // La constelación (misma referencia mientras no se reabra), el trazo y su reloj
+  constellation: MapConstellation | null;
+  trail: number;
+  trailClock: number;
+  trailCount: number;
+  // Por punto: fracción leída y destello al completarse
+  progress: Float32Array;
 };
 
 const regionFit = (view: MapView) => {
@@ -221,10 +328,37 @@ export const createMapScene = () => {
   const probe = new Float32Array(16);
   const colorData = new Float32Array(MAP_MAX_POINTS * 3);
   const pointData = new Float32Array(MAP_MAX_POINTS * 4);
+  const progressData = new Float32Array(MAP_MAX_POINTS * 2);
 
   const leanAt = (s: SceneState, now: number) => {
     const k = s.reduced ? 1 : smooth(span(now - s.leanAt, 0, LEAN_MS));
     return { v: mixV(s.leanFrom, s.leanTo, k), k: s.leanFromK + (s.leanToK - s.leanFromK) * k };
+  };
+
+  /* Mientras se encienden las estrellas nuevas, la cámara se acerca sola a
+     la punta del trazo (al capítulo por el que pasa), salvo que el visitante
+     esté señalando algo */
+  const autoLeanAt = (s: SceneState, now: number) => {
+    const plan = s.trail;
+    if (!s.constellation || s.reduced || plan.nNew === 0) return null;
+    const t = now - s.openAt;
+    const from = plan.newStart - 500;
+    const to = plan.end + 300;
+    if (t <= from || t >= to + 1100) return null;
+    const k = 0.8 * smooth(span(t, from, from + 900)) * (1 - smooth(span(t, to, to + 1100)));
+    const { path } = s.constellation;
+    const pen = Math.min(Math.max(trailAt(plan, t), Math.max(0, plan.nOld - 1)), path.length - 1);
+    const i = Math.floor(pen);
+    const a = s.points[path[i][0]] ?? [0, 0, 0];
+    const b = s.points[path[Math.min(i + 1, path.length - 1)][0]] ?? a;
+    return { v: mixV(a, b, easeInOut(pen - i)), k };
+  };
+
+  // La de quien señala manda; si no, la automática
+  const effectiveLean = (s: SceneState, now: number) => {
+    const user = leanAt(s, now);
+    if (user.k > 0.001 || s.leanToK > 0) return user;
+    return autoLeanAt(s, now) ?? user;
   };
 
   const focusAt = (s: SceneState, index: number, now: number) => {
@@ -254,7 +388,7 @@ export const createMapScene = () => {
     // Señalar acerca la cámara a la estrella sin moverla en pantalla: avanza
     // por la recta que las une y sigue mirando hacia el mismo lado, así la
     // estrella queda bajo el puntero y el mapa crece a su alrededor
-    const lean = still ? null : leanAt(s, now);
+    const lean = still ? null : effectiveLean(s, now);
     if (lean && lean.k > 0.0001) {
       const pull = 0.22 * lean.k;
       const offset: Vec3 = [(lean.v[0] - eye[0]) * pull, (lean.v[1] - eye[1]) * pull, (lean.v[2] - eye[2]) * pull];
@@ -281,6 +415,19 @@ export const createMapScene = () => {
       const count = Math.min(MAP_MAX_POINTS, message.colors.length);
       if (layout.points.length !== count) layout = buildMapLayout(count);
       const fit = regionFit(message.view);
+      // Sin lecturas igual hay constelación: el polvo de las obras por encender
+      const constellation = message.constellation?.counts.some((works) => works > 0) ? message.constellation : null;
+      const trail = trailPlan(constellation?.path.length ?? 0, message.reduced ? 0 : constellation?.fresh ?? 0);
+      // Qué estrella nueva completa cada capítulo (para su destello)
+      const completes = new Array(count).fill(-1);
+      if (constellation) {
+        const read = new Array(count).fill(0);
+        constellation.path.forEach(([point], k) => {
+          if (point >= count) return;
+          read[point] += 1;
+          if (read[point] === constellation.counts[point] && k >= trail.nOld) completes[point] = k;
+        });
+      }
       state = {
         openAt: message.at,
         closeAt: null,
@@ -302,6 +449,9 @@ export const createMapScene = () => {
         leanTo: [0, 0, 0],
         leanToK: 0,
         leanAt: message.at,
+        constellation,
+        trail,
+        completes,
       };
       return;
     }
@@ -317,7 +467,7 @@ export const createMapScene = () => {
       s.focusFrom = s.focusFrom.map((_, i) => focusAt(s, i, at));
       s.focusTo = s.focusTo.map((_, i) => (i === message.index ? 1 : 0));
       s.focusAt = at;
-      const lean = leanAt(s, at);
+      const lean = effectiveLean(s, at);
       s.leanFrom = lean.v;
       s.leanFromK = lean.k;
       const point = s.points[message.index];
@@ -400,6 +550,22 @@ export const createMapScene = () => {
       baseHaze[1] + (diveHaze[1] - baseHaze[1]) * tone,
       baseHaze[2] + (diveHaze[2] - baseHaze[2]) * tone,
     ];
+    // El trazo de la constelación y lo leído de cada capítulo a su paso
+    const trail = still ? s.trail.total - 1 + 0.35 : trailAt(s.trail, t);
+    progressData.fill(0);
+    if (s.constellation) {
+      const { counts, path } = s.constellation;
+      path.forEach(([point], k) => {
+        if (point >= count) return;
+        progressData[point * 2] += clamp01((trail - k + 0.12) / 0.3) / Math.max(1, counts[point] ?? 1);
+      });
+      for (let j = 0; j < count; j++) {
+        const k = s.completes[j];
+        if (k < 0) continue;
+        const age = t - s.trail.igniteAt(k);
+        progressData[j * 2 + 1] = age >= 0 && age < 1800 ? 1 - age / 1800 : 0;
+      }
+    }
     let vanish: [number, number] | null = null;
     if (d >= 0) {
       const p = s.points[s.diveIndex];
@@ -428,6 +594,11 @@ export const createMapScene = () => {
       time: still ? 0 : t / 1000,
       vanish,
       dive: d,
+      constellation: s.constellation,
+      trail,
+      trailClock: still ? 1e6 : t,
+      trailCount: s.trail.total,
+      progress: progressData,
     };
   };
 

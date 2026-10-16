@@ -58,6 +58,7 @@ import {
 import { SalaPortal } from './SalaPortal';
 import { flyIntoObra, flyOutOfObra, obraFlightSupported, panStudio, prewarmObraFlight } from './obraFlight';
 import { prewarmChapterWarp, warpTo } from './chapterWarp';
+import { useReadLog } from './readingLog';
 import { skyCovers } from './roomShared';
 import { MenuOverlay } from './StarMapMenu';
 import { startLookAround } from './lookAround';
@@ -3439,6 +3440,15 @@ export default function MuseoOrbital() {
   }, []);
 
   const openMenu = useCallback(() => setMenuOpen(true), []);
+  // Lo leído de cada capítulo: un arco alrededor de su punto en el riel
+  const readIds = useReadLog();
+  const readShare = useMemo(() => {
+    const read = new Set(readIds);
+    return new Map(chapters.map((chapter) => [
+      chapter.id,
+      chapter.concepts.filter((concept) => read.has(concept.id)).length / Math.max(1, chapter.concepts.length),
+    ]));
+  }, [chapters, readIds]);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   // M abre el mapa desde cualquier punto del recorrido (el mapa abierto se
@@ -3802,8 +3812,8 @@ export default function MuseoOrbital() {
           <button
             key={chapter.id}
             type="button"
-            className={activeHallId === chapter.id ? 'is-eclipsed' : ''}
-            style={{ '--accent': chapter.color } as CSSProperties}
+            className={`${activeHallId === chapter.id ? 'is-eclipsed' : ''}${readShare.get(chapter.id) ? ' has-read' : ''}`}
+            style={{ '--accent': chapter.color, '--read': readShare.get(chapter.id) ?? 0 } as CSSProperties}
             aria-label={t("Capítulo {0}: {1}", chapter.number.padStart(2, '0'), chapter.title)}
             aria-current={activeHallId === chapter.id ? 'location' : undefined}
             data-warp-target={`sala-${chapter.id}`}

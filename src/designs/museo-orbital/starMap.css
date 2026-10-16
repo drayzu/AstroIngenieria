@@ -128,6 +128,35 @@
   letter-spacing: -0.012em;
 }
 
+/* Tu constelación: cuántas obras leíste hasta el final */
+.mo-menu-constellation {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: calc(clamp(14px, 2.6vh, 26px) * -0.45) 0 clamp(14px, 2.4vh, 24px);
+  font-family: var(--mo-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--mo-muted);
+}
+
+.mo-menu-constellation b {
+  font-family: var(--mo-serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: 0;
+  color: #f5f1e8;
+  text-shadow: 0 0 14px rgba(245, 241, 232, 0.35);
+}
+
+.mo-menu-constellation.is-empty {
+  max-width: 46ch;
+  line-height: 1.7;
+  letter-spacing: 0.16em;
+}
+
 .mo-menu-list {
   list-style: none;
   margin: 0;
@@ -217,6 +246,16 @@
   font-size: 10px;
   letter-spacing: 0.2em;
   color: var(--mo-muted);
+}
+
+/* Leídas en el capítulo: la cifra se enciende en su color */
+.mo-menu-list button i.has-read {
+  color: color-mix(in srgb, var(--accent, #c9a86a) 45%, var(--mo-muted));
+}
+
+.mo-menu-list button i em {
+  font-style: normal;
+  color: var(--accent, #c9a86a);
 }
 
 .mo-menu-list button.is-extra span {

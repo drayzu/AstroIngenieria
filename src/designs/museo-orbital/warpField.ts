@@ -518,6 +518,8 @@ export const createWarpLoop = (
     here: 1,
     reduced: true,
     view: { ...size, region: { x: 0, y: 0, w: size.width, h: size.height } },
+    // Dos estrellas leídas y un tramo: compila también la constelación
+    constellation: { counts: [0, 2], path: [[1, 0], [1, 1]], fresh: 0 },
   });
   const warmFrame = warm.sample(1000);
   if (warmFrame) {

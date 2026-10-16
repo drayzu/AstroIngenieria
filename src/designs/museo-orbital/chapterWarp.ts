@@ -8,7 +8,7 @@ import {
   type WarpMessage,
   type WarpSize,
 } from './warpField';
-import { MAP_CLOSE_MS, createMapScene, type MapMessage, type MapRegion } from './starMap';
+import { MAP_CLOSE_MS, createMapScene, type MapConstellation, type MapMessage, type MapRegion } from './starMap';
 import { drawMapLabels, type MapLabelEntry } from './starMapLabels';
 import { skyCovers } from './roomShared';
 import './chapterWarp.css';
@@ -251,6 +251,8 @@ export type StarMapSetup = {
   here: number;
   hereLabel: string;
   region: MapRegion;
+  // Las obras leídas por el visitante, para dibujar su constelación
+  constellation?: MapConstellation;
 };
 
 // Copia de la escena en este hilo: dice dónde está cada estrella bajo el puntero
@@ -335,6 +337,7 @@ export const openStarMap = (setup: StarMapSetup) => {
     here: setup.here,
     reduced: reducedMotion(),
     view: mapViewFor(setup.region),
+    constellation: setup.constellation,
   });
   return true;
 };
