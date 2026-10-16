@@ -62,6 +62,7 @@ import { useReadLog } from './readingLog';
 import { skyCovers } from './roomShared';
 import { MenuOverlay } from './StarMapMenu';
 import { startLookAround } from './lookAround';
+import { cycleCinemaRate, holdCinema, isCinemaRunning, startCinema, stopCinema } from './cinema';
 import { GalleryCorridor, type CorridorGroup } from './GalleryCorridor';
 import { OrbitRoom } from './OrbitRoom';
 import { VerticalRoom } from './VerticalRoom';
@@ -541,6 +542,12 @@ const Hero = memo(({
     }, HERO_ROTATION_MS);
     return () => window.clearTimeout(timeout);
   }, [heroOrder, heroPosition, heroVisible, introPhase, living, pageVisible, playgroundEntryState, reduced, showHeroAt]);
+
+  // El modo cine espera a que la intro termine
+  useEffect(() => {
+    holdCinema('intro', introPhase !== 'off');
+    return () => holdCinema('intro', false);
+  }, [introPhase]);
 
   // Estrella viva: la pista del cielo aparece si el visitante se queda quieto
   // y se retira para siempre en cuanto toca o baja
@@ -3468,6 +3475,35 @@ export default function MuseoOrbital() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [active, flight, menuOpen, openMenu, playground, playgroundEntryState]);
+
+  // Modo cine: el museo se recorre solo. ?cine en la dirección lo enciende
+  // al entrar; la C lo enciende y, ya andando, cambia su velocidad (1×,
+  // 1,5×, 2×). Cualquier otro gesto lo detiene
+  const cinemaHint = useRef((rate: number) => `${rate}`);
+  cinemaHint.current = (rate) => t('Modo cine {0} · desplázate o toca para tomar el control', `${rate.toLocaleString(locale)}×`);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || !new URLSearchParams(window.location.search).has('cine')) return;
+    startCinema(root, (rate) => cinemaHint.current(rate));
+    return stopCinema;
+  }, []);
+  useEffect(() => {
+    if (menuOpen || active || playground || flight) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'c' && event.key !== 'C') return;
+      if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      if (playgroundEntryState !== 'idle') return;
+      const root = rootRef.current;
+      if (!root) return;
+      event.preventDefault();
+      if (isCinemaRunning()) cycleCinemaRate();
+      else startCinema(root, (rate) => cinemaHint.current(rate));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [active, flight, menuOpen, playground, playgroundEntryState]);
 
   let plateOffset = 0;
   const vitrineConcepts = getVitrineConcepts(vitrineIds, locale);

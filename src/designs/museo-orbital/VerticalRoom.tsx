@@ -6,6 +6,7 @@ import type { CorridorGroup } from './GalleryCorridor';
 import { TopicHeading } from './TopicHeading';
 import { selectedStudyImages } from '../../data/selectedStudyImages';
 import { ASSEMBLY_MAX, assemblyEnd, assemblySides, drawAssembly, endAssembly, startAssembly, type Assembly, type Box } from './tileAssembly';
+import { holdCinema } from './cinema';
 import { clamp, clamp01, offsetWithin, skyDrift, smoothstep, useRoomLook, useRoomLoop } from './roomShared';
 import { drawWheel, sizeWheel, wheelRadius, wheelSpokes, wheelStops, type Wheel, type WheelStop } from './wheelHabitat';
 import './verticalRooms.css';
@@ -283,11 +284,14 @@ export const VerticalRoom = memo(({
           state.built[index] = true;
           root.classList.add('is-built');
           root.classList.remove('is-building');
+          holdCinema(root, false);
           continue;
         }
         const itemLeft = box.centerX - box.width / 2;
         const assembly = state.assembly[index] ??= startAssembly(root, box.window, itemLeft, width, viewport, sources[index], index);
         root.classList.add('is-building');
+        // El modo cine avanza despacio mientras la flota la arma
+        holdCinema(root, true);
         // Las teselas salen de fuera de la pantalla, por los bordes a media
         // altura: su posición respecto a la ventana
         const windowLeft = itemLeft + box.window.left;
@@ -587,6 +591,7 @@ const settleItem = (parts: ItemParts) => {
   parts.heat?.style.removeProperty('opacity');
   parts.glow?.style.removeProperty('opacity');
   parts.root?.classList.remove('is-built', 'is-building');
+  if (parts.root) holdCinema(parts.root, false);
 };
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;

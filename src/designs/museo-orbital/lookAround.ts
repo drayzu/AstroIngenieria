@@ -242,6 +242,15 @@ const onPointerLeave = () => {
   retarget(0, 0, RETURN);
 };
 
+/* Una mirada que no viene del visitante (el modo cine), en fracciones del
+   giro máximo. El puntero, mientras se mueve, sigue mandando */
+const DRIFT = 1.4;
+export const steerLook = (yaw: number, pitch: number) => {
+  if (!enabled) return;
+  if (blocked() || performance.now() - lastInput < HOLD_MS) return;
+  retarget(yaw * YAW, pitch * PITCH, yaw === 0 && pitch === 0 ? RETURN : DRIFT);
+};
+
 /* ---------------- Teléfono ---------------- */
 
 // Inclinación de referencia (grados), que sigue despacio a la real

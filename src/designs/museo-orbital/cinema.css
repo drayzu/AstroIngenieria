@@ -1,0 +1,51 @@
+/* Modo cine: la pantalla queda limpia mientras el piloto recorre el museo */
+
+html.mo-cine .mo-rail,
+html.mo-cine .mo-pill,
+html.mo-cine .mo-cursor,
+html.mo-cine .mo-sky-hint,
+html.mo-cine .mo-hero-toolbar,
+html.mo-cine .mo-hero-carousel {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.6s ease;
+}
+
+html.mo-cine,
+html.mo-cine * {
+  cursor: none !important;
+}
+
+/* Cómo salir: aparece al empezar y se apaga sola */
+.mo-cine-hint {
+  position: fixed;
+  left: 50%;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  z-index: 200;
+  padding: 0.55em 1.1em;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 999px;
+  background: rgb(6 8 14 / 0.55);
+  color: rgb(255 255 255 / 0.78);
+  font: 500 12px/1.2 'JetBrains Mono Variable', ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+  animation: mo-cine-hint 4.6s ease forwards;
+}
+
+@keyframes mo-cine-hint {
+  0% { opacity: 0; transform: translate(-50%, 8px); }
+  12%, 72% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, 0); }
+}
+
+@media (max-width: 480px) {
+  .mo-cine-hint {
+    max-width: calc(100vw - 32px);
+    white-space: normal;
+    text-align: center;
+  }
+}

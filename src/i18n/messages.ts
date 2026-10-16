@@ -15,6 +15,7 @@ export const englishMessages = {
   'Llega al final para encender esta estrella': 'Reach the end to light this star',
   'Estrella {0} de {1} · ya está en el mapa del museo': 'Star {0} of {1} · now on the museum map',
   '{0} de {1} obras leídas': '{0} of {1} works read',
+  'Modo cine {0} · desplázate o toca para tomar el control': 'Cinema mode {0} · scroll or tap to take control',
   'Astroingeniería': 'Astroengineering',
   'Un atlas ilustrado': 'An illustrated atlas',
   'Museo Orbital': 'Orbital Museum',

@@ -42,6 +42,9 @@ export const lockSmoothScroll = (key: string, locked: boolean) => {
   applyLocks();
 };
 
+/* Si algo (intro, salto, sala de estudio, menú…) tiene la página detenida */
+export const smoothScrollLocked = () => locks.size > 0;
+
 /* Desplazamiento animado; devuelve false si no hay scroll suave activo */
 export const smoothScrollTo = (target: HTMLElement | number) => {
   if (!lenis) return false;
