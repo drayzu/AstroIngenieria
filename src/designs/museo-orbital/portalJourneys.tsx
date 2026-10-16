@@ -143,6 +143,35 @@ const coverSky = (key: object, p: number) => {
   else skyCovers.delete(key);
 };
 
+/* El lienzo de un viaje solo ocupa memoria cerca de la vista: lejos queda
+   en 1×1 (ocho lienzos a pantalla completa eran ~40 MB desde la carga).
+   Cada dibujo limpia el lienzo y fuera de su tramo no pinta nada, así que
+   no cambia lo que se ve. `measure` le da su tamaño y lo dibuja */
+const sizeWhileNear = (canvas: HTMLCanvasElement, measure: () => void) => {
+  let near = false;
+  const onResize = () => {
+    if (near) measure();
+  };
+  const observer = new IntersectionObserver(([entry]) => {
+    const next = Boolean(entry?.isIntersecting);
+    if (next === near) return;
+    near = next;
+    if (near) measure();
+    else {
+      canvas.width = 1;
+      canvas.height = 1;
+    }
+  }, { root: canvas.closest('.mo-root'), rootMargin: '100% 0px' });
+  canvas.width = 1;
+  canvas.height = 1;
+  observer.observe(canvas);
+  window.addEventListener('resize', onResize);
+  return () => {
+    observer.disconnect();
+    window.removeEventListener('resize', onResize);
+  };
+};
+
 /* Radio del iris en dos tramos: ventana en vmin y luego cubrir en vmax */
 interface RadiusParts { min: number; max: number }
 const irisParts = (p: number, windowSize = 30): RadiusParts => ({
@@ -432,10 +461,9 @@ const HabitatDock = ({ progress }: { progress: MotionValue<number> }) => {
       canvas.height = Math.round(height * ratio);
       draw(progress.get());
     };
-    measure();
-    window.addEventListener('resize', measure);
+    const release = sizeWhileNear(canvas, measure);
     return () => {
-      window.removeEventListener('resize', measure);
+      release();
       const fx = document.querySelector<HTMLElement>('.mo-starfx');
       if (fx) fx.style.opacity = '';
     };
@@ -509,10 +537,9 @@ const SkyScaffold = ({ progress }: { progress: MotionValue<number> }) => {
       canvas.height = Math.round(height * ratio);
       draw(progress.get());
     };
-    measure();
-    window.addEventListener('resize', measure);
+    const release = sizeWhileNear(canvas, measure);
     return () => {
-      window.removeEventListener('resize', measure);
+      release();
       document.querySelectorAll<HTMLElement>('.mo-starfx, .mo-trailfx').forEach((fx) => {
         fx.style.opacity = '';
       });
@@ -612,10 +639,9 @@ const Shipyard = ({ progress, image }: { progress: MotionValue<number>; image?: 
       canvas.height = Math.round(height * ratio);
       draw(progress.get());
     };
-    measure();
-    window.addEventListener('resize', measure);
+    const release = sizeWhileNear(canvas, measure);
     return () => {
-      window.removeEventListener('resize', measure);
+      release();
       const fx = document.querySelector<HTMLElement>('.mo-starfx');
       if (fx) fx.style.opacity = '';
     };
@@ -679,10 +705,9 @@ const MagneticShield = ({ progress }: { progress: MotionValue<number> }) => {
       canvas.height = Math.round(height * ratio);
       draw(progress.get());
     };
-    measure();
-    window.addEventListener('resize', measure);
+    const release = sizeWhileNear(canvas, measure);
     return () => {
-      window.removeEventListener('resize', measure);
+      release();
       const fx = document.querySelector<HTMLElement>('.mo-starfx');
       if (fx) fx.style.opacity = '';
     };
@@ -736,6 +761,11 @@ const BlackHole = ({ progress }: { progress: MotionValue<number> }) => {
       }
       if (!active) {
         lastFrame = 0;
+        // Fuera del viaje el lienzo no guarda su último cuadro en memoria
+        if (canvas.width > 1) {
+          canvas.width = 1;
+          canvas.height = 1;
+        }
         return;
       }
       frame = requestAnimationFrame(tick);
@@ -778,14 +808,20 @@ const BlackHole = ({ progress }: { progress: MotionValue<number> }) => {
     };
     const unsubscribe = progress.on('change', wake);
     wake();
+    // El shader compila en segundo plano: basta con arrancarlo en un rato libre
+    let stopPreparing = () => {};
+    const prepare = () => {
+      stopPreparing = prepareHole(canvas);
+    };
     const idle = window.requestIdleCallback
-      ? window.requestIdleCallback(() => prepareHole(canvas), { timeout: 6000 })
-      : window.setTimeout(() => prepareHole(canvas), 3000);
+      ? window.requestIdleCallback(prepare, { timeout: 6000 })
+      : window.setTimeout(prepare, 3000);
     return () => {
       unsubscribe();
       cancelAnimationFrame(frame);
       if (window.cancelIdleCallback) window.cancelIdleCallback(idle);
       else window.clearTimeout(idle);
+      stopPreparing();
       const fx = document.querySelector<HTMLElement>('.mo-starfx');
       if (fx) fx.style.opacity = '';
     };
@@ -859,13 +895,12 @@ const DysonSwarm = ({ progress }: { progress: MotionValue<number> }) => {
       canvas.height = Math.round(height * ratio);
       draw(progress.get());
     };
-    measure();
-    window.addEventListener('resize', measure);
+    const release = sizeWhileNear(canvas, measure);
     // La estrella se pinta una sola vez, en un rato libre: no en el primer
     // cuadro del viaje
     const idle = window.requestIdleCallback?.(prepareSwarm) ?? window.setTimeout(prepareSwarm, 200);
     return () => {
-      window.removeEventListener('resize', measure);
+      release();
       if (window.cancelIdleCallback) window.cancelIdleCallback(idle);
       else window.clearTimeout(idle);
       const fx = document.querySelector<HTMLElement>('.mo-starfx');
@@ -936,9 +971,7 @@ const PropulsionChase = ({ progress }: { progress: MotionValue<number> }) => {
       canvas.height = Math.round(height * ratio);
       draw(progress.get());
     };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
+    return sizeWhileNear(canvas, measure);
   }, [progress, draw]);
 
   return <motion.canvas ref={canvasRef} className="mo-journey-stage is-chase" style={{ opacity }} aria-hidden="true" />;
@@ -1234,6 +1267,9 @@ const SignalSearch = ({ progress, label }: { progress: MotionValue<number>; labe
       sky.style.opacity = cover.toFixed(3);
       sky.style.visibility = cover > 0.005 ? 'visible' : 'hidden';
     }
+    // Con el cielo del observatorio opaco, el de la página descansa debajo
+    if (cover >= 1) skyCovers.add(dishSkyRef);
+    else skyCovers.delete(dishSkyRef);
     const fx = document.querySelector<HTMLElement>('.mo-starfx');
     if (fx) fx.style.opacity = cover > 0 ? (1 - cover).toFixed(3) : '';
     const canvas = dishRef.current;
@@ -1418,9 +1454,11 @@ const SignalSearch = ({ progress, label }: { progress: MotionValue<number>; labe
       canvas.height = Math.round(height * ratio);
       draw(progress.get(), width, height);
     };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
+    const release = sizeWhileNear(canvas, measure);
+    return () => {
+      release();
+      skyCovers.delete(dishSkyRef);
+    };
   }, [draw, progress]);
 
   return (
@@ -1502,6 +1540,11 @@ const KardashevZoom = ({ progress }: { progress: MotionValue<number> }) => {
     // El suelo y el resplandor de la ciudad: capas que solo se mueven
     const ground = kardashevGround(p, width, height);
     if (groundRef.current) groundRef.current.style.opacity = String(ground.cover);
+    // Con el suelo opaco a pantalla completa (y las constelaciones de encima
+    // ya apagadas) el cielo de la página descansa debajo
+    const shown = p > JOURNEY_OPEN[0] + 0.03 && p < JOURNEY_COVER[0] + 0.08;
+    if (shown && ground.cover >= 1 && kardashevSkyDim(p) >= 1) skyCovers.add(groundRef);
+    else skyCovers.delete(groundRef);
     if (hazeRef.current) hazeRef.current.style.opacity = ground.haze.toFixed(3);
     const glow = glowRef.current;
     if (glow) {
@@ -1534,14 +1577,14 @@ const KardashevZoom = ({ progress }: { progress: MotionValue<number> }) => {
       canvas.height = Math.round(height * ratio);
       draw(progress.get());
     };
-    measure();
-    window.addEventListener('resize', measure);
+    const release = sizeWhileNear(canvas, measure);
     // El planeta, los gases y los resplandores se pintan en ratos libres,
     // mucho antes de llegar: el primer cuadro del viaje no paga por ellos
     const cancelPrepare = prepareKardashev(tint.current);
     return () => {
       cancelPrepare();
-      window.removeEventListener('resize', measure);
+      release();
+      skyCovers.delete(groundRef);
       const fx = document.querySelector<HTMLElement>('.mo-starfx');
       if (fx) fx.style.opacity = '';
     };

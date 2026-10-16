@@ -4,7 +4,7 @@ import { translate, type Locale } from './messages';
 export const LOCALE_KEY = 'mo-locale';
 const LocaleContext = createContext({ locale: 'es' as Locale, setLocale: (_locale: Locale) => {}, t: (message: string, ...values: (string | number)[]) => translate(message, 'es', ...values) });
 
-function initialLocale(): Locale {
+export function initialLocale(): Locale {
   try { return localStorage.getItem(LOCALE_KEY) === 'en' ? 'en' : 'es'; }
   catch { return 'es'; }
 }
@@ -16,10 +16,12 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     t: (message: string, ...values: (string | number)[]) => translate(message, locale, ...values),
     setLocale: (next: Locale) => {
       if (next === locale) return;
-      window.dispatchEvent(new CustomEvent('mo-locale-before-change'));
-      window.dispatchEvent(new CustomEvent('mo-cursor-reset'));
-      updateLocale(next);
-      try { localStorage.setItem(LOCALE_KEY, next); } catch { /* Keep the choice in memory. */ }
+      void import('./catalog').then(({ loadCatalog }) => loadCatalog(next)).then(() => {
+        window.dispatchEvent(new CustomEvent('mo-locale-before-change'));
+        window.dispatchEvent(new CustomEvent('mo-cursor-reset'));
+        updateLocale(next);
+        try { localStorage.setItem(LOCALE_KEY, next); } catch { /* Keep the choice in memory. */ }
+      }, () => { /* Offline: stay in the current language. */ });
     },
   }), [locale]);
   useLayoutEffect(() => {

@@ -10,6 +10,7 @@ import {
 } from './warpField';
 import { MAP_CLOSE_MS, createMapScene, type MapMessage, type MapRegion } from './starMap';
 import { drawMapLabels, type MapLabelEntry } from './starMapLabels';
+import { skyCovers } from './roomShared';
 import './chapterWarp.css';
 
 /* Salto al hiperespacio entre capítulos. Toda la navegación del museo (riel,
@@ -28,6 +29,8 @@ import './chapterWarp.css';
    cámara se zambulle en su estrella y el salto sigue desde ahí. */
 
 const DEPART_MS = 440;
+// Mientras el velo está cerrado, el cielo de la página descansa debajo
+const WARP_COVER = {};
 // Desde el mapa la partida es la zambullida: un poco más larga
 const MAP_DEPART_MS = 580;
 // Cada capítulo que cruzamos alarga un poco el tránsito
@@ -579,8 +582,10 @@ export const warpTo = (target: HTMLElement | 0, options: WarpOptions = {}) => {
   window.setTimeout(() => {
     // La zambullida terminó: el mapa ya no está en pantalla
     if (dive) mapShown = false;
-    // Con el velo cerrado: el salto real
+    // Con el velo cerrado: el salto real. Hasta la llegada nadie ve el cielo
+    // de la página: no se dibuja y el destino se monta sin competir con él
     snapping = true;
+    skyCovers.add(WARP_COVER);
     jumpScroll(root, top);
     nextFrames(5, () => { snapping = false; });
     // Dos cuadros para que el destino se monte y se pinte bajo el velo
@@ -590,6 +595,8 @@ export const warpTo = (target: HTMLElement | 0, options: WarpOptions = {}) => {
       const delay = arriveAt - now;
       if (drawn) state.send({ type: 'arrive', at: arriveAt });
       else fallbackVeil(state, delay);
+      // El cielo vuelve un poco antes de que el velo empiece a abrirse
+      window.setTimeout(() => skyCovers.delete(WARP_COVER), Math.max(0, delay - 60));
       if (destination) showArrival(state, delay);
       window.setTimeout(() => {
         state.root.classList.remove('is-active');

@@ -1,3 +1,4 @@
+import { startProgram, whenReady, type PendingProgram } from './glProgram';
 import { clamp01 } from './roomShared';
 import { lookShift, lookTurn } from './lookAround';
 
@@ -491,8 +492,10 @@ interface Mount {
 }
 
 const mounts = new WeakMap<HTMLCanvasElement, Mount | null>();
+// Contextos cuyo shader todavía compila en segundo plano
+const linking = new WeakMap<HTMLCanvasElement, { gl: WebGLRenderingContext; pending: PendingProgram }>();
 
-const mount = (canvas: HTMLCanvasElement): Mount | null => {
+const begin = (canvas: HTMLCanvasElement) => {
   const gl = canvas.getContext('webgl', {
     alpha: true,
     antialias: false,
@@ -501,18 +504,12 @@ const mount = (canvas: HTMLCanvasElement): Mount | null => {
     powerPreference: 'high-performance',
   });
   if (!gl || !gl.getExtension('OES_standard_derivatives')) return null;
-  const compile = (type: number, source: string) => {
-    const shader = gl.createShader(type)!;
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) console.warn(gl.getShaderInfoLog(shader));
-    return shader;
-  };
-  const program = gl.createProgram()!;
-  gl.attachShader(program, compile(gl.VERTEX_SHADER, VERT));
-  gl.attachShader(program, compile(gl.FRAGMENT_SHADER, FRAG));
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return null;
+  return { gl, pending: startProgram(gl, VERT, FRAG) };
+};
+
+const complete = ({ gl, pending }: { gl: WebGLRenderingContext; pending: PendingProgram }): Mount | null => {
+  const program = pending.finish();
+  if (!program) return null;
   gl.useProgram(program);
   const buffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -523,6 +520,13 @@ const mount = (canvas: HTMLCanvasElement): Mount | null => {
   const names = ['view', 'focal', 'eye', 'right', 'up', 'forward', 'spread', 'escape', 'time', 'disk', 'exposure', 'center', 'window', 'ring', 'ringLight'];
   const uniforms = Object.fromEntries(names.map((name) => [name, gl.getUniformLocation(program, `u_${name}`)]));
   return { gl, uniforms };
+};
+
+// Si el viaje llega antes de que termine la compilación, la espera ahí
+const mountNow = (canvas: HTMLCanvasElement) => {
+  const started = linking.get(canvas) ?? begin(canvas);
+  linking.delete(canvas);
+  return started ? complete(started) : null;
 };
 
 export interface HoleFrame {
@@ -538,18 +542,29 @@ export interface HoleFrame {
   opening: number;
 }
 
-/* Compila el shader de antemano, en un rato libre: compilarlo al llegar
-   traba el primer cuadro */
+/* Compila el shader de antemano, en segundo plano: compilarlo al llegar
+   traba el primer cuadro. Al terminar dibuja un cuadro de 1 px para que el
+   navegador termine de preparar el programa. Devuelve con qué cancelar */
 export const prepareHole = (canvas: HTMLCanvasElement) => {
-  if (mounts.has(canvas)) return;
-  canvas.width = 1;
-  canvas.height = 1;
-  paintHole(canvas, { p: 0.1, time: 0, width: 1, height: 1, resolution: 1, radius: 0, opening: 0 });
+  if (mounts.has(canvas) || linking.has(canvas)) return () => {};
+  const started = begin(canvas);
+  if (!started) {
+    mounts.set(canvas, null);
+    return () => {};
+  }
+  linking.set(canvas, started);
+  return whenReady(started.pending, () => {
+    // El viaje llegó antes y ya terminó de montarlo
+    if (linking.get(canvas) !== started) return;
+    canvas.width = 1;
+    canvas.height = 1;
+    paintHole(canvas, { p: 0.1, time: 0, width: 1, height: 1, resolution: 1, radius: 0, opening: 0 });
+  });
 };
 
 /* Dibuja un cuadro. Devuelve false si no hay WebGL */
 export const paintHole = (canvas: HTMLCanvasElement, frame: HoleFrame) => {
-  if (!mounts.has(canvas)) mounts.set(canvas, mount(canvas));
+  if (!mounts.has(canvas)) mounts.set(canvas, mountNow(canvas));
   const mounted = mounts.get(canvas);
   if (!mounted) return false;
   const { gl, uniforms: u } = mounted;

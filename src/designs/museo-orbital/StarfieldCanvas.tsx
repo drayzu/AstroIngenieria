@@ -346,18 +346,6 @@ const PAGE_TEXT_TARGET_SELECTOR = [
   '.mo-studio-brief > .mo-kicker',
   '.mo-studio-brief > h2',
   '.mo-studio-brief > .mo-chip-row > span',
-  '.mo-studio .mo-reader-kicker',
-  '.mo-studio .mo-reader-standfirst',
-  '.mo-studio .mo-reader > p',
-  '.mo-studio .mo-reader-section > h3',
-  '.mo-studio .mo-reader-section > p',
-  '.mo-studio .mo-callout',
-  '.mo-studio .mo-takeaways article',
-  '.mo-studio .mo-dossier-section > h3',
-  '.mo-studio .mo-dossier-section dd',
-  '.mo-studio .mo-dossier-foot h4',
-  '.mo-studio .mo-dossier-foot li',
-  '.mo-studio .mo-final-quote',
 ].join(',');
 
 /* Tintes vivos para los proyectiles de la resortera */
@@ -2486,6 +2474,11 @@ export const StarfieldCanvas = ({
         ? Math.min(0.032, Math.max(0.008, (nowMs - lastFrameNow) / 1000))
         : 0.016;
       time += dt;
+      // Fracción de un cuadro de 60 Hz: los pasos fijos por cuadro (deriva,
+      // suavizados, decaimientos) se escalan con ella para que en pantallas
+      // de 90-144 Hz el cielo no vaya más rápido. A 60 Hz o menos vale 1 y
+      // todo queda exactamente como antes
+      const frameScale = dt > 0.0145 ? 1 : dt * 60;
       if (lastFrameNow > 0) {
         const rawDt = Math.max(1, nowMs - lastFrameNow);
         labFps = labFps * 0.94 + (1000 / rawDt) * 0.06;
@@ -2521,7 +2514,7 @@ export const StarfieldCanvas = ({
         }
       }
       const labDt = Math.min(0.08, cursorDt) * sandboxTimeScale;
-      const labStep = sandboxActive ? Math.min(0.08, labDt) * 60 : 1;
+      const labStep = sandboxActive ? Math.min(0.08, labDt) * 60 : frameScale;
       if (sandboxActive) {
         cosmicLab.resize(width, height);
         cosmicLab.step(labDt, comets, cursorDt);
@@ -2537,7 +2530,7 @@ export const StarfieldCanvas = ({
         sandboxChargeT0 = null;
       }
       scrollVel *= 0.92;
-      warpBoost *= 0.93;
+      warpBoost *= Math.pow(0.93, frameScale);
       let scriptedVelocity = 0;
       let scriptedElapsedMs = 0;
       if (scriptedWarp) {
@@ -2556,10 +2549,11 @@ export const StarfieldCanvas = ({
         }
       }
       const targetDim = dimRef.current ? 0.22 : 1;
-      dimLevel += (targetDim - dimLevel) * 0.06;
+      dimLevel += (targetDim - dimLevel) * (1 - Math.pow(0.94, frameScale));
 
-      mouse.sx += (mouse.x - mouse.sx) * 0.055;
-      mouse.sy += (mouse.y - mouse.sy) * 0.055;
+      const mouseEase = 1 - Math.pow(0.945, frameScale);
+      mouse.sx += (mouse.x - mouse.sx) * mouseEase;
+      mouse.sy += (mouse.y - mouse.sy) * mouseEase;
 
       const isPlayground = playgroundSceneRef.current === 'active';
       const isArriving = playgroundSceneRef.current === 'arriving';
@@ -2746,7 +2740,7 @@ export const StarfieldCanvas = ({
       const scrollDirection = Math.sign(effectiveScrollVelocity);
       if (scrollDirection === -1 || scrollDirection === 1) warpDirection = scrollDirection;
       const dir = scrollDirection || warpDirection;
-      lateralMix += (skyDrift.lateral - lateralMix) * 0.08;
+      lateralMix += (skyDrift.lateral - lateralMix) * (1 - Math.pow(0.92, frameScale));
       const lateralGain = lateralMix * skyDrift.gain;
       // Estiramiento por velocidad de la cámara: las estrellas se fugan en
       // sentido contrario al vuelo (efecto hyperspace al cruzar bordes rápido)
@@ -2769,8 +2763,10 @@ export const StarfieldCanvas = ({
       const spin = skyDrift.spin;
       const spinAngle = Math.max(-0.5, Math.min(0.5, spin.angle));
       spin.angle = 0;
+      const gravityEase = 1 - Math.pow(0.91, frameScale);
+      const gravityRelease = Math.pow(0.88, frameScale);
       for (const [starIndex, star] of stars.entries()) {
-        star.x -= 0.05 * star.z + effectiveScrollVelocity * 0.045 * star.z * lateralGain;
+        star.x -= 0.05 * star.z * frameScale + effectiveScrollVelocity * 0.045 * star.z * lateralGain;
         star.y -= effectiveScrollVelocity * 0.045 * star.z * (1 - lateralMix);
         if (spinAngle) {
           const turn = spinAngle * (1 - spin.depth + spin.depth * star.z);
@@ -2803,15 +2799,15 @@ export const StarfieldCanvas = ({
           const radiusG = 170;
           if (gd < radiusG && gd > 0.001) {
             const f = Math.pow(1 - gd / radiusG, 2) * 12;
-            star.ox += ((gx / gd) * f - star.ox) * 0.09;
-            star.oy += ((gy / gd) * f - star.oy) * 0.09;
+            star.ox += ((gx / gd) * f - star.ox) * gravityEase;
+            star.oy += ((gy / gd) * f - star.oy) * gravityEase;
           } else {
-            star.ox *= 0.88;
-            star.oy *= 0.88;
+            star.ox *= gravityRelease;
+            star.oy *= gravityRelease;
           }
         } else {
-          star.ox *= 0.88;
-          star.oy *= 0.88;
+          star.ox *= gravityRelease;
+          star.oy *= gravityRelease;
         }
 
         let px = bx + star.ox + parX * star.z * 16;
@@ -3049,7 +3045,7 @@ export const StarfieldCanvas = ({
         const ambSpanW = width + 160;
         const ambSpanH = height + 160;
         for (const c of ambient) {
-          c.x -= 0.032;
+          c.x -= 0.032 * frameScale;
           const age = time - c.t0;
           // Sin banda de hero en playground: las ambientales cubren todo
           const heroFade = hasPlaygroundScene
@@ -3909,8 +3905,8 @@ export const StarfieldCanvas = ({
           }
           sp.x += sp.vx * labStep;
           sp.y += sp.vy * labStep;
-          sp.vx *= 0.965;
-          sp.vy = sp.vy * 0.965 + sp.grav;
+          sp.vx *= Math.pow(0.965, frameScale);
+          sp.vy = sp.vy * Math.pow(0.965, frameScale) + sp.grav * frameScale;
           sp.life -= (sp.size > 2.6 ? 0.018 : 0.024) * labStep;
           const [sr, sg, sb] = sp.rgb ?? TINTS[sp.tint];
           const target = effectContext(sp.layer);
@@ -3924,8 +3920,8 @@ export const StarfieldCanvas = ({
 
         flashes = flashes.filter((flash) => flash.alpha > 0.02);
         for (const flash of flashes) {
-          flash.r += 3.4;
-          flash.alpha *= 0.87;
+          flash.r += 3.4 * frameScale;
+          flash.alpha *= Math.pow(0.87, frameScale);
           const target = effectContext(flash.layer);
           if (!target) continue;
           const level = effectOpacity(flash.layer);
@@ -3955,8 +3951,8 @@ export const StarfieldCanvas = ({
             const previous = cosmicLab.moveBody(comet, Math.min(0.08, labDt));
             prevX = previous.x; prevY = previous.y;
           } else {
-            comet.x += comet.vx;
-            comet.y += comet.vy;
+            comet.x += comet.vx * labStep;
+            comet.y += comet.vy * labStep;
           }
           comet.vy += comet.curve * labStep;
           comet.life -= (comet.size > 2.4 ? 0.009 : 0.012) * labStep;
@@ -4514,7 +4510,7 @@ export const StarfieldCanvas = ({
             target.fill();
           }
           if (comet.tailAge !== undefined && comet.tailAge < fullTailFrames) {
-            comet.tailAge = Math.min(fullTailFrames, comet.tailAge + 1);
+            comet.tailAge = Math.min(fullTailFrames, comet.tailAge + labStep);
           }
         }
 
@@ -4574,8 +4570,8 @@ export const StarfieldCanvas = ({
             wave.delay -= dt;
             continue;
           }
-          wave.r += wave.grow ?? 7;
-          wave.alpha *= wave.decay ?? 0.94;
+          wave.r += (wave.grow ?? 7) * frameScale;
+          wave.alpha *= Math.pow(wave.decay ?? 0.94, frameScale);
           if (wave.r <= 0) continue;
           const wBase = wave.width ?? 1.2;
           const target = effectContext(wave.layer);
@@ -4598,8 +4594,8 @@ export const StarfieldCanvas = ({
 
         comboLabels = comboLabels.filter((label) => label.life > 0.02);
         for (const label of comboLabels) {
-          label.life *= 0.94;
-          label.y -= 0.45;
+          label.life *= Math.pow(0.94, frameScale);
+          label.y -= 0.45 * frameScale;
           fxCtx.save();
           fxCtx.globalAlpha = Math.min(1, label.life * 1.4);
           fxCtx.textAlign = 'center';

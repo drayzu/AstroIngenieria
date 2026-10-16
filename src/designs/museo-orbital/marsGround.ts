@@ -1,3 +1,4 @@
+import { startProgram, whenReady, type PendingProgram } from './glProgram';
 /* Ingeniería planetaria: el suelo es Marte de verdad.
 
    El relieve viene del altímetro MOLA de la Mars Global Surveyor (NASA, de
@@ -133,21 +134,26 @@ const START_LONGITUDE = 12;
 const DRY = -8600;
 const OCEAN = -2500;
 
-const mount = (canvas: HTMLCanvasElement): Mount | null => {
+interface Started {
+  gl: WebGLRenderingContext;
+  pending: PendingProgram;
+  image: HTMLImageElement;
+}
+
+// Contexto, shader (compila en segundo plano) y relieve (se descarga)
+const begin = (canvas: HTMLCanvasElement): Started | null => {
   const gl = canvas.getContext('webgl', { alpha: true, antialias: false, premultipliedAlpha: true, powerPreference: 'low-power' });
   if (!gl || !gl.getExtension('OES_standard_derivatives')) return null;
+  const image = new Image();
+  image.decoding = 'async';
+  // La versión en la dirección evita que quede en caché una franja anterior
+  image.src = `${import.meta.env.BASE_URL}textures/mars-mola-band.webp?v=2`;
+  return { gl, pending: startProgram(gl, VERT, FRAG), image };
+};
 
-  const compile = (type: number, source: string) => {
-    const shader = gl.createShader(type)!;
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-    return shader;
-  };
-  const program = gl.createProgram()!;
-  gl.attachShader(program, compile(gl.VERTEX_SHADER, VERT));
-  gl.attachShader(program, compile(gl.FRAGMENT_SHADER, FRAG));
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return null;
+const complete = (canvas: HTMLCanvasElement, { gl, pending, image }: Started): Mount | null => {
+  const program = pending.finish();
+  if (!program) return null;
   gl.useProgram(program);
 
   const buffer = gl.createBuffer();
@@ -171,9 +177,7 @@ const mount = (canvas: HTMLCanvasElement): Mount | null => {
   let ready = false;
   let last: MarsState | null = null;
   const texture = gl.createTexture();
-  const image = new Image();
-  image.decoding = 'async';
-  image.onload = () => {
+  const upload = () => {
     gl.bindTexture(gl.TEXTURE_2D, texture);
     // Los bytes tal cual: son alturas, no colores
     gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
@@ -187,8 +191,6 @@ const mount = (canvas: HTMLCanvasElement): Mount | null => {
     ready = true;
     if (last) draw(last);
   };
-  // La versión en la dirección evita que quede en caché una franja anterior
-  image.src = `${import.meta.env.BASE_URL}textures/mars-mola-band.webp?v=2`;
 
   const draw = (state: MarsState) => {
     last = state;
@@ -217,10 +219,43 @@ const mount = (canvas: HTMLCanvasElement): Mount | null => {
     gl.uniform1f(u.green, state.green);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   };
+  if (image.complete && image.naturalWidth) upload();
+  else image.onload = upload;
   return { draw };
 };
 
+const linking = new WeakMap<HTMLCanvasElement, Started>();
+// Lo último que se pidió dibujar mientras el shader compilaba
+const waiting = new WeakMap<HTMLCanvasElement, MarsState>();
+
+/* Lo prepara en segundo plano: compilar el shader y subir el relieve no
+   traban ningún cuadro */
+const prepare = (canvas: HTMLCanvasElement) => {
+  if (linking.has(canvas)) return;
+  const started = begin(canvas);
+  if (!started) {
+    mounts.set(canvas, null);
+    return;
+  }
+  linking.set(canvas, started);
+  whenReady(started.pending, () => {
+    linking.delete(canvas);
+    const mounted = complete(canvas, started);
+    mounts.set(canvas, mounted);
+    const state = waiting.get(canvas);
+    waiting.delete(canvas);
+    if (state) mounted?.draw(state);
+  });
+};
+
+/* Si aún no está listo, lo prepara y lo dibuja apenas termine (unos
+   cuadros después, como ya pasaba al llegar el relieve descargado) */
 export const paintMarsGround = (canvas: HTMLCanvasElement, state: MarsState) => {
-  if (!mounts.has(canvas)) mounts.set(canvas, mount(canvas));
-  mounts.get(canvas)?.draw(state);
+  const mounted = mounts.get(canvas);
+  if (mounted !== undefined) {
+    mounted?.draw(state);
+    return;
+  }
+  waiting.set(canvas, state);
+  prepare(canvas);
 };

@@ -123,9 +123,16 @@ export const useRoomLoop = (
       raf = 0;
     };
 
+    let drawn = false;
     const refresh = () => {
       locate();
       lastTop = Number.NaN;
+      // Lejos de la vista basta con medir: al acercarse el observador vuelve
+      // a llamar aquí y dibuja. Así una sala lejana no repinta (ni reanuda
+      // sus animaciones) al cambiar el tamaño de la ventana. El primer dibujo
+      // sí se hace: deja la sala lista y pide las primeras imágenes
+      if (!inView && drawn) return;
+      drawn = true;
       draw(root.scrollTop, performance.now());
       wake();
     };

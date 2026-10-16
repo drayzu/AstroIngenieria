@@ -55,7 +55,6 @@ import {
   PlaygroundArcade, PLAYGROUND_WORD, PLAYGROUND_COMBO_MS, PLAYGROUND_MAX_BONUSES, playgroundRecordsKey,
   parsePlaygroundRecords, rankPlaygroundRecords, type PlaygroundRecord, type PlaygroundControlMode,
 } from './PlaygroundArcade';
-import { DistortOverlay } from './DistortOverlay';
 import { SalaPortal } from './SalaPortal';
 import { flyIntoObra, flyOutOfObra, obraFlightSupported, panStudio, prewarmObraFlight } from './obraFlight';
 import { prewarmChapterWarp, warpTo } from './chapterWarp';
@@ -1868,7 +1867,6 @@ const obraMetaVariants = {
 const Obra = memo(({
   concept,
   plate,
-  featured,
   enableFlight,
   preload = false,
   overlay,
@@ -1876,7 +1874,6 @@ const Obra = memo(({
 }: {
   concept: AstroConcept;
   plate: number;
-  featured: boolean;
   enableFlight: boolean;
   /* El pasillo avisa cuando la obra está por entrar desde el costado */
   preload?: boolean;
@@ -1949,7 +1946,7 @@ const Obra = memo(({
 
   return (
     <motion.article
-      className={`mo-obra${featured ? ' is-featured' : ''}`}
+      className="mo-obra"
       data-concept-id={concept.id}
       variants={obraVariants}
       initial={reduced ? false : 'hidden'}
@@ -2009,7 +2006,6 @@ const Obra = memo(({
             </AnimatePresence>
             </motion.div>
             {overlay}
-            {approvedImage && featured && shouldLoadImage && <DistortOverlay imageRef={imgRef} active={hovered && hoverImageIndex === 0} />}
           </div>
           <span className="mo-frame-glow" aria-hidden="true" />
         </figure>
@@ -2144,7 +2140,6 @@ const Sala = memo(({
     <Obra
       concept={concept}
       plate={plate}
-      featured={false}
       enableFlight={enableFlight}
       preload={preload}
       overlay={overlay}
@@ -2199,7 +2194,7 @@ const Sala = memo(({
           <div className="mo-wall">
             {group.conceptIds.map(id => {
               const concept = conceptById.get(id)!;
-              return <Obra key={id} concept={concept} plate={offset + chapter.concepts.indexOf(concept) + 1} featured={false} enableFlight={enableFlight} onSelect={onSelect} />;
+              return <Obra key={id} concept={concept} plate={offset + chapter.concepts.indexOf(concept) + 1} enableFlight={enableFlight} onSelect={onSelect} />;
             })}
           </div>
       </section>)}
@@ -3099,104 +3094,6 @@ export default function MuseoOrbital() {
       document.removeEventListener('visibilitychange', onVisibility);
       cancelAnimationFrame(raf);
       marquee.style.setProperty('--marquee-skew', '0.00deg');
-    };
-  }, [reduced]);
-
-  useEffect(() => {
-    if (reduced || !window.matchMedia('(pointer: fine)').matches) return;
-    const root = rootRef.current;
-    if (!root) return;
-    const offsets = new WeakMap<HTMLElement, { x: number; y: number }>();
-    const mouse = { x: -9999, y: -9999 };
-    let raf = 0;
-    const visible = new Set<HTMLElement>();
-    const observed = new Set<HTMLElement>();
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        const node = entry.target as HTMLElement;
-        if (entry.isIntersecting) visible.add(node);
-        else {
-          visible.delete(node);
-          offsets.delete(node);
-          if (node.style.transform) node.style.transform = '';
-        }
-      });
-      requestLoop();
-    }, { root, rootMargin: '200px 0px' });
-
-    const syncNodes = () => {
-      const next = new Set(root.querySelectorAll<HTMLElement>('.mo-obra.is-featured .mo-frame-mask'));
-      observed.forEach((node) => {
-        if (!next.has(node)) {
-          observer.unobserve(node);
-          observed.delete(node);
-          visible.delete(node);
-          offsets.delete(node);
-        }
-      });
-      next.forEach((node) => {
-        if (!observed.has(node)) {
-          observed.add(node);
-          observer.observe(node);
-        }
-      });
-    };
-    const requestLoop = () => {
-      if (!raf && visible.size && !document.hidden) raf = requestAnimationFrame(loop);
-    };
-
-    const onMove = (event: MouseEvent) => {
-      mouse.x = event.clientX;
-      mouse.y = event.clientY;
-      requestLoop();
-    };
-
-    const loop = () => {
-      const nodes = Array.from(visible);
-      const rects = nodes.map((node) => node.getBoundingClientRect());
-      let unsettled = false;
-      nodes.forEach((node, index) => {
-        const rect = rects[index];
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-        const dx = mouse.x - cx;
-        const dy = mouse.y - cy;
-        const dist = Math.hypot(dx, dy);
-        const radius = Math.max(rect.width, rect.height) / 2 + 100;
-        const force = dist < radius ? Math.pow(1 - dist / radius, 1.6) : 0;
-        const state = offsets.get(node) ?? { x: 0, y: 0 };
-        const tx = force > 0 ? (dx / (dist || 1)) * force * 7 : 0;
-        const ty = force > 0 ? (dy / (dist || 1)) * force * 5 : 0;
-        state.x += (tx - state.x) * 0.12;
-        state.y += (ty - state.y) * 0.12;
-        offsets.set(node, state);
-        const x = Math.abs(state.x) < 0.01 ? 0 : state.x;
-        const y = Math.abs(state.y) < 0.01 ? 0 : state.y;
-        const transform = x || y ? `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px)` : '';
-        if (node.style.transform !== transform) node.style.transform = transform;
-        if (Math.abs(tx - state.x) >= 0.01 || Math.abs(ty - state.y) >= 0.01) unsettled = true;
-      });
-      raf = unsettled ? requestAnimationFrame(loop) : 0;
-    };
-
-    const mutationObserver = new MutationObserver(syncNodes);
-    mutationObserver.observe(root, { childList: true, subtree: true });
-    const refresh = () => { syncNodes(); requestLoop(); };
-    const onVisibility = () => document.hidden ? (cancelAnimationFrame(raf), raf = 0) : refresh();
-    syncNodes();
-
-    window.addEventListener('mousemove', onMove, { passive: true });
-    window.addEventListener('resize', refresh);
-    root.addEventListener('scroll', requestLoop, { passive: true });
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('resize', refresh);
-      root.removeEventListener('scroll', requestLoop);
-      document.removeEventListener('visibilitychange', onVisibility);
-      mutationObserver.disconnect();
-      observer.disconnect();
-      cancelAnimationFrame(raf);
     };
   }, [reduced]);
 

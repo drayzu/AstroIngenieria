@@ -3,6 +3,7 @@ import { animate, type AnimationPlaybackControls } from 'framer-motion';
 import { lockSmoothScroll } from '../shared/smoothScroll';
 import { livingSignal, starFrame } from './living/livingHero';
 import { FLIGHT } from './living/nebulaFlight';
+import { skyCovers } from './roomShared';
 import './heroIgnition.css';
 
 /* Fases de la intro, compartidas con el hero:
@@ -41,6 +42,17 @@ export const shouldPlayIntro = () => {
   } catch {
     return false;
   }
+};
+
+/* Durante el vuelo un fondo fijo y opaco tapa el cielo 2D: el cielo no se
+   dibuja (su cuadro competiría con la escena) hasta que el fondo empieza a
+   desvanecerse al aterrizar */
+const FLIGHT_COVER = {};
+const setFlight = (hero: HTMLElement, value: '' | 'landing' | null) => {
+  if (value === null) hero.removeAttribute('data-flight');
+  else hero.setAttribute('data-flight', value);
+  if (value === '') skyCovers.add(FLIGHT_COVER);
+  else skyCovers.delete(FLIGHT_COVER);
 };
 
 /* Retira el punto de luz de index.html (con fundido si no hay intro) */
@@ -462,11 +474,11 @@ export const HeroIgnition = ({
         }],
         // La onda de choque atraviesa la cámara
         [FLIGHT.hit, () => run(animate(hit, { opacity: [0, 0.6, 0] }, { duration: 0.55, times: [0, 0.1, 1] }))],
-        [FLIGHT.landing, () => hero.setAttribute('data-flight', 'landing')],
+        [FLIGHT.landing, () => setFlight(hero, 'landing')],
         // Con la cámara ya quieta vuelven la barra, la marquesina y el scroll
         [FLIGHT.end, () => {
           flight.active = false;
-          hero.removeAttribute('data-flight');
+          setFlight(hero, null);
           releaseScroll();
           onPhase('chrome');
           later(finish, 1.1);
@@ -490,7 +502,7 @@ export const HeroIgnition = ({
 
     if (flying) {
       // El fondo tapa el cielo 2D: el vuelo trae el suyo
-      hero.setAttribute('data-flight', '');
+      setFlight(hero, '');
       // Mientras la escena compila, el punto late como en la pantalla de arranque
       held = animate(dot, { scale: [1, 1.35, 1], opacity: [1, 0.75, 1] }, { duration: 1.8, repeat: Infinity, ease: 'easeInOut' });
       const sceneReady = livingSignal.ready.then(() => 'ready' as const);
@@ -502,7 +514,7 @@ export const HeroIgnition = ({
           return;
         }
         // La escena no llegó a tiempo: la estrella nace como antes, sin vuelo
-        hero.removeAttribute('data-flight');
+        setFlight(hero, null);
         held?.stop();
         arrive();
         collapseLiving();
@@ -532,7 +544,7 @@ export const HeroIgnition = ({
       if (flying) {
         window.cancelAnimationFrame(flightFrame);
         flight.active = false;
-        hero.removeAttribute('data-flight');
+        setFlight(hero, null);
       }
       if (!revealed) {
         revealed = true;
@@ -579,7 +591,7 @@ export const HeroIgnition = ({
       window.cancelAnimationFrame(flightFrame);
       if (flying) {
         flight.active = false;
-        hero.removeAttribute('data-flight');
+        setFlight(hero, null);
       }
       under?.remove();
       hero.removeAttribute('data-birth');

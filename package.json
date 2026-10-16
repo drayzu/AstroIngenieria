@@ -18,6 +18,7 @@
     "check:playground": "node scripts/checkPlayground.mjs && node scripts/checkPlaygroundBrowser.mjs",
     "check:performance": "node scripts/checkMuseumPerformance.mjs && node scripts/checkCursorConstellations.mjs",
     "benchmark:museum": "node scripts/benchmarkMuseum.mjs",
+    "benchmark:scroll": "node scripts/benchmarkScroll.mjs",
     "check:cosmic-lab": "node scripts/checkCosmicLab.mjs && node scripts/checkCosmicLabBrowser.mjs",
     "build": "tsc && vite build && node scripts/createSpaFallback.mjs",
     "preview": "vite preview",

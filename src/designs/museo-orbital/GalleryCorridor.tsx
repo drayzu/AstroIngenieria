@@ -553,6 +553,44 @@ interface SceneFrame {
   dawnAt: number;
 }
 
+/* Cada pieza de una escala aparece cuando el avance de su grupo (--grow)
+   pasa su umbral --t. Escribir --grow en la escala entera recalculaba en cada
+   cuadro los estilos de sus miles de nodos (la galaxia sola tiene más de
+   mil): se escribe en cada pieza, recortado a su tramo de aparición, y solo
+   cuando cambia. Fuera de ese tramo la pieza ya está apagada o encendida del
+   todo, así que se ve exactamente igual */
+// El tramo de la aparición más lenta (--grow × 8 en el CSS), con margen
+const GROW_SPAN = 0.13;
+
+interface GrowPiece {
+  element: SVGElement;
+  t: number;
+  last: string;
+}
+
+const growPieces = new WeakMap<Element, { pieces: GrowPiece[]; whole: GrowPiece[] }>();
+
+const writeGrow = (layer: HTMLElement | SVGElement, grow: number) => {
+  let found = growPieces.get(layer);
+  if (!found) {
+    const piece = (element: SVGElement) => ({ element, t: parseFloat(element.style.getPropertyValue('--t')) || 0, last: '' });
+    found = {
+      pieces: Array.from(layer.querySelectorAll<SVGElement>('[style*="--t"]'), piece),
+      // El brillo y el calor de la estrella siguen el avance entero
+      whole: Array.from(layer.querySelectorAll<SVGElement>('.mo-scale-sun-glow, .mo-scale-sun-waste'), piece),
+    };
+    growPieces.set(layer, found);
+  }
+  const write = (piece: GrowPiece, value: string) => {
+    if (value === piece.last) return;
+    piece.last = value;
+    piece.element.style.setProperty('--grow', value);
+  };
+  for (const piece of found.pieces) write(piece, Math.min(piece.t + GROW_SPAN, Math.max(piece.t, grow)).toFixed(3));
+  const whole = grow.toFixed(3);
+  for (const piece of found.whole) write(piece, whole);
+};
+
 const paintScene = (kind: CorridorKind, parts: SceneParts, frame: SceneFrame) => {
   if (kind === 'acceleration') {
     const doppler = (frame.beta ** 1.4 * 0.9).toFixed(3);
@@ -626,7 +664,7 @@ const paintScene = (kind: CorridorKind, parts: SceneParts, frame: SceneFrame) =>
     if (shown <= 0) return;
     // Lo que se construye en la escala: hoy la Tierra ya tiene sus luces
     const built = clamp01(local / 0.85);
-    layer.style.setProperty('--grow', (index === 0 ? 0.3 + built * 0.7 : built).toFixed(3));
+    writeGrow(layer, Number((index === 0 ? 0.3 + built * 0.7 : built).toFixed(3)));
     // La cámara siempre se aleja; en el tiempo profundo, más despacio, para
     // que el agujero se vea crecer con lo que traga
     const zoom = (index === 0 ? 9 : index === last ? 1.5 : 2.4) ** -local;

@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './designs/museo-orbital/base.css';
-import { LocaleProvider } from './i18n/LocaleProvider';
+import { initialLocale, LocaleProvider } from './i18n/LocaleProvider';
 
 const root = createRoot(document.getElementById('root')!);
 
@@ -40,7 +40,11 @@ if (isLabPath('/disenos')) {
     releaseBoot();
   });
 } else {
-  void import('./designs/museo-orbital/MuseoOrbital').then(({ default: MuseoOrbital }) => {
+  // Reading in English: its catalog arrives alongside the museum
+  void Promise.all([
+    import('./designs/museo-orbital/MuseoOrbital'),
+    import('./i18n/catalog').then(({ loadCatalog }) => loadCatalog(initialLocale())).catch(() => {}),
+  ]).then(([{ default: MuseoOrbital }]) => {
     root.render(
       <StrictMode>
         <LocaleProvider><MuseoOrbital /></LocaleProvider>

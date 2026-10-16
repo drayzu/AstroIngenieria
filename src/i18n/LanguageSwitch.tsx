@@ -1,4 +1,9 @@
+import { loadCatalog } from './catalog';
 import { useLocale } from './LocaleProvider';
+
+// Pointing at the switch already fetches the other catalog, so the click
+// changes language without a wait
+const prefetch = (language: 'es' | 'en') => { void loadCatalog(language).catch(() => {}); };
 
 export function LanguageSwitch() {
   const { locale, setLocale, t } = useLocale();
@@ -6,6 +11,7 @@ export function LanguageSwitch() {
     {(['es', 'en'] as const).map(language => <button
       key={language} type="button" lang={language} aria-pressed={locale === language}
       aria-label={t(language === 'es' ? 'Cambiar a español' : 'Cambiar a inglés')}
+      onPointerEnter={() => prefetch(language)} onFocus={() => prefetch(language)}
       onClick={() => setLocale(language)} data-cursor-label={language === 'es' ? 'Español' : 'English'}
     >{language.toUpperCase()}</button>)}
   </div>;

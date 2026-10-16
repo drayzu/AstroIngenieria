@@ -133,9 +133,12 @@ export const SalaPortal = ({
   const lastValue = useRef(0);
   const crossed = useRef<boolean | null>(null);
   useMotionValueEvent(scrollYProgress, 'change', (value) => {
-    // En un salto por hiperespacio el portal no recorre su viaje fuera de
-    // pantalla: el muelle salta directo al nuevo progreso
-    if (isScrollWarping()) progress.jump(value);
+    const offStage = value <= 0 || value >= 1;
+    // En un salto por hiperespacio, o en uno que deja el portal fuera de
+    // escena (arrastre de la barra, Inicio/Fin, el modo cine), el portal no
+    // recorre su viaje fuera de pantalla: el muelle salta directo al nuevo
+    // progreso. Si no, cada portal cruzado se dibujaría entero sin verse
+    if (isScrollWarping() || (offStage && Math.abs(value - progress.get()) > 0.2)) progress.jump(value);
     const delta = value - lastValue.current;
     lastValue.current = value;
     const side = value >= 0.5;
@@ -144,7 +147,6 @@ export const SalaPortal = ({
       // Un salto que deja el portal fuera de pantalla (carga con scroll
       // restaurado, arrastre de la barra) no es un cruce: la sala activa la
       // corrige el observador de salas.
-      const offStage = value <= 0 || value >= 1;
       if (!offStage || Math.abs(delta) <= 0.5) onCross(side ? to : from);
     }
     // Impulso al cielo en el tramo central: las estrellas se estiran con el salto
