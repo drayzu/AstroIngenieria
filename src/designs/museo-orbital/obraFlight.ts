@@ -328,7 +328,7 @@ const virtualSource = (image: Rect): Source => {
 
 type StudioImage = { rect: Rect; src: string | null; natural?: { w: number; h: number } };
 
-/* La imagen de la sala de estudio: su rectángulo real (contain) en pantalla */
+/* La imagen de la sala de estudio: su rectángulo real (cover, 21:9) en pantalla */
 const measureStudioImage = (fallbackNatural?: { w: number; h: number }): StudioImage | null => {
   const figure = document.querySelector<HTMLElement>('.mo-studio .mo-studio-figure');
   if (!figure) return null;
@@ -337,7 +337,7 @@ const measureStudioImage = (fallbackNatural?: { w: number; h: number }): StudioI
     const r = img.getBoundingClientRect();
     const natural = img.naturalWidth > 1 ? { w: img.naturalWidth, h: img.naturalHeight } : fallbackNatural;
     const box = { x: r.left, y: r.top, w: r.width, h: r.height };
-    return { rect: natural ? fitRect(box, natural.w, natural.h, 'contain') : box, src: img.currentSrc || img.src, natural };
+    return { rect: natural ? fitRect(box, natural.w, natural.h, 'cover') : box, src: img.currentSrc || img.src, natural };
   }
   const r = (figure.querySelector<HTMLElement>('.mo-image-pending') ?? figure).getBoundingClientRect();
   return { rect: { x: r.left, y: r.top, w: r.width, h: r.height }, src: null };

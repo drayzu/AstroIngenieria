@@ -57,6 +57,7 @@ import {
 } from './PlaygroundArcade';
 import { SalaPortal } from './SalaPortal';
 import { flyIntoObra, flyOutOfObra, obraFlightSupported, panStudio, prewarmObraFlight } from './obraFlight';
+import { RoomLivingCanvas } from './LivingCanvas';
 import { prewarmChapterWarp, warpTo } from './chapterWarp';
 import { useReadLog } from './readingLog';
 import { skyCovers } from './roomShared';
@@ -1996,6 +1997,7 @@ const Obra = memo(({
                 if (event.currentTarget.naturalWidth > 1) setDeveloped(true);
               }}
             /> : <span className="mo-image-pending" role="img" aria-label={t("Imagen de {0} pendiente de selección", concept.title)}>{t("Imagen pendiente de selección")}</span>}
+            {approvedImage && <RoomLivingCanvas src={approvedImage} chapterId={concept.chapterId} />}
             <AnimatePresence initial={false}>
               {shouldLoadImage && images && hoverImageIndex > 0 && (
                 <motion.img
@@ -3362,7 +3364,8 @@ export default function MuseoOrbital() {
 
   // Mirar alrededor: la vista gira un poco con el puntero o el teléfono, y
   // queda al frente con el estudio, el menú o el juego abiertos
-  const lookHeld = Boolean(active) || menuOpen || playground || flight;
+  // La sala de estudio no la bloquea: el cielo de fondo sigue mirando con el mouse
+  const lookHeld = menuOpen || playground || flight;
   useEffect(() => startLookAround(lookHeld), [lookHeld]);
 
   // Las obras bajo el cursor dejan sus imágenes listas para entrar en el cuadro

@@ -253,7 +253,8 @@
 /* La deriva vertical no tiene sentido en una pared que avanza de lado:
    la capa se ensancha y GalleryCorridor la desplaza en horizontal */
 .mo-corridor .mo-frame-zoom {
-  inset: 0 -8%;
+  /* 6 px arriba y abajo para el paralaje vertical del mouse (--img-y) */
+  inset: -6px -8%;
   animation: none;
 }
 

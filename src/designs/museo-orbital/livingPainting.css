@@ -1,0 +1,77 @@
+/* Cuadros vivos: el lienzo cubre la imagen y aparece cuando ya dibuja
+   exactamente lo mismo que ella */
+
+.mo-living {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease-out;
+}
+
+.mo-living.is-on {
+  opacity: 1;
+}
+
+/* Con la obra viva, la profundidad ya mueve la imagen: la inclinación 3D del
+   marco sobra y, al girar, despegaba su borde y dejaba ver el fondo negro */
+.mo-studio-figure:has(.mo-living.is-on) {
+  transform: none;
+}
+
+/* En los marcos de las salas sigue a la imagen: el mismo paralaje del
+   mouse sobre el marco y la misma saturación */
+.mo-frame .mo-living-room {
+  translate: var(--img-x, 0px) var(--img-y, 0px);
+  filter: saturate(0.85);
+  transition: opacity 0.4s ease-out, translate 0.4s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s ease;
+}
+
+.mo-obra-hit:hover .mo-frame .mo-living-room {
+  filter: saturate(1);
+}
+
+/* La imagen ampliada: mantener presionado la muestra tal cual */
+.mo-image-lightbox-media .mo-living {
+  pointer-events: none;
+}
+
+.mo-image-lightbox-media.is-raw .mo-living {
+  opacity: 0;
+  transition-duration: 0.18s;
+}
+
+/* La imagen de abajo lleva el mismo margen fijo que el lienzo (4 %, centrado
+   donde el shader: 50 % 45 %), así el lienzo aparece sin saltos ni zoom */
+.mo-kb:has(> .mo-living) img,
+.mo-frame-zoom:has(> .mo-living-room) > img:not(.mo-frame-alternate),
+.mo-image-lightbox-media:has(> .mo-living) img {
+  scale: 1.04;
+  transform-origin: 50% 45%;
+}
+
+.mo-image-lightbox-media:has(> .mo-living) {
+  overflow: hidden;
+}
+
+/* Mantener presionado muestra la imagen entera, sin el margen */
+.mo-image-lightbox-media.is-raw img {
+  scale: 1;
+}
+
+/* Las obras se amplían en 21:9, como en la sala, aunque la imagen no lo sea */
+.mo-image-lightbox-media.is-wide {
+  aspect-ratio: 21 / 9;
+  width: min(92vw, 1500px, calc((100vh - 150px) * 21 / 9));
+  overflow: hidden;
+}
+
+.mo-image-lightbox-figure .mo-image-lightbox-media.is-wide img {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
+}

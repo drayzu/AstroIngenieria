@@ -19,6 +19,7 @@ import { ImageLightbox, type ImageLightboxImage } from '../shared/ImageLightbox'
 import { StudyDiagram } from './StudyDiagrams';
 import { ReadingSeal } from './ReadingSeal';
 import { isObraFlightRunning, OBRA_LANDED_EVENT, obraFlightSupported } from './obraFlight';
+import { LivingCanvas } from './LivingCanvas';
 import './museoOrbital.css';
 
 const EASE_OUT = [0.16, 1, 0.3, 1] as const;
@@ -342,12 +343,13 @@ export const StudioRoom = ({
                             src={variant.src}
                             alt={concept.illustration.alt}
                             decoding="async"
-                            initial={{ opacity: 0, scale: 1.03 }}
-                            animate={{ opacity: 1, scale: 1 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.5, ease: EASE_OUT }}
                           />
                         </AnimatePresence>
+                        <LivingCanvas key={variant.src} src={variant.src} chapterId={concept.chapterId} />
                       </div>
                     </div>
                   </motion.div>
@@ -471,6 +473,7 @@ export const StudioRoom = ({
             onClose={() => setLightboxImage(null)}
             onPrevious={variants.length > 1 ? () => changeVariant(-1) : undefined}
             onNext={variants.length > 1 ? () => changeVariant(1) : undefined}
+            chapterId={concept.chapterId}
           />
         )}
       </AnimatePresence>

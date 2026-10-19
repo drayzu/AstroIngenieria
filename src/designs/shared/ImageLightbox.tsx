@@ -2,6 +2,7 @@ import { useLocale } from '../../i18n/LocaleProvider';
 import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useScrollLock } from './useScrollLock';
+import { LivingCanvas } from '../museo-orbital/LivingCanvas';
 
 export interface ImageLightboxImage {
   src: string;
@@ -14,11 +15,35 @@ interface ImageLightboxProps {
   onClose: () => void;
   onPrevious?: () => void;
   onNext?: () => void;
+  /* Capítulo de la obra: con él, la imagen ampliada queda viva con su atmósfera */
+  chapterId?: string;
 }
 
-export function ImageLightbox({ image, onClose, onPrevious, onNext }: ImageLightboxProps) {
+export function ImageLightbox({ image, onClose, onPrevious, onNext, chapterId }: ImageLightboxProps) {
   const { t } = useLocale();
   const closeRef = useRef<HTMLButtonElement>(null);
+  const mediaRef = useRef<HTMLDivElement>(null);
+  // Mantener presionado (el clic o la barra espaciadora) muestra la imagen tal
+  // cual, sin profundidad ni atmósfera; al soltar vuelve a estar viva
+  const hold = useRef({ timer: 0, held: false });
+  const setRaw = (raw: boolean) => mediaRef.current?.classList.toggle('is-raw', raw);
+  const releaseHold = () => {
+    window.clearTimeout(hold.current.timer);
+    setRaw(false);
+  };
+  useEffect(() => {
+    const onSpace = (event: KeyboardEvent) => {
+      if (event.key !== ' ') return;
+      event.preventDefault();
+      setRaw(event.type === 'keydown');
+    };
+    window.addEventListener('keydown', onSpace, true);
+    window.addEventListener('keyup', onSpace, true);
+    return () => {
+      window.removeEventListener('keydown', onSpace, true);
+      window.removeEventListener('keyup', onSpace, true);
+    };
+  }, []);
   useScrollLock(true);
 
   useEffect(() => {
@@ -66,7 +91,20 @@ export function ImageLightbox({ image, onClose, onPrevious, onNext }: ImageLight
         </button>
         <div className="mo-image-lightbox-viewer">
           <figure className="mo-image-lightbox-figure">
-            <div className="mo-image-lightbox-media">
+            <div
+              className={`mo-image-lightbox-media${chapterId ? ' is-wide' : ''}`}
+              ref={mediaRef}
+              onPointerDown={() => {
+                hold.current.held = false;
+                hold.current.timer = window.setTimeout(() => {
+                  hold.current.held = true;
+                  setRaw(true);
+                }, 220);
+              }}
+              onPointerUp={releaseHold}
+              onPointerLeave={releaseHold}
+              onPointerCancel={releaseHold}
+            >
               {onPrevious && (
                 <button
                   type="button"
@@ -82,10 +120,18 @@ export function ImageLightbox({ image, onClose, onPrevious, onNext }: ImageLight
                 src={image.src}
                 alt={image.alt}
                 draggable={false}
-                onClick={onClose}
+                onClick={() => {
+                  // Soltar después de mantener presionado no cierra
+                  if (hold.current.held) {
+                    hold.current.held = false;
+                    return;
+                  }
+                  onClose();
+                }}
                 title={t("Clic para cerrar")}
                 data-cursor-label={t("Cerrar")}
               />
+              <LivingCanvas key={image.src} src={image.src} chapterId={chapterId} />
               {onNext && (
                 <button
                   type="button"

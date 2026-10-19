@@ -10,10 +10,11 @@ import { conceptTitles } from './englishTerminology.mjs';
 const server = await createServer({ server: { host: '127.0.0.1', port: 5195, strictPort: true }, logLevel: 'error' });
 let browser;
 try {
-  const { getCatalog } = await server.ssrLoadModule('/src/i18n/catalog.ts');
+  const { getCatalog, loadCatalog } = await server.ssrLoadModule('/src/i18n/catalog.ts');
   const { loadArticle } = await server.ssrLoadModule('/src/data/articles/loadArticle.ts');
   const { englishMessages, spanishMessages, translate } = await server.ssrLoadModule('/src/i18n/messages.ts');
   const { LAB_TOOLS } = await server.ssrLoadModule('/src/designs/museo-orbital/CosmicLab.ts');
+  await loadCatalog('en');
   const es = getCatalog('es'), en = getCatalog('en');
   const catalogCopy = JSON.parse(await readFile('src/i18n/catalog.en.json', 'utf8'));
   const visibleFields = new Set(['title', 'summary', 'question', 'body', 'category', 'keyIdea', 'mentalImage', 'mechanism', 'advantages', 'difficulties', 'alt', 'label', 'role', 'target', 'caption', 'credit', 'visualNotes', 'description', 'missionLabel', 'cta', 'visualFocus', 'fallback']);
@@ -86,6 +87,7 @@ try {
   const base = 'http://127.0.0.1:5195/AstroIngenieria/';
   const choose = language => page.locator('.mo-hero-toolbar .mo-language-switch button').filter({ hasText: language }).click();
   await page.goto(base);
+  await expect(page.locator('.mo-root')).toBeVisible({ timeout: 30000 });
   await expect(page.locator('html')).toHaveAttribute('lang', 'es');
   await expect(page.locator('h1')).toHaveAttribute('aria-label', 'Astroingeniería');
   await choose('EN');
@@ -100,8 +102,9 @@ try {
   await page.screenshot({ path: join(artifactDir, 'english-desktop.png') });
   await page.locator('.mo-hero-index').click();
   await page.locator('.mo-menu .mo-language-switch button').filter({ hasText: 'ES' }).click();
-  await expect(page.locator('.mo-menu h2')).toHaveText('Índice del recorrido');
+  await expect(page.locator('.mo-menu').getByRole('heading', { level: 2 })).toHaveText('Mapa del recorrido');
   await page.locator('.mo-menu .mo-language-switch button').filter({ hasText: 'EN' }).click();
+  await expect(page.locator('.mo-menu').getByRole('heading', { level: 2 })).toHaveText('Exhibition map');
   await page.screenshot({ path: join(artifactDir, 'english-index.png') });
   await page.locator('.mo-menu-close').click();
   for (const concept of en.allConcepts) {

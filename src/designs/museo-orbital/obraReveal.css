@@ -3,10 +3,12 @@
    dentro de su marco al hacer scroll y encabezados de grupo que se trazan. */
 
 /* Capa de la imagen, más alta que la ventana del marco: el zoom de entrada
-   y la deriva con el scroll nunca dejan ver sus bordes */
+   y la deriva con el scroll nunca dejan ver sus bordes. Los 6 px de los
+   lados cubren el paralaje del mouse (--img-x, hasta 5 px), que dejaba ver
+   el fondo negro por el costado */
 .mo-frame-zoom {
   position: absolute;
-  inset: -7% 0;
+  inset: -7% -6px;
 }
 
 /* La imagen aparece cuando terminó de cargar: mientras tanto queda la
