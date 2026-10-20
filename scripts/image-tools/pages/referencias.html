@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Referencias para ChatGPT</title>
+<style>
+  :root {
+    --bg: #0b0b0c; --panel: #141416; --line: #2a2a2e; --fg: #ece6d9; --muted: #9b968b;
+    --gold: #e8b46a; --blue: #7fc4ff; --green: #8fd19e; --red: #ff8a7a; --pink: #ff7fa8;
+    --side: 380px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  button, select, input, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; }
+  button:hover { border-color: #4a4a50; }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--pink); border-color: var(--pink); color: #2a0612; font-weight: 600; }
+  button.primary:hover { filter: brightness(1.08); }
+  button.small { padding: 3px 8px; font-size: 12.5px; }
+  button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
+  select, input[type=search], input[type=text], textarea { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+  textarea { width: 100%; resize: vertical; min-height: 64px; }
+
+  header.top { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; padding: 12px 20px; background: rgba(11,11,12,.94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .brand { font-weight: 600; letter-spacing: .02em; color: inherit; text-decoration: none; }
+  a.brand { color: var(--muted); font-weight: 500; }
+  a.brand:hover { color: var(--fg); }
+  .spacer { flex: 1; }
+  .saved { color: var(--muted); font-size: 12px; min-width: 90px; text-align: right; }
+  label.inline { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+  #search { width: 200px; }
+
+  .layout { display: grid; grid-template-columns: 1fr var(--side); }
+  main { padding: 16px 20px 80px; min-width: 0; }
+  .legend { color: var(--muted); font-size: 12.5px; margin-bottom: 12px; }
+  .legend kbd { background: #222; border: 1px solid #333; border-radius: 4px; padding: 0 5px; font-size: 11.5px; color: var(--fg); }
+  .room h2 { font-size: 15px; font-weight: 600; margin: 22px 0 8px; display: flex; gap: 10px; align-items: baseline; }
+  .room h2 small { color: var(--muted); font-weight: 400; font-size: 12.5px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--thumb, 240px), 1fr)); gap: 10px; }
+  .card { position: relative; border-radius: 9px; overflow: hidden; background: #000; border: 2px solid transparent; cursor: pointer; user-select: none; aspect-ratio: 16 / 9; }
+  .card img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .card:hover { border-color: #3a3a40; }
+  .card.on { border-color: var(--pink); box-shadow: 0 0 0 2px rgba(255,127,168,.25); }
+  .tag { position: absolute; background: rgba(0,0,0,.75); border-radius: 6px; padding: 1px 7px; font-size: 11.5px; font-weight: 600; pointer-events: none; }
+  .tag.num { top: 7px; left: 7px; }
+  .tag.web { bottom: 7px; left: 7px; background: rgba(120,120,120,.85); font-weight: 500; }
+  .heart { position: absolute; top: 6px; right: 6px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: rgba(0,0,0,.6); font-size: 15px; pointer-events: none; color: #ddd; }
+  .card.on .heart { background: var(--pink); color: #2a0612; }
+  .card .order { position: absolute; top: 6px; right: 42px; background: var(--pink); color: #2a0612; border-radius: 6px; padding: 1px 7px; font-size: 12px; font-weight: 700; pointer-events: none; display: none; }
+  .card.on .order { display: block; }
+  .zoom { position: absolute; right: 6px; bottom: 6px; background: rgba(0,0,0,.7); border: 0; border-radius: 6px; padding: 3px 7px; font-size: 12px; }
+  .empty { color: var(--muted); padding: 40px 0; }
+
+  aside { position: sticky; top: 57px; height: calc(100vh - 57px); border-left: 1px solid var(--line); background: #0f0f11; display: flex; flex-direction: column; }
+  .side-head { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+  .side-head .row { display: flex; gap: 6px; align-items: center; }
+  .side-head select { flex: 1; min-width: 0; }
+  .side-head .hint { color: var(--muted); font-size: 12px; }
+  .items { flex: 1; overflow-y: auto; padding: 8px 10px; }
+  .item { display: grid; grid-template-columns: 22px 92px 1fr; gap: 8px; align-items: start; padding: 8px 6px; border-bottom: 1px solid #1d1d21; }
+  .item .n { color: var(--pink); font-weight: 700; padding-top: 2px; text-align: right; }
+  .item img { width: 92px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 5px; cursor: zoom-in; display: block; }
+  .item .title { font-size: 12.5px; line-height: 1.3; margin-bottom: 4px; }
+  .item .title small { color: var(--muted); }
+  .item input { width: 100%; padding: 4px 8px; font-size: 12.5px; }
+  .item .tools { display: flex; gap: 4px; margin-top: 5px; }
+  .side-empty { color: var(--muted); padding: 24px 12px; font-size: 13px; }
+  .side-foot { padding: 12px 16px 16px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
+  .side-foot .primary { width: 100%; padding: 10px; }
+  .result { font-size: 12.5px; color: var(--muted); display: grid; gap: 6px; }
+  .result b { color: var(--green); font-weight: 600; }
+  .result .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .toggle-side { display: none; }
+
+  .viewer { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.94); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px; }
+  .viewer.open { display: flex; }
+  .viewer img { max-width: 100%; max-height: calc(100vh - 110px); object-fit: contain; }
+  .viewer .bar2 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .viewer .label { color: var(--muted); }
+
+  @media (max-width: 1000px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { position: fixed; inset: auto 0 0 0; top: auto; height: 70vh; z-index: 10; border-left: 0; border-top: 1px solid var(--line); transform: translateY(100%); transition: transform .25s; }
+    body.side-open aside { transform: none; }
+    .toggle-side { display: inline-block; }
+    #search { width: 140px; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/">← Imágenes</a>
+  <span class="brand">Referencias para ChatGPT</span>
+  <input type="search" id="search" placeholder="Buscar obra…" aria-label="Buscar obra">
+  <select id="chapter" aria-label="Capítulo"></select>
+  <select id="show" aria-label="Qué mostrar">
+    <option value="all">Todas las imágenes</option>
+    <option value="mine">Solo las de esta colección</option>
+    <option value="any">Las que están en alguna colección</option>
+    <option value="web">Solo las que hoy usa la página</option>
+  </select>
+  <label class="inline">Tamaño <input type="range" id="size" min="160" max="520" step="20" value="240" aria-label="Tamaño de las miniaturas"></label>
+  <span class="spacer"></span>
+  <button class="toggle-side" id="toggleSide">Colección</button>
+  <span class="saved" id="saved"></span>
+</header>
+
+<div class="layout">
+  <main>
+    <div class="legend">
+      <kbd>Clic</kbd> agrega o quita de la colección · <kbd>🔍</kbd> o doble clic: ver grande (ahí <kbd>F</kbd> agrega, <kbd>←</kbd> <kbd>→</kbd> pasa) · Todo se guarda solo.
+      <span id="countShown"></span>
+    </div>
+    <div id="rooms"></div>
+  </main>
+
+  <aside>
+    <div class="side-head">
+      <div class="row">
+        <select id="collection" aria-label="Colección activa"></select>
+        <button class="small" id="newCollection" title="Nueva colección">+ Nueva</button>
+      </div>
+      <div class="row">
+        <button class="small" id="rename">Renombrar</button>
+        <button class="small" id="duplicate">Duplicar</button>
+        <button class="small" id="remove">Borrar</button>
+        <span class="spacer"></span>
+        <span class="hint" id="itemCount"></span>
+      </div>
+      <textarea id="collectionNote" placeholder="¿Qué le vas a pedir a ChatGPT con estas referencias? (opcional, va al texto)"></textarea>
+    </div>
+    <div class="items" id="items"></div>
+    <div class="side-foot">
+      <button class="primary" id="export">Preparar para ChatGPT</button>
+      <div class="result" id="result"></div>
+    </div>
+  </aside>
+</div>
+
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-label="Imagen ampliada">
+  <img id="viewerImg" alt="">
+  <div class="bar2">
+    <button id="vPrev">←</button>
+    <span class="label" id="viewerLabel"></span>
+    <button id="vNext">→</button>
+    <button id="vToggle">Agregar (F)</button>
+    <button id="vClose">Cerrar (Esc)</button>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const asset = (p) => (p.startsWith('../../') ? `/curaduria/${p.slice(6)}` : `/datos/${p}`);
+const keyOf = (room, n) => `${room}|${n}`;
+const escapeHtml = (text) => String(text).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+const safeStorage = {
+  get(key) { try { return localStorage.getItem(key); } catch { return null; } },
+  set(key, value) { try { localStorage.setItem(key, value); } catch { /* sin almacenamiento */ } },
+};
+
+let rooms = [];
+const byKey = new Map();
+let store = { colecciones: [] };
+let activeId = null;
+let shown = [];
+let viewing = -1;
+let saveTimer = 0;
+
+const newId = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
+const active = () => store.colecciones.find((c) => c.id === activeId) ?? store.colecciones[0];
+const inActive = (key) => active().items.findIndex((item) => keyOf(item.room, item.n) === key);
+const inAny = (key) => store.colecciones.some((c) => c.items.some((item) => keyOf(item.room, item.n) === key));
+
+const save = () => {
+  safeStorage.set('referencias', JSON.stringify(store));
+  $('saved').textContent = 'Guardando…';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      const res = await fetch('/api/colecciones', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(store) });
+      $('saved').textContent = res.ok ? 'Guardado ✓' : 'No se pudo guardar';
+    } catch { $('saved').textContent = 'Guardado solo en este navegador'; }
+  }, 300);
+};
+
+const toggle = (key) => {
+  const c = active();
+  const pos = inActive(key);
+  if (pos >= 0) c.items.splice(pos, 1);
+  else { const { room, cand } = byKey.get(key); c.items.push({ room: room.room, n: cand.n, nota: '' }); }
+  $('result').innerHTML = '';
+  save(); updateMarks(); renderSide();
+  if ($('show').value !== 'all' && $('show').value !== 'web') renderGrid();
+};
+
+// Cuadrícula: todas las candidatas, agrupadas por sala
+const renderGrid = () => {
+  const query = $('search').value.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const chapter = $('chapter').value;
+  const show = $('show').value;
+  const box = $('rooms');
+  box.innerHTML = '';
+  shown = [];
+  for (const room of rooms) {
+    if (chapter !== 'all' && room.chapter !== chapter) continue;
+    const haystack = `${room.number} ${room.title} ${room.id}`.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (query && !haystack.includes(query)) continue;
+    const cands = room.candidates.filter((cand) => {
+      const key = keyOf(room.room, cand.n);
+      return show === 'mine' ? inActive(key) >= 0 : show === 'any' ? inAny(key) : show === 'web' ? cand.actual !== null : true;
+    });
+    if (!cands.length) continue;
+    const section = document.createElement('section');
+    section.className = 'room';
+    section.innerHTML = `<h2>${room.number} · ${escapeHtml(room.title)} <small>${escapeHtml(room.chapterTitle)} · ${cands.length}</small></h2><div class="grid"></div>`;
+    const grid = section.querySelector('.grid');
+    for (const cand of cands) {
+      const key = keyOf(room.room, cand.n);
+      const index = shown.push(key) - 1;
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.key = key;
+      card.innerHTML = `<img loading="lazy" src="${asset(cand.thumb)}" alt="${escapeHtml(room.title)}, imagen ${escapeHtml(cand.n)}">
+        <span class="tag num">${escapeHtml(cand.n)}</span>
+        ${cand.actual !== null ? `<span class="tag web">${cand.actual === 0 ? 'hoy principal' : 'hoy en la página'}</span>` : ''}
+        <span class="order"></span><span class="heart">♥</span>
+        <button class="zoom" title="Ver grande">🔍</button>`;
+      card.addEventListener('click', (event) => {
+        if (event.target.closest('.zoom')) openViewer(index); else toggle(key);
+      });
+      card.addEventListener('dblclick', (event) => { event.preventDefault(); openViewer(index); });
+      grid.appendChild(card);
+    }
+    box.appendChild(section);
+  }
+  if (!shown.length) box.innerHTML = `<div class="empty">${show === 'mine' ? 'Esta colección todavía no tiene imágenes. Vuelve a «Todas las imágenes» y haz clic en las que te gusten.' : 'No hay imágenes con este filtro.'}</div>`;
+  $('countShown').textContent = shown.length ? ` · ${shown.length} imágenes` : '';
+  updateMarks();
+};
+
+const updateMarks = () => {
+  const order = new Map(active().items.map((item, i) => [keyOf(item.room, item.n), i + 1]));
+  document.querySelectorAll('.card').forEach((card) => {
+    const number = order.get(card.dataset.key);
+    card.classList.toggle('on', Boolean(number));
+    card.querySelector('.order').textContent = number ?? '';
+  });
+  if (viewing >= 0) showViewer();
+};
+
+// Panel de la colección activa
+const renderSide = () => {
+  const c = active();
+  $('collection').innerHTML = store.colecciones.map((col) => `<option value="${col.id}">${escapeHtml(col.nombre)} (${col.items.length})</option>`).join('');
+  $('collection').value = c.id;
+  $('collectionNote').value = c.nota ?? '';
+  $('itemCount').textContent = `${c.items.length} ${c.items.length === 1 ? 'imagen' : 'imágenes'}`;
+  $('remove').disabled = store.colecciones.length < 2;
+  $('export').disabled = !c.items.length;
+  $('toggleSide').textContent = `Colección (${c.items.length})`;
+  const list = $('items');
+  if (!c.items.length) {
+    list.innerHTML = '<div class="side-empty">Haz clic en las imágenes que más te gusten para juntarlas aquí. Después puedes anotar qué te gusta de cada una y prepararlas para ChatGPT.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  c.items.forEach((item, i) => {
+    const entry = byKey.get(keyOf(item.room, item.n));
+    const row = document.createElement('div');
+    row.className = 'item';
+    row.innerHTML = entry
+      ? `<span class="n">${i + 1}</span><img src="${asset(entry.cand.thumb)}" alt="">
+        <div><div class="title">${escapeHtml(entry.room.title)} <small>· ${escapeHtml(item.n)}</small></div>
+        <input type="text" placeholder="Qué te gusta de esta (opcional)" value="${escapeHtml(item.nota ?? '')}">
+        <div class="tools"><button class="small" data-act="up" ${i === 0 ? 'disabled' : ''} title="Subir">↑</button><button class="small" data-act="down" ${i === c.items.length - 1 ? 'disabled' : ''} title="Bajar">↓</button><button class="small" data-act="del" title="Quitar">Quitar</button></div></div>`
+      : `<span class="n">${i + 1}</span><span></span><div><div class="title">Ya no existe: ${escapeHtml(item.room)} · ${escapeHtml(item.n)}</div><div class="tools"><button class="small" data-act="del">Quitar</button></div></div>`;
+    row.querySelector('input')?.addEventListener('input', (event) => { item.nota = event.target.value; save(); });
+    row.querySelector('img')?.addEventListener('click', () => {
+      const index = shown.indexOf(keyOf(item.room, item.n));
+      if (index >= 0) openViewer(index);
+    });
+    row.querySelectorAll('[data-act]').forEach((button) => button.addEventListener('click', () => {
+      const act = button.dataset.act;
+      if (act === 'del') c.items.splice(i, 1);
+      else { const j = act === 'up' ? i - 1 : i + 1; [c.items[i], c.items[j]] = [c.items[j], c.items[i]]; }
+      $('result').innerHTML = '';
+      save(); updateMarks(); renderSide();
+    }));
+    list.appendChild(row);
+  });
+};
+
+const setActive = (id) => {
+  activeId = id;
+  safeStorage.set('referencias-activa', id);
+  $('result').innerHTML = '';
+  renderSide();
+  if ($('show').value === 'mine') renderGrid(); else updateMarks();
+};
+const askName = (message, fallback) => {
+  const name = prompt(message, fallback);
+  return name && name.trim() ? name.trim() : null;
+};
+
+$('newCollection').onclick = () => {
+  const nombre = askName('Nombre de la nueva colección (por ejemplo «Paleta cálida» o «Escala monumental»):', '');
+  if (!nombre) return;
+  const c = { id: newId(), nombre, nota: '', creada: new Date().toISOString(), items: [] };
+  store.colecciones.push(c);
+  save(); setActive(c.id);
+};
+$('rename').onclick = () => {
+  const c = active();
+  const nombre = askName('Nuevo nombre de la colección:', c.nombre);
+  if (!nombre) return;
+  c.nombre = nombre;
+  save(); renderSide();
+};
+$('duplicate').onclick = () => {
+  const c = active();
+  const copy = { ...structuredClone(c), id: newId(), nombre: `${c.nombre} (copia)`, creada: new Date().toISOString() };
+  store.colecciones.push(copy);
+  save(); setActive(copy.id);
+};
+$('remove').onclick = () => {
+  const c = active();
+  if (store.colecciones.length < 2) return;
+  if (!confirm(`¿Borrar la colección «${c.nombre}»? Las imágenes no se borran, solo la colección.`)) return;
+  store.colecciones = store.colecciones.filter((col) => col.id !== c.id);
+  save(); setActive(store.colecciones[0].id);
+};
+$('collection').onchange = (event) => setActive(event.target.value);
+$('collectionNote').oninput = (event) => { active().nota = event.target.value; save(); };
+
+$('export').onclick = async () => {
+  const button = $('export');
+  button.disabled = true;
+  button.textContent = 'Preparando…';
+  $('result').innerHTML = '';
+  try {
+    const res = await fetch('/api/exportar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ collection: active(), open: true }) });
+    const out = await res.json();
+    if (!res.ok) throw new Error(out.error || 'No se pudo preparar');
+    const relative = out.folder.replace(/\\/g, '/').replace(/^.*\/output\//, 'output/');
+    $('result').innerHTML = `<div><b>Listo:</b> ${out.images} imágenes y ${out.sheets.length === 1 ? 'una hoja de contacto' : `${out.sheets.length} hojas de contacto`} en <code>${escapeHtml(relative)}</code>. Arrastra las imágenes (o solo la hoja) a ChatGPT y pega el texto.</div>
+      <div class="row"><button class="small" id="openFolder">Abrir carpeta</button><button class="small" id="copyText">Copiar texto</button></div>`;
+    $('openFolder').onclick = () => fetch('/api/abrir', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ folder: out.folder }) });
+    $('copyText').onclick = async () => {
+      try { await navigator.clipboard.writeText(out.text); $('copyText').textContent = 'Copiado ✓'; } catch { $('copyText').textContent = 'No se pudo copiar'; }
+    };
+  } catch (error) {
+    $('result').innerHTML = `<div style="color:var(--red)">${escapeHtml(error.message)}</div>`;
+  } finally {
+    button.disabled = !active().items.length;
+    button.textContent = 'Preparar para ChatGPT';
+  }
+};
+
+// Visor
+const openViewer = (i) => { viewing = i; $('viewer').classList.add('open'); showViewer(); };
+const closeViewer = () => { viewing = -1; $('viewer').classList.remove('open'); };
+const stepViewer = (step) => { viewing = (viewing + step + shown.length) % shown.length; showViewer(); };
+const showViewer = () => {
+  const entry = byKey.get(shown[viewing]);
+  if (!entry) return closeViewer();
+  const pos = inActive(shown[viewing]);
+  $('viewerImg').src = asset(entry.cand.full);
+  $('viewerLabel').textContent = `${entry.room.number} · ${entry.room.title} · ${entry.cand.n}${pos >= 0 ? ` · en la colección (#${pos + 1})` : ''}`;
+  $('vToggle').textContent = pos >= 0 ? 'Quitar (F)' : 'Agregar (F)';
+};
+$('vPrev').onclick = () => stepViewer(-1);
+$('vNext').onclick = () => stepViewer(1);
+$('vToggle').onclick = () => toggle(shown[viewing]);
+$('vClose').onclick = closeViewer;
+$('viewer').addEventListener('click', (event) => { if (event.target === $('viewer')) closeViewer(); });
+document.addEventListener('keydown', (event) => {
+  if (viewing < 0 || ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
+  if (event.key === 'Escape') closeViewer();
+  if (event.key === 'ArrowRight') stepViewer(1);
+  if (event.key === 'ArrowLeft') stepViewer(-1);
+  if (event.key.toLowerCase() === 'f' || event.key === ' ') { event.preventDefault(); toggle(shown[viewing]); }
+});
+
+// Filtros
+let searchTimer = 0;
+$('search').oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(renderGrid, 200); };
+$('chapter').onchange = () => { safeStorage.set('referencias-capitulo', $('chapter').value); renderGrid(); };
+$('show').onchange = () => { safeStorage.set('referencias-mostrar', $('show').value); renderGrid(); };
+$('size').oninput = (event) => { document.body.style.setProperty('--thumb', `${event.target.value}px`); safeStorage.set('referencias-tamano', event.target.value); };
+$('toggleSide').onclick = () => document.body.classList.toggle('side-open');
+
+(async () => {
+  rooms = await (await fetch('/datos/data.json', { cache: 'no-store' })).json();
+  for (const room of rooms) for (const cand of room.candidates) byKey.set(keyOf(room.room, cand.n), { room, cand });
+  let fromServer = {};
+  try { fromServer = await (await fetch('/api/colecciones', { cache: 'no-store' })).json(); } catch { /* sin servidor */ }
+  let local = {};
+  try { local = JSON.parse(safeStorage.get('referencias') || '{}'); } catch { local = {}; }
+  store = fromServer.colecciones?.length ? fromServer : local.colecciones?.length ? local : { colecciones: [] };
+  if (!store.colecciones.length) store.colecciones.push({ id: newId(), nombre: 'Mis favoritas', nota: '', creada: new Date().toISOString(), items: [] });
+  activeId = safeStorage.get('referencias-activa');
+  if (!store.colecciones.some((c) => c.id === activeId)) activeId = store.colecciones[0].id;
+
+  const chapters = [...new Map(rooms.map((room) => [room.chapter, room.chapterTitle])).entries()];
+  $('chapter').innerHTML = `<option value="all">Todos los capítulos</option>${chapters.map(([id, title]) => `<option value="${id}">${escapeHtml(title)}</option>`).join('')}`;
+  $('chapter').value = safeStorage.get('referencias-capitulo') || 'all';
+  if (!$('chapter').value) $('chapter').value = 'all';
+  $('show').value = safeStorage.get('referencias-mostrar') || 'all';
+  const size = safeStorage.get('referencias-tamano');
+  if (size) { $('size').value = size; document.body.style.setProperty('--thumb', `${size}px`); }
+  renderSide();
+  renderGrid();
+  $('saved').textContent = fromServer.colecciones?.length ? 'Guardado ✓' : '';
+})();
+</script>
+</body>
+</html>

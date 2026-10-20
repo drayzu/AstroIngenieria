@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Imágenes del museo</title>
+<style>
+  :root { --bg: #0b0b0c; --panel: #141416; --line: #2a2a2e; --fg: #ece6d9; --muted: #9b968b; --gold: #e8b46a; --pink: #ff7fa8; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 56px 20px; }
+  h1 { font-size: 30px; font-weight: 600; margin: 0 0 6px; }
+  .lead { color: var(--muted); margin: 0 0 32px; }
+  .tools { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  a.tool { display: block; text-decoration: none; color: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px 22px 20px; transition: border-color .15s, transform .15s; }
+  a.tool:hover { transform: translateY(-2px); }
+  a.tool.pick:hover { border-color: var(--gold); }
+  a.tool.refs:hover { border-color: var(--pink); }
+  a.tool:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+  .tool h2 { margin: 0 0 6px; font-size: 19px; font-weight: 600; }
+  .pick h2 { color: var(--gold); }
+  .refs h2 { color: var(--pink); }
+  .tool p { margin: 0 0 14px; color: var(--muted); }
+  .stat { font-size: 13px; color: var(--fg); }
+  .help { margin-top: 36px; color: var(--muted); font-size: 13.5px; }
+  .help code { background: #1c1c20; border: 1px solid #2c2c31; border-radius: 5px; padding: 1px 6px; color: var(--fg); }
+  .help li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Imágenes del museo</h1>
+  <p class="lead">Dos herramientas sobre las mismas imágenes candidatas de las 106 salas.</p>
+  <div class="tools">
+    <a class="tool pick" href="/elegir/">
+      <h2>Elegir para la página</h2>
+      <p>Sala por sala: la imagen principal y las secundarias que usa el museo.</p>
+      <div class="stat" id="pickStat">&nbsp;</div>
+    </a>
+    <a class="tool refs" href="/referencias/">
+      <h2>Referencias para ChatGPT</h2>
+      <p>Junta las imágenes que más te gustan en colecciones y prepáralas para subirlas a ChatGPT como referencia.</p>
+      <div class="stat" id="refsStat">&nbsp;</div>
+    </a>
+  </div>
+  <ul class="help">
+    <li>Abrir esto: <code>npm run imagenes</code> en la carpeta del proyecto.</li>
+    <li>Si llegaron imágenes nuevas a <code>elegida/</code>: <code>npm run imagenes:actualizar</code> y recarga.</li>
+    <li>Pasar las elecciones a la página: <code>npm run imagenes:aplicar</code> (prueba) y después <code>npm run imagenes:aplicar -- --write</code>.</li>
+    <li>Las referencias preparadas quedan en <code>output/referencias-chatgpt/</code>, una carpeta por colección.</li>
+  </ul>
+</main>
+<script>
+(async () => {
+  try {
+    const [rooms, choices, refs] = await Promise.all(['/datos/data.json', '/api/elecciones', '/api/colecciones'].map((url) => fetch(url, { cache: 'no-store' }).then((res) => res.json())));
+    const decided = Object.values(choices).filter((c) => c.principal || c.nueva).length;
+    document.getElementById('pickStat').textContent = `${decided} de ${rooms.length} salas decididas · ${rooms.reduce((sum, room) => sum + room.candidates.length, 0)} imágenes`;
+    const cols = refs.colecciones ?? [];
+    document.getElementById('refsStat').textContent = cols.length
+      ? `${cols.length} ${cols.length === 1 ? 'colección' : 'colecciones'} · ${cols.reduce((sum, c) => sum + c.items.length, 0)} referencias`
+      : 'Todavía sin colecciones';
+  } catch { /* solo faltan los números */ }
+})();
+</script>
+</body>
+</html>

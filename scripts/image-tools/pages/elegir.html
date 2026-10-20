@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elegir imágenes</title>
+<style>
+  :root {
+    --bg: #0b0b0c; --panel: #141416; --line: #2a2a2e; --fg: #ece6d9; --muted: #9b968b;
+    --gold: #e8b46a; --blue: #7fc4ff; --green: #8fd19e; --red: #ff8a7a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  button, select { font: inherit; color: inherit; }
+  button { cursor: pointer; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; }
+  button:hover { border-color: #4a4a50; }
+  button.on { border-color: var(--gold); color: var(--gold); }
+  button:focus-visible, select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  select { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+
+  header.top { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 12px 20px; background: rgba(11,11,12,.94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .brand { font-weight: 600; letter-spacing: .02em; color: inherit; text-decoration: none; }
+  a.brand { color: var(--muted); font-weight: 500; }
+  a.brand:hover { color: var(--fg); }
+  .progress { display: flex; align-items: center; gap: 10px; color: var(--muted); }
+  .bar { width: 180px; height: 6px; border-radius: 3px; background: #24242a; overflow: hidden; }
+  .bar span { display: block; height: 100%; background: var(--gold); width: 0; transition: width .3s; }
+  .saved { color: var(--muted); font-size: 12px; min-width: 90px; }
+  .spacer { flex: 1; }
+
+  main { padding: 18px 20px 60px; max-width: 1700px; margin: 0 auto; }
+  .room-head { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-end; justify-content: space-between; margin-bottom: 12px; }
+  .room-head h1 { margin: 0; font-size: 24px; font-weight: 600; }
+  .room-head .kicker { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .choice { margin: 6px 0 10px; color: var(--muted); }
+  .choice b { color: var(--fg); font-weight: 600; }
+  .choice .pending { color: var(--red); }
+  .choice .done { color: var(--green); }
+
+  .legend { color: var(--muted); font-size: 12.5px; margin-bottom: 14px; }
+  .legend kbd { background: #222; border: 1px solid #333; border-radius: 4px; padding: 0 5px; font-size: 11.5px; color: var(--fg); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px; }
+  .card { position: relative; border-radius: 10px; overflow: hidden; background: #000; border: 2px solid transparent; cursor: pointer; user-select: none; }
+  .card img { display: block; width: 100%; height: auto; }
+  .card.principal { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(232,180,106,.25); }
+  .card.secundaria { border-color: var(--blue); }
+  .tags { position: absolute; top: 8px; left: 8px; display: flex; gap: 6px; flex-wrap: wrap; pointer-events: none; }
+  .tags.top-right { left: auto; right: 46px; }
+  .date { position: absolute; left: 8px; bottom: 8px; background: rgba(0,0,0,.72); border-radius: 6px; padding: 2px 8px; font-size: 11.5px; color: #cfc9bc; pointer-events: none; }
+  .tags.bottom-right { top: auto; left: auto; bottom: 8px; right: 8px; }
+  .tag { background: rgba(0,0,0,.78); border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 600; }
+  .tag.num { font-size: 15px; }
+  .tag.actual { background: rgba(120,120,120,.85); }
+  .tag.principal { background: var(--gold); color: #1a1205; }
+  .tag.secundaria { background: var(--blue); color: #04121f; }
+  .zoom { position: absolute; right: 8px; top: 8px; background: rgba(0,0,0,.7); border: 0; border-radius: 6px; padding: 4px 8px; font-size: 13px; }
+  .crop { position: absolute; left: 0; right: 0; border-top: 1.5px dashed rgba(127,196,255,.8); border-bottom: 1.5px dashed rgba(127,196,255,.8); pointer-events: none; display: none; }
+  body.show-crop .crop.needed { display: block; }
+
+  .viewer { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.94); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px; }
+  .viewer.open { display: flex; }
+  .viewer img { max-width: 100%; max-height: calc(100vh - 110px); object-fit: contain; }
+  .viewer .bar2 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .viewer .label { color: var(--muted); }
+  .empty { color: var(--muted); padding: 40px 0; }
+  @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } .bar { width: 100px; } }
+</style>
+</head>
+<body class="show-crop">
+<header class="top">
+  <a class="brand" href="/">← Imágenes</a><span class="brand">Elegir para la página</span>
+  <span class="progress"><span class="bar"><span id="bar"></span></span><span id="count"></span></span>
+  <select id="jump" aria-label="Ir a una sala"></select>
+  <select id="filter" aria-label="Filtrar salas">
+    <option value="all">Todas las salas</option>
+    <option value="pending">Solo pendientes</option>
+  </select>
+  <select id="order" aria-label="Orden de las imágenes">
+    <option value="new">Más nuevas primero</option>
+    <option value="old">Más antiguas primero</option>
+    <option value="num">Por número</option>
+  </select>
+  <label style="color:var(--muted);font-size:13px"><input type="checkbox" id="cropToggle" checked> Ver recorte 21:9</label>
+  <span class="spacer"></span>
+  <span class="saved" id="saved"></span>
+</header>
+<main>
+  <div class="room-head">
+    <div>
+      <div class="kicker" id="kicker"></div>
+      <h1 id="title"></h1>
+    </div>
+    <div class="actions">
+      <button id="prev">← Anterior</button>
+      <button id="keep" title="Deja como principal y secundarias las que están hoy en la página">Mantener las actuales</button>
+      <button id="needsNew">Necesita imagen nueva</button>
+      <button id="clear">Limpiar</button>
+      <button id="next">Siguiente →</button>
+    </div>
+  </div>
+  <div class="choice" id="choice"></div>
+  <div class="legend">
+    <kbd>Clic</kbd> principal · <kbd>Shift</kbd>+clic o clic derecho: secundaria · <kbd>🔍</kbd> o doble clic: ver grande ·
+    <kbd>←</kbd> <kbd>→</kbd> cambiar de sala · Todo se guarda solo.
+  </div>
+  <div class="grid" id="grid"></div>
+</main>
+
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-label="Imagen ampliada">
+  <img id="viewerImg" alt="">
+  <div class="bar2">
+    <button id="vPrev">← </button>
+    <span class="label" id="viewerLabel"></span>
+    <button id="vNext"> →</button>
+    <button id="vPrincipal">Principal (P)</button>
+    <button id="vSecondary">Secundaria (S)</button>
+    <button id="vClose">Cerrar (Esc)</button>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+// Rutas de data.json: '../../<capítulo>/…' son originales; el resto vive junto a data.json
+const asset = (p) => (p.startsWith('../../') ? `/curaduria/${p.slice(6)}` : `/datos/${p}`);
+let rooms = [];
+let choices = {};
+let index = 0;
+let viewing = -1;
+let shown = [];
+// Pasar a la candidata vecina en el orden que se ve en pantalla
+const stepViewer = (step) => { const pos = shown.indexOf(viewing); viewing = shown[(pos + step + shown.length) % shown.length]; showViewer(); };
+let saveTimer = 0;
+const safeStorage = {
+  get(key) { try { return localStorage.getItem(key); } catch { return null; } },
+  set(key, value) { try { localStorage.setItem(key, value); } catch { /* sin almacenamiento */ } },
+};
+
+const choiceOf = (room) => choices[room.room] ?? (choices[room.room] = { principal: null, secundarias: [], nueva: false });
+const decided = (room) => { const c = choices[room.room]; return Boolean(c && (c.principal || c.nueva)); };
+const actualOf = (room) => room.candidates.filter((c) => c.actual !== null).sort((a, b) => a.actual - b.actual).map((c) => c.n);
+
+const save = () => {
+  safeStorage.set('elegir-imagenes', JSON.stringify(choices));
+  $('saved').textContent = 'Guardando…';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      const res = await fetch('/api/elecciones', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(choices) });
+      $('saved').textContent = res.ok ? 'Guardado ✓' : 'No se pudo guardar';
+    } catch { $('saved').textContent = 'Guardado solo en este navegador'; }
+  }, 300);
+};
+
+const visibleRooms = () => {
+  const filter = $('filter').value;
+  return rooms.map((room, i) => ({ room, i })).filter(({ room }) =>
+    filter === 'pending' ? !decided(room) : true);
+};
+
+const move = (step) => {
+  const list = visibleRooms();
+  if (!list.length) return;
+  const pos = list.findIndex(({ i }) => i === index);
+  const nextPos = pos < 0 ? 0 : Math.max(0, Math.min(list.length - 1, pos + step));
+  go(list[nextPos].i);
+};
+
+const go = (i) => {
+  index = i;
+  safeStorage.set('elegir-sala', rooms[i].room);
+  render();
+  window.scrollTo({ top: 0 });
+};
+
+const setPrincipal = (room, n) => {
+  const c = choiceOf(room);
+  c.principal = c.principal === n ? null : n;
+  c.secundarias = c.secundarias.filter((s) => s !== n);
+  if (c.principal) c.nueva = false;
+  save(); render();
+};
+const toggleSecondary = (room, n) => {
+  const c = choiceOf(room);
+  if (c.secundarias.includes(n)) c.secundarias = c.secundarias.filter((s) => s !== n);
+  else { c.secundarias.push(n); if (c.principal === n) c.principal = null; }
+  save(); render();
+};
+
+const render = () => {
+  const room = rooms[index];
+  if (!room) return;
+  const c = choiceOf(room);
+  const done = rooms.filter(decided).length;
+  $('bar').style.width = `${(done / rooms.length) * 100}%`;
+  $('count').textContent = `${done} de ${rooms.length} salas decididas`;
+  $('kicker').textContent = `Sala ${room.number} de 106 · ${room.chapterTitle}`;
+  $('title').textContent = room.title;
+  $('jump').value = String(index);
+  [...$('jump').options].forEach((option) => {
+    const r = rooms[Number(option.value)];
+    option.textContent = `${decided(r) ? '✓' : '○'} ${r.number} · ${r.title}`;
+  });
+  const actual = actualOf(room);
+  $('choice').innerHTML = c.nueva
+    ? '<span class="pending">Marcada: necesita imagen nueva</span>'
+    : c.principal
+      ? `<span class="done">✓</span> Principal <b>${c.principal}</b>${c.secundarias.length ? ` · secundarias <b>${c.secundarias.join(', ')}</b>` : ''}${actual.length ? ` · hoy en la página: ${actual.join(', ')}` : ''}`
+      : `<span class="pending">Sin elegir</span>${actual.length ? ` · hoy en la página: principal ${actual[0]}${actual.length > 1 ? `, secundarias ${actual.slice(1).join(', ')}` : ''}` : ' · hoy no tiene imagen'}`;
+  $('needsNew').classList.toggle('on', c.nueva);
+  $('keep').disabled = !actual.length;
+
+
+  const grid = $('grid');
+  grid.innerHTML = '';
+  const order = $('order').value;
+  const sorted = room.candidates.map((cand, i) => ({ cand, i })).sort((a, b) =>
+    order === 'num' ? a.i - b.i : order === 'old' ? a.cand.date - b.cand.date : b.cand.date - a.cand.date);
+  shown = sorted.map(({ i }) => i);
+  sorted.forEach(({ cand, i }) => {
+    const card = document.createElement('div');
+    const isPrincipal = c.principal === cand.n;
+    const secIndex = c.secundarias.indexOf(cand.n);
+    card.className = `card${isPrincipal ? ' principal' : ''}${secIndex >= 0 ? ' secundaria' : ''}`;
+    card.innerHTML = `<img loading="lazy" src="${asset(cand.thumb)}" alt="Candidata ${cand.n}">
+      <div class="crop"></div>
+      <div class="tags">
+        <span class="tag num">${cand.n}</span>
+        ${isPrincipal ? '<span class="tag principal">PRINCIPAL</span>' : ''}
+        ${secIndex >= 0 ? `<span class="tag secundaria">SECUNDARIA ${secIndex + 1}</span>` : ''}
+      </div>
+      <div class="tags top-right">${cand.actual !== null ? `<span class="tag actual">${cand.actual === 0 ? 'HOY PRINCIPAL' : 'HOY SECUNDARIA'}</span>` : ''}</div>
+      <span class="date">${new Date(cand.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}</span>
+      <button class="zoom" title="Ver grande">🔍</button>`;
+    const img = card.querySelector('img');
+    img.addEventListener('load', () => {
+      // Franja que se ve en las salas (21:9), si la imagen es más alta que eso
+      const ratio = img.naturalWidth / img.naturalHeight;
+      const known = [[21 / 9, '21:9'], [16 / 9, '16:9'], [3 / 2, '3:2'], [4 / 3, '4:3'], [1, '1:1'], [2, '2:1']];
+      const match = known.find(([value]) => Math.abs(ratio - value) / value < 0.03);
+      card.querySelector('.date').textContent += ` · ${match ? match[1] : `${ratio.toFixed(2)}:1`}`;
+      const crop = card.querySelector('.crop');
+      if (ratio < 2.2) {
+        const band = (ratio / (21 / 9)) * 100;
+        crop.style.top = `${(100 - band) / 2}%`;
+        crop.style.height = `${band}%`;
+        crop.classList.add('needed');
+      }
+    });
+    card.addEventListener('click', (event) => {
+      if (event.target.closest('.zoom')) { openViewer(i); return; }
+      if (event.shiftKey) toggleSecondary(room, cand.n); else setPrincipal(room, cand.n);
+    });
+    card.addEventListener('dblclick', (event) => { event.preventDefault(); openViewer(i); });
+    card.addEventListener('contextmenu', (event) => { event.preventDefault(); toggleSecondary(room, cand.n); });
+    grid.appendChild(card);
+  });
+  if (!room.candidates.length) grid.innerHTML = '<div class="empty">Esta sala no tiene candidatas en elegida/.</div>';
+  if (viewing >= 0) showViewer();
+};
+
+const openViewer = (i) => { viewing = i; $('viewer').classList.add('open'); showViewer(); };
+const closeViewer = () => { viewing = -1; $('viewer').classList.remove('open'); };
+const showViewer = () => {
+  const room = rooms[index];
+  const cand = room.candidates[viewing];
+  if (!cand) return closeViewer();
+  const c = choiceOf(room);
+  $('viewerImg').src = asset(cand.full);
+  $('viewerLabel').textContent = `${room.number} · ${room.title} · candidata ${cand.n}${c.principal === cand.n ? ' · PRINCIPAL' : ''}${c.secundarias.includes(cand.n) ? ' · SECUNDARIA' : ''}`;
+};
+
+document.addEventListener('keydown', (event) => {
+  const room = rooms[index];
+  if (!room || event.target.tagName === 'SELECT') return;
+  if (viewing >= 0) {
+    if (event.key === 'Escape') closeViewer();
+    if (event.key === 'ArrowRight') stepViewer(1);
+    if (event.key === 'ArrowLeft') stepViewer(-1);
+    if (event.key.toLowerCase() === 'p') setPrincipal(room, room.candidates[viewing].n);
+    if (event.key.toLowerCase() === 's') toggleSecondary(room, room.candidates[viewing].n);
+    return;
+  }
+  if (event.key === 'ArrowRight') move(1);
+  if (event.key === 'ArrowLeft') move(-1);
+});
+
+$('prev').onclick = () => move(-1);
+$('next').onclick = () => move(1);
+$('keep').onclick = () => {
+  const room = rooms[index];
+  const actual = actualOf(room);
+  if (!actual.length) return;
+  choices[room.room] = { principal: actual[0], secundarias: actual.slice(1), nueva: false };
+  save(); render();
+};
+$('needsNew').onclick = () => {
+  const c = choiceOf(rooms[index]);
+  c.nueva = !c.nueva;
+  if (c.nueva) { c.principal = null; c.secundarias = []; }
+  save(); render();
+};
+$('clear').onclick = () => { choices[rooms[index].room] = { principal: null, secundarias: [], nueva: false }; save(); render(); };
+$('jump').onchange = (event) => go(Number(event.target.value));
+$('filter').onchange = () => { const list = visibleRooms(); if (list.length && !list.some(({ i }) => i === index)) go(list[0].i); else render(); };
+$('order').value = safeStorage.get('elegir-orden') || 'new';
+$('order').onchange = (event) => { safeStorage.set('elegir-orden', event.target.value); render(); };
+$('cropToggle').onchange = (event) => document.body.classList.toggle('show-crop', event.target.checked);
+$('vClose').onclick = closeViewer;
+$('vPrev').onclick = () => stepViewer(-1);
+$('vNext').onclick = () => stepViewer(1);
+$('vPrincipal').onclick = () => setPrincipal(rooms[index], rooms[index].candidates[viewing].n);
+$('vSecondary').onclick = () => toggleSecondary(rooms[index], rooms[index].candidates[viewing].n);
+$('viewer').addEventListener('click', (event) => { if (event.target === $('viewer')) closeViewer(); });
+
+(async () => {
+  rooms = await (await fetch('/datos/data.json', { cache: 'no-store' })).json();
+  let fromServer = {};
+  try { fromServer = await (await fetch('/api/elecciones', { cache: 'no-store' })).json(); } catch { /* sin servidor */ }
+  let local = {};
+  try { local = JSON.parse(safeStorage.get('elegir-imagenes') || '{}'); } catch { local = {}; }
+  choices = Object.keys(fromServer).length ? fromServer : local;
+  $('jump').innerHTML = rooms.map((room, i) => `<option value="${i}"></option>`).join('');
+  const last = safeStorage.get('elegir-sala');
+  const lastIndex = rooms.findIndex((room) => room.room === last);
+  const firstPending = rooms.findIndex((room) => !decided(room));
+  go(lastIndex >= 0 ? lastIndex : Math.max(0, firstPending));
+  $('saved').textContent = Object.keys(fromServer).length ? 'Guardado ✓' : '';
+})();
+</script>
+</body>
+</html>
